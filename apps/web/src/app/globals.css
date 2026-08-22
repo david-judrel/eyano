@@ -1,0 +1,181 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  /* Nouvelle palette Electric Lime */
+  --ey-background: #050505;           /* Deep Black */
+  --ey-surface: #0D0F0E;              /* Carbon Black */
+  --ey-surface-2: #16191c;            /* Surface secondaire */
+  --ey-surface-3: #1c2025;            /* Surface tertiaire */
+  --ey-foreground: #F2FFF0;           /* Ice White */
+  --ey-muted-foreground: #8a9a8e;     /* Texte atténué */
+  --ey-border: rgba(242, 255, 240, 6%);
+  --ey-border-strong: rgba(242, 255, 240, 12%);
+  --ey-ring: rgba(57, 255, 20, 30%);
+
+  /* Couleurs principales */
+  --ey-brand: #39FF14;                /* Electric Lime */
+  --ey-brand-dim: rgba(57, 255, 20, 12%);
+  --ey-brand-foreground: #050505;     /* Deep Black pour contraste */
+  
+  --ey-primary: #39FF14;              /* Electric Lime */
+  --ey-primary-foreground: #050505;   /* Deep Black */
+
+  /* Couleurs d'accentuation */
+  --ey-accent: #7CFF00;               /* Neon Green - glow/highlights */
+  --ey-accent-dim: rgba(124, 255, 0, 15%);
+  
+  --ey-depth: #0B5E20;                /* Deep Emerald - ombres/profondeur */
+  --ey-secondary: #16A34A;            /* Dark Mint - états secondaires */
+
+  /* États */
+  --ey-destructive: #ef4444;
+  --ey-destructive-foreground: #ffffff;
+
+  /* Effets */
+  --ey-overlay: rgba(5, 5, 5, 70%);
+  --ey-glass: rgba(13, 15, 14, 85%);  /* Carbon Black avec transparence */
+
+  --ey-radius: 0.75rem;
+  --ey-radius-lg: 1rem;
+}
+
+html.dark {
+  color-scheme: dark;
+}
+
+@layer base {
+  * {
+    border-color: var(--ey-border);
+  }
+
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--ey-background);
+    color: var(--ey-foreground);
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  ::selection {
+    background-color: rgba(57, 255, 20, 30%);
+    color: #050505;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer utilities {
+  .glass {
+    background-color: var(--ey-glass);
+    backdrop-filter: blur(24px) saturate(1.2);
+    -webkit-backdrop-filter: blur(24px) saturate(1.2);
+    border: 1px solid var(--ey-border);
+  }
+
+  .glow-brand {
+    box-shadow: 
+      0 0 20px rgba(57, 255, 20, 12%), 
+      0 0 40px rgba(57, 255, 20, 6%),
+      0 0 60px rgba(124, 255, 0, 3%);
+  }
+
+  .glow-neon {
+    box-shadow: 
+      0 0 15px rgba(124, 255, 0, 20%), 
+      0 0 30px rgba(124, 255, 0, 10%);
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .safe-top {
+    padding-top: env(safe-area-inset-top);
+  }
+  .safe-bottom {
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+.prose pre {
+  background: var(--ey-surface) !important;
+  border: 1px solid var(--ey-border-strong) !important;
+  border-radius: var(--ey-radius);
+  padding: 16px;
+  overflow-x: auto;
+}
+
+.prose code {
+  background: var(--ey-brand-dim);
+  color: var(--ey-brand);
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 0.875em;
+}
+
+.prose pre code {
+  background: none;
+  padding: 0;
+}
+
+textarea:focus,
+input:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--ey-ring);
+}
+
+/* Smooth transitions for all interactive elements */
+button, a, input, textarea, select {
+  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  transition-duration: 150ms;
+}
+
+/* Hover effects with neon glow */
+button:hover, a:hover {
+  box-shadow: 0 0 15px rgba(57, 255, 20, 10%);
+}
+
+/* Custom scrollbar avec Electric Lime */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(57, 255, 20, 20%);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(57, 255, 20, 35%);
+}

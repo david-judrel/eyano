@@ -1,0 +1,29 @@
+{$API_DOMAIN:api.example.com} {
+    reverse_proxy api:3001
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    }
+
+    request_body {
+        max_size 10MB
+    }
+}
+
+{$DOMAIN:example.com} {
+    reverse_proxy web:3000
+
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options DENY
+        Referrer-Policy strict-origin-when-cross-origin
+        Strict-Transport-Security "max-age=31536000; includeSubDomains"
+    }
+}
+
+:80 {
+    redir https://{host}{uri} permanent
+}

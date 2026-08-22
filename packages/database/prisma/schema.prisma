@@ -1,0 +1,182 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum AccountProvider {
+  EMAIL
+  GOOGLE
+  APPLE
+  PASSKEY
+}
+
+enum MessageRole {
+  user
+  assistant
+  system
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BANNED
+}
+
+enum MessageStatus {
+  PENDING
+  STREAMING
+  COMPLETED
+  FAILED
+}
+
+enum AIRequestStatus {
+  PENDING
+  SUCCESS
+  FAILED
+  RATE_LIMITED
+}
+
+model User {
+  id            String     @id @default(cuid())
+  email         String     @unique
+  name          String?
+  passwordHash  String?
+  avatarUrl     String?
+  emailVerified Boolean    @default(false)
+  role          UserRole   @default(USER)
+  status        UserStatus @default(ACTIVE)
+  lastLoginAt   DateTime?
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+
+  accounts      Account[]
+  sessions      Session[]
+  conversations Conversation[]
+  usage         Usage[]
+  auditLogs     AuditLog[]
+}
+
+model Account {
+  id              String          @id @default(cuid())
+  userId          String
+  provider        AccountProvider
+  providerAccountId String
+  createdAt       DateTime        @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String?
+  model     String?
+  provider  String?
+  archived  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages Message[]
+}
+
+model Message {
+  id             String        @id @default(cuid())
+  conversationId String
+  role           MessageRole
+  content        String
+  model          String?
+  provider       String?
+  status         MessageStatus @default(COMPLETED)
+  inputTokens    Int?
+  outputTokens   Int?
+  latencyMs      Int?
+  createdAt      DateTime      @default(now())
+
+  conversation Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  attachments  Attachment[]
+  aiRequests   AIRequest[]
+}
+
+model Attachment {
+  id         String   @id @default(cuid())
+  messageId  String
+  fileName   String
+  mimeType   String
+  size       Int
+  storageKey String
+  createdAt  DateTime @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+}
+
+model AIRequest {
+  id             String          @id @default(cuid())
+  messageId      String
+  provider       String
+  model          String
+  keyId          String?
+  inputTokens    Int?
+  outputTokens   Int?
+  latencyMs      Int?
+  status         AIRequestStatus @default(PENDING)
+  errorCode      String?
+  errorMessage   String?
+  createdAt      DateTime        @default(now())
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([provider])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Usage {
+  id          String   @id @default(cuid())
+  userId      String
+  model       String
+  inputTokens Int
+  outputTokens Int
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String
+  action    String
+  target    String?
+  details   Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([action])
+  @@index([createdAt])
+}
