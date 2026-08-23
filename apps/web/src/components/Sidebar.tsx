@@ -12,7 +12,7 @@ import { useLongPress } from '@/hooks/useLongPress';
 import { useTheme } from '@/lib/theme-provider';
 
 interface ConversationItemProps {
-  conv: { id: string; title: string; updatedAt: string };
+  conv: { id: string; title: string | null; updatedAt: string };
   isActive: boolean;
   isEditing: boolean;
   editTitle: string;
