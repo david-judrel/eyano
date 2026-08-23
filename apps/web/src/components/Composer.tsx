@@ -1,7 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState, useCallback } from 'react';
-import { Send, ChevronDown, Plus, X, Image, FileText, Paperclip, StopCircle } from 'lucide-react';
+import { Send, ChevronDown, Plus, X, Image, FileText, Paperclip, StopCircle, Loader2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
 import { api } from '@/lib/api';
@@ -60,6 +60,10 @@ export function Composer({ onRequireLogin }: ComposerProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+  
+  // ✅ COUCHE 1 : Verrou anti-double-soumission
+  const isSubmittingRef = useRef(false);
+  
   const router = useRouter();
 
   const {
@@ -81,9 +85,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
     if (pendingGuestMessage && user && !isStreaming) {
       setInput(pendingGuestMessage);
       setPendingGuestMessage(null);
-      setTimeout(() => {
-        handleSubmit();
-      }, 100);
+      setTimeout(() => handleSubmit(), 100);
     }
   }, [pendingGuestMessage, user]);
 
@@ -179,66 +181,78 @@ export function Composer({ onRequireLogin }: ComposerProps) {
     setStreamingMessageId(null);
   };
 
+  // ✅ FONCTION D'ENVOI CORRIGÉE AVEC PROTECTION ANTI-DOUBLON
   const handleSubmit = async () => {
-    if ((!input.trim() && attachedFiles.length === 0) || isStreaming) return;
+    // ✅ COUCHE 1 : Vérification immédiate du verrou
+    if (isSubmittingRef.current || isStreaming) return;
+    if (!input.trim() && attachedFiles.length === 0) return;
 
-    if (!user) {
-      onRequireLogin?.(input.trim());
-      return;
-    }
-
-    let message = input.trim();
-    if (!message && attachedFiles.length > 0) {
-      const names = attachedFiles.map((f) => f.file.name).join(', ');
-      message = attachedFiles.length === 1 ? `Piece jointe : ${names}` : `${attachedFiles.length} pieces jointes : ${names}`;
-    }
-    setInput('');
-    setDropdownOpen(false);
-
-    let convId = activeConversationId;
-    if (!convId) {
-      const conv = await api.createConversation();
-      convId = conv.id;
-      setActiveConversationId(conv.id);
-      addConversation(conv);
-      router.push(`/c/${conv.id}`);
-    }
-
-    const finalConvId = convId!;
-
-    const tempUserMsgId = `temp-user-${Date.now()}`;
-    addMessage({
-      id: tempUserMsgId,
-      role: 'user',
-      content: message,
-      createdAt: new Date().toISOString(),
-      attachments: attachedFiles.map(af => ({
-        fileName: af.file.name,
-        mimeType: af.file.type,
-        size: af.file.size,
-        url: af.preview,
-      })),
-    });
-
-    const images: { mimeType: string; data: string }[] = [];
-    for (const af of attachedFiles) {
-      if (af.type === 'image' && af.file) {
-        const img = await fileToBase64(af.file);
-        images.push(img);
-      }
-    }
-
-    setIsStreaming(true);
-    setStreamingContent('');
-    const filesToSend = [...attachedFiles];
-    setAttachedFiles([]);
-
-    const abortController = new AbortController();
-    abortRef.current = abortController;
-
-    let currentMessageId = '';
+    // ✅ VERROUILLAGE IMMÉDIAT
+    isSubmittingRef.current = true;
 
     try {
+      if (!user) {
+        onRequireLogin?.(input.trim());
+        return;
+      }
+
+      let message = input.trim();
+      if (!message && attachedFiles.length > 0) {
+        const names = attachedFiles.map((f) => f.file.name).join(', ');
+        message = attachedFiles.length === 1 
+          ? `Piece jointe : ${names}` 
+          : `${attachedFiles.length} pieces jointes : ${names}`;
+      }
+      
+      // Vider l'input ET fermer le dropdown IMMÉDIATEMENT
+      setInput('');
+      setDropdownOpen(false);
+
+      let convId = activeConversationId;
+      if (!convId) {
+        const conv = await api.createConversation();
+        convId = conv.id;
+        setActiveConversationId(conv.id);
+        addConversation(conv);
+        router.push(`/c/${conv.id}`);
+      }
+
+      const finalConvId = convId!;
+
+      // ✅ COUCHE 2 : ID unique basé sur timestamp + random pour éviter collisions
+      const tempUserMsgId = `user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      
+      addMessage({
+        id: tempUserMsgId,
+        role: 'user',
+        content: message,
+        createdAt: new Date().toISOString(),
+        attachments: attachedFiles.map(af => ({
+          fileName: af.file.name,
+          mimeType: af.file.type,
+          size: af.file.size,
+          url: af.preview,
+        })),
+      });
+
+      const images: { mimeType: string; data: string }[] = [];
+      for (const af of attachedFiles) {
+        if (af.type === 'image' && af.file) {
+          const img = await fileToBase64(af.file);
+          images.push(img);
+        }
+      }
+
+      setIsStreaming(true);
+      setStreamingContent('');
+      const filesToSend = [...attachedFiles];
+      setAttachedFiles([]);
+
+      const abortController = new AbortController();
+      abortRef.current = abortController;
+
+      let currentMessageId = '';
+
       await api.chatStream(finalConvId, message, selectedModel, images.length > 0 ? images : undefined, {
         onStart: () => {},
         onMessageCreated: (data) => {
@@ -264,7 +278,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
         onDone: (data) => {
           if (currentMessageId) {
             updateMessage(currentMessageId, {
-              content: data.messageId ? useAppStore.getState().messages.find(m => m.id === currentMessageId)?.content || '' : '',
+              content: useAppStore.getState().messages.find(m => m.id === currentMessageId)?.content || '',
               status: 'COMPLETED',
               inputTokens: data.inputTokens,
               outputTokens: data.outputTokens,
@@ -290,18 +304,35 @@ export function Composer({ onRequireLogin }: ComposerProps) {
           });
         },
       });
-    } catch {
+
+      filesToSend.forEach((f) => {
+        if (f.preview) URL.revokeObjectURL(f.preview);
+      });
+      
+    } catch (err) {
+      console.error('Submit error:', err);
       setIsStreaming(false);
       setStreamingContent('');
       setStreamingMessageId(null);
+    } finally {
+      // ✅ DÉVERROUILLAGE SEULEMENT À LA FIN (avec délai de sécurité)
+      setTimeout(() => {
+        isSubmittingRef.current = false;
+      }, 800);
     }
-
-    filesToSend.forEach((f) => {
-      if (f.preview) URL.revokeObjectURL(f.preview);
-    });
   };
 
-  const canSend = (input.trim() || attachedFiles.length > 0) && !isStreaming;
+  // ✅ COUCHE 3 : Gestionnaire de touche sécurisé pour mobile
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      // ✅ Empêche le double déclenchement sur mobile
+      e.preventDefault();
+      e.stopPropagation();
+      handleSubmit();
+    }
+  }, [handleSubmit]);
+
+  const canSend = (input.trim() || attachedFiles.length > 0) && !isStreaming && !isSubmittingRef.current;
 
   return (
     <div className="w-full min-w-0 pb-2 pt-1 relative">
@@ -366,7 +397,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
 
             <div className="flex-1 min-w-0 relative">
               <textarea ref={textareaRef} value={input} onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSubmit(); } }}
+                onKeyDown={handleKeyDown} // ✅ Utilise le handler sécurisé
                 onPaste={handlePaste}
                 placeholder={attachedFiles.length > 0 ? `Ajouter un message...` : 'Posez votre question a Eyano...'}
                 rows={1}
@@ -396,7 +427,12 @@ export function Composer({ onRequireLogin }: ComposerProps) {
                 className={cn('shrink-0 p-2.5 rounded-full transition-all duration-200 flex items-center justify-center mb-1',
                   'disabled:opacity-15 disabled:cursor-not-allowed',
                   canSend ? 'bg-[#39FF14] text-[#050505] hover:brightness-110 active:scale-90 shadow-[0_0_15px_rgba(57,255,20,0.25)]' : 'bg-[#F2FFF0]/[6%] text-[#F2FFF0]/20')}>
-                <Send className="h-4 w-4" />
+                {/* ✅ Affiche un loader si en cours de soumission */}
+                {isSubmittingRef.current ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
               </button>
             )}
           </div>
