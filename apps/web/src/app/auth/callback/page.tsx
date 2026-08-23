@@ -46,19 +46,19 @@ function CallbackHandler() {
   return (
     <div className="flex flex-col items-center gap-4">
       <Logo size="lg" className="animate-spin opacity-60" />
-      <p className="text-[#F2FFF0]/40 text-sm">Connexion en cours...</p>
+      <p className="text-muted text-sm">Connexion en cours...</p>
     </div>
   );
 }
 
 export default function AuthCallbackPage() {
   return (
-    <div className="flex min-h-screen w-full bg-[#050505] items-center justify-center">
+    <div className="flex min-h-screen w-full bg-background items-center justify-center">
       <ToastContainer />
       <Suspense fallback={
         <div className="flex flex-col items-center gap-4">
           <Logo size="lg" className="animate-spin opacity-60" />
-          <p className="text-[#F2FFF0]/40 text-sm">Chargement...</p>
+          <p className="text-muted text-sm">Chargement...</p>
         </div>
       }>
         <CallbackHandler />
