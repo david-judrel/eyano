@@ -124,7 +124,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       )}
 
       {/* Main */}
-      <main className="flex-1 flex flex-col min-h-screen overflow-hidden">
+      <main className="flex-1 flex flex-col h-full overflow-hidden">
         {/* Top bar */}
         <header className="flex h-16 items-center gap-4 border-b border-[#F2FFF0]/[4%] bg-[#0A0C0B]/80 backdrop-blur-xl px-4">
           <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 text-[#F2FFF0]/40 hover:text-[#F2FFF0]">
