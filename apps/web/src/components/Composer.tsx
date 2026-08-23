@@ -1,6 +1,7 @@
 'use client';
 
 import { useRef, useEffect, useState, useCallback } from 'react';
+
 import {
   Send,
   X,
@@ -11,8 +12,8 @@ import {
   Loader2,
   Camera,
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
+import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -38,9 +39,11 @@ const MAX_FILES = 5;
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} o`;
+
   if (bytes < 1024 * 1024) {
     return `${(bytes / 1024).toFixed(1)} Ko`;
   }
+
   return `${(bytes / (1024 * 1024)).toFixed(1)} Mo`;
 }
 
@@ -133,7 +136,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
 
   const { addToast } = useToast();
 
-  /*
+  /**
    * Message invité en attente après connexion
    */
   useEffect(() => {
@@ -153,7 +156,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
     setPendingGuestMessage,
   ]);
 
-  /*
+  /**
    * Auto-resize du textarea
    */
   useEffect(() => {
@@ -167,7 +170,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
     }
   }, [input]);
 
-  /*
+  /**
    * Fermer le dropdown lorsqu'on clique ailleurs
    */
   useEffect(() => {
@@ -187,7 +190,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
     };
   }, []);
 
-  /*
+  /**
    * Nettoyage des previews lorsque le composant est démonté
    */
   useEffect(() => {
@@ -200,13 +203,12 @@ export function Composer({ onRequireLogin }: ComposerProps) {
     };
   }, [attachedFiles]);
 
-  /*
+  /**
    * Ajouter des fichiers
    */
   const validateAndAddFiles = useCallback(
     (fileList: FileList | File[]) => {
       const current = attachedFiles;
-
       const newFiles: AttachedFile[] = [];
 
       let imageCount = current.filter(
@@ -272,7 +274,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
     [attachedFiles, addToast]
   );
 
-  /*
+  /**
    * Coller une image / un fichier
    */
   const handlePaste = useCallback(
@@ -301,13 +303,12 @@ export function Composer({ onRequireLogin }: ComposerProps) {
     [validateAndAddFiles]
   );
 
-  /*
+  /**
    * Drag & Drop
    */
   const handleDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
-
       setIsDragging(false);
 
       if (e.dataTransfer.files.length > 0) {
@@ -317,7 +318,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
     [validateAndAddFiles]
   );
 
-  /*
+  /**
    * Supprimer une pièce jointe
    */
   const removeFile = (index: number) => {
@@ -332,7 +333,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
     });
   };
 
-  /*
+  /**
    * Arrêter le streaming
    */
   const handleStop = () => {
@@ -343,7 +344,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
     setStreamingMessageId(null);
   };
 
-  /*
+  /**
    * Envoi du message
    */
   const handleSubmit = async () => {
@@ -360,7 +361,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
     isSubmittingRef.current = true;
 
     try {
-      /*
+      /**
        * Utilisateur non connecté
        */
       if (!user) {
@@ -370,7 +371,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
 
       let message = input.trim();
 
-      /*
+      /**
        * Message automatique si uniquement des fichiers
        */
       if (!message && attachedFiles.length > 0) {
@@ -384,13 +385,13 @@ export function Composer({ onRequireLogin }: ComposerProps) {
             : `${attachedFiles.length} pièces jointes : ${names}`;
       }
 
-      /*
+      /**
        * Vider immédiatement l'input
        */
       setInput('');
       setDropdownOpen(false);
 
-      /*
+      /**
        * Créer une conversation si nécessaire
        */
       let convId = activeConversationId;
@@ -406,16 +407,27 @@ export function Composer({ onRequireLogin }: ComposerProps) {
         router.push(`/c/${conv.id}`);
       }
 
+      /**
+       * IMPORTANT :
+       * Garantit que convId est bien un string
+       * avant de l'utiliser dans chatStream.
+       */
+      if (!convId) {
+        throw new Error(
+          'Impossible de déterminer l’identifiant de la conversation'
+        );
+      }
+
       const finalConvId = convId;
 
-      /*
+      /**
        * ID temporaire unique pour le message utilisateur
        */
       const tempUserMsgId = `user-${Date.now()}-${Math.random()
         .toString(36)
         .substring(2, 11)}`;
 
-      /*
+      /**
        * Ajouter immédiatement le message utilisateur
        */
       addMessage({
@@ -431,7 +443,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
         })),
       });
 
-      /*
+      /**
        * Convertir les images en Base64
        */
       const images: {
@@ -446,26 +458,25 @@ export function Composer({ onRequireLogin }: ComposerProps) {
         }
       }
 
-      /*
+      /**
        * Préparer les fichiers avant de vider le state
        */
       const filesToSend = [...attachedFiles];
 
       setAttachedFiles([]);
 
-      /*
+      /**
        * Activer le streaming
        */
       setIsStreaming(true);
       setStreamingContent('');
 
       const abortController = new AbortController();
-
       abortRef.current = abortController;
 
       let currentMessageId = '';
 
-      /*
+      /**
        * Appel API streaming
        */
       await api.chatStream(
@@ -558,7 +569,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
         }
       );
 
-      /*
+      /**
        * Libérer les previews
        */
       filesToSend.forEach((f) => {
@@ -574,7 +585,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
       setStreamingMessageId(null);
       abortRef.current = null;
     } finally {
-      /*
+      /**
        * Déverrouillage avec petit délai de sécurité
        */
       setTimeout(() => {
@@ -583,7 +594,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
     }
   };
 
-  /*
+  /**
    * Gestion de la touche Enter
    */
   const handleKeyDown = useCallback(
@@ -598,7 +609,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
     [handleSubmit]
   );
 
-  /*
+  /**
    * État du bouton envoyer
    */
   const canSend =
@@ -608,7 +619,6 @@ export function Composer({ onRequireLogin }: ComposerProps) {
 
   return (
     <div className="w-full min-w-0 pb-2 pt-1 relative">
-      {/* Zone Drag & Drop */}
       {isDragging && (
         <div
           className="absolute inset-x-0 bottom-0 top-[-100px] z-50 flex flex-col items-center justify-center bg-background/90 backdrop-blur-md rounded-3xl border-2 border-dashed border-brand/50 animate-in fade-in"
@@ -643,14 +653,16 @@ export function Composer({ onRequireLogin }: ComposerProps) {
                   ? 'border-brand/20 bg-surface/80 shadow-[0_0_15px_rgba(57,255,20,0.05)]'
                   : 'border-border bg-surface/60 hover:border-border-strong'
           )}
+
           onDrop={handleDrop}
+
           onDragOver={(e) => {
             e.preventDefault();
             setIsDragging(true);
           }}
+
           onDragLeave={() => setIsDragging(false)}
         >
-          {/* Fichiers attachés */}
           {attachedFiles.length > 0 && (
             <div className="flex flex-wrap gap-2 px-4 pt-4 pb-2 animate-in slide-in-from-top-2 duration-300">
               {attachedFiles.map((af, i) => (
@@ -692,7 +704,6 @@ export function Composer({ onRequireLogin }: ComposerProps) {
             </div>
           )}
 
-          {/* Zone de saisie */}
           <div className="flex items-end gap-2 px-3 py-3">
             <div className="shrink-0 mb-1">
               <button
@@ -728,7 +739,6 @@ export function Composer({ onRequireLogin }: ComposerProps) {
               />
             </div>
 
-            {/* Bouton envoyer / arrêter */}
             {isStreaming ? (
               <button
                 type="button"
@@ -751,7 +761,6 @@ export function Composer({ onRequireLogin }: ComposerProps) {
                     : 'bg-border text-foreground/20'
                 )}
               >
-                {/* Affiche un loader si soumission en cours */}
                 {isSubmittingRef.current ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
                 ) : (
@@ -762,10 +771,8 @@ export function Composer({ onRequireLogin }: ComposerProps) {
           </div>
         </div>
 
-        {/* Dropdown pièces jointes */}
         {dropdownOpen && (
           <div className="absolute bottom-full left-0 mb-3 w-56 rounded-2xl bg-surface/95 backdrop-blur-xl border border-border shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 overflow-hidden p-1.5">
-            {/* Image */}
             <button
               type="button"
               onClick={() => {
@@ -785,7 +792,6 @@ export function Composer({ onRequireLogin }: ComposerProps) {
               </span>
             </button>
 
-            {/* Caméra */}
             <button
               type="button"
               onClick={() => {
@@ -805,7 +811,6 @@ export function Composer({ onRequireLogin }: ComposerProps) {
               </span>
             </button>
 
-            {/* Document */}
             <button
               type="button"
               onClick={() => {
@@ -828,7 +833,6 @@ export function Composer({ onRequireLogin }: ComposerProps) {
         )}
       </div>
 
-      {/* Input image */}
       <input
         ref={imageInputRef}
         type="file"
@@ -844,7 +848,6 @@ export function Composer({ onRequireLogin }: ComposerProps) {
         }}
       />
 
-      {/* Input caméra */}
       <input
         ref={cameraInputRef}
         type="file"
@@ -860,7 +863,6 @@ export function Composer({ onRequireLogin }: ComposerProps) {
         }}
       />
 
-      {/* Input documents */}
       <input
         ref={fileInputRef}
         type="file"
