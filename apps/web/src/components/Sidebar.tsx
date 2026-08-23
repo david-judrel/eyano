@@ -293,7 +293,7 @@ export function Sidebar() {
                   <span className="text-[10px] text-brand/70 font-medium">En ligne</span>
                 </div>
               </div>
-              <div className="flex items-center gap-0.5 lg:opacity-0 lg:group-hover/profile:opacity-100 transition-all duration-200">
+              <div className="flex items-center gap-0.5">
                 <button onClick={(e) => { e.stopPropagation(); router.push('/profile'); setSidebarOpen(false); }}
                   className="p-2 rounded-lg hover:bg-surface-2 transition-colors text-foreground/30 hover:text-foreground" title="Paramètres">
                   <Settings className="h-4 w-4" />
