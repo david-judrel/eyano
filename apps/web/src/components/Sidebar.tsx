@@ -24,7 +24,16 @@ interface ConversationItemProps {
 }
 
 function ConversationItem({ conv, isActive, isEditing, editTitle, onEditTitleChange, onSelect, onRename, onCancelEdit, onContextMenu }: ConversationItemProps) {
-  const longPressHandlers = useLongPress({ onLongPress: onContextMenu });
+  const longPressHandlers = useLongPress({
+  onLongPress: () => {
+    // Le hook ne fournit pas directement l'événement,
+    // l'événement est géré par onContextMenu/onClick séparément.
+    onContextMenu({
+      preventDefault: () => {},
+      currentTarget: document.body,
+    } as unknown as React.MouseEvent);
+  },
+});
 
   if (isEditing) {
     return (
