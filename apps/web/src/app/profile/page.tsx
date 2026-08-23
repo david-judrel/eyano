@@ -2,7 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Save, Loader2, Mail, User, Calendar, MessageSquare, Cpu, LogOut, Pencil, X, Zap } from 'lucide-react';
+import { 
+  ArrowLeft, Save, Loader2, Mail, User, Calendar, LogOut, Pencil, X, 
+  ShieldCheck, Key, Palette, Database, Bell, Globe, ChevronRight, Eye, EyeOff 
+} from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { api } from '@/lib/api';
 import { Avatar } from '@/components/ui/avatar';
@@ -10,47 +13,50 @@ import { Logo } from '@/components/ui/logo';
 import { ToastContainer } from '@/components/Toast';
 import { useToast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
-
-interface UsageStats {
-  totalInputTokens: number;
-  totalOutputTokens: number;
-  byModel: Record<string, { inputTokens: number; outputTokens: number }>;
-}
+import { useTheme } from '@/lib/theme-provider'; // Assure-toi que ce hook existe
 
 export default function ProfilePage() {
   const router = useRouter();
-  const { user, setUser, conversations, setConversations } = useAppStore();
+  const { user, setUser, setConversations } = useAppStore();
   const { addToast } = useToast();
+  const { theme, setTheme, resolvedTheme } = useTheme();
 
   const [name, setName] = useState('');
-  const [editing, setEditing] = useState(false);
+  const [apiKey, setApiKey] = useState('sk-eyano-xxxxxxxxxxxx'); // Fake key pour démo
+  const [showKey, setShowKey] = useState(false);
+  const [editingName, setEditingName] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [usage, setUsage] = useState<UsageStats | null>(null);
+
+  // Préférences simulées
+  const [prefs, setPrefs] = useState({
+    language: 'fr',
+    notifications: true,
+    dataRetention: '30d',
+    modelDefault: 'gnoxe-brains-1'
+  });
 
   useEffect(() => {
     const token = api.getToken();
     if (!token) { router.push('/login'); return; }
 
-    Promise.all([api.getMe(), api.getConversations(), api.getUsage()])
-      .then(([u, convos, stats]) => {
+    api.getMe()
+      .then((u) => {
         setUser(u);
         setName(u.name || '');
-        setConversations(convos);
-        setUsage(stats);
       })
       .catch(() => { api.setToken(null); router.push('/login'); })
       .finally(() => setLoading(false));
   }, []);
 
-  const handleSave = async () => {
+  const handleSaveName = async () => {
     if (!name.trim()) return;
     setSaving(true);
     try {
       const updated = await api.patch<any>('/users/me', { name: name.trim() });
       setUser({ ...user!, name: updated.name });
-      setEditing(false);
-      addToast('Profil mis à jour', 'success');
+      setEditingName(false);
+      addToast('Nom mis à jour', 'success');
     } catch {
       addToast('Erreur lors de la mise à jour', 'error');
     } finally {
@@ -67,161 +73,212 @@ export default function ProfilePage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen w-full bg-[#050505] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[#39FF14]" />
+      <div className="flex h-[100dvh] w-full bg-[var(--ey-background)] items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-[var(--ey-brand)]" />
       </div>
     );
   }
 
   if (!user) return null;
 
-  const totalConversations = conversations.length;
-  const totalMessages = conversations.reduce((acc, c) => acc + (c._count?.messages || 0), 0);
-  const totalTokens = (usage?.totalInputTokens || 0) + (usage?.totalOutputTokens || 0);
-
   return (
-    // ✅ CONTENEUR SCROLLABLE RESPONSIVE
-    <div className="flex flex-col h-full w-full bg-[#050505] overflow-y-auto">
+    <div className="min-h-[100dvh] lg:min-h-screen w-full bg-[var(--ey-background)] flex flex-col">
       <ToastContainer />
 
-      {/* Header Sticky */}
-      <div className="sticky top-0 z-30 backdrop-blur-xl bg-[#050505]/90 border-b border-[#F2FFF0]/[4%] shrink-0">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 h-14 sm:h-16 flex items-center justify-between">
-          <button onClick={() => router.push('/')}
-            className="flex items-center gap-2 text-[#F2FFF0]/40 hover:text-[#39FF14] transition-colors group">
-            <ArrowLeft className="h-4 w-4 group-hover:-translate-x-0.5 transition-transform" />
-            <span className="text-sm font-medium">Retour</span>
+      {/* Header App IA Pro */}
+      <header className="sticky top-0 z-30 backdrop-blur-xl bg-[var(--ey-background)]/90 border-b border-[var(--ey-border)] shrink-0">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 lg:h-16 flex items-center justify-between">
+          <button onClick={() => router.back()} 
+            className="flex items-center gap-2 text-[var(--ey-muted-foreground)] hover:text-[var(--ey-brand)] transition-colors active:scale-95 touch-manipulation">
+            <ArrowLeft className="h-5 w-5" />
+            <span className="text-sm font-medium hidden sm:inline">Retour au chat</span>
           </button>
-          <div className="flex items-center gap-2 opacity-60">
+          <div className="flex items-center gap-3 opacity-70">
             <Logo size="sm" />
-            <span className="text-sm font-bold tracking-tight hidden sm:inline">Eyano</span>
+            <span className="text-sm font-bold tracking-tight hidden sm:inline">Paramètres & Compte</span>
           </div>
         </div>
-      </div>
+      </header>
 
-      {/* Contenu Principal - Padding adaptatif mobile/desktop */}
-      <main className="flex-1 w-full max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-10 space-y-6 sm:space-y-8 pb-20">
-
-        {/* Carte Profil - Padding réduit sur mobile */}
-        <div className="relative rounded-2xl sm:rounded-3xl border border-[#F2FFF0]/[6%] bg-[#0D0F0E]/60 backdrop-blur-xl overflow-hidden">
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(57,255,20,0.08)_0%,transparent_50%)] pointer-events-none" />
-          <div className="relative p-5 sm:p-8 md:p-10 flex flex-col sm:flex-row items-center sm:items-start gap-5 sm:gap-8">
-            <Avatar src={user.avatarUrl} fallback={user.name?.[0] || user.email[0]?.toUpperCase()} size="lg"
-              className="w-20 h-20 sm:w-24 sm:h-24 md:w-28 md:h-28 text-2xl sm:text-3xl bg-[#39FF14]/[10%] text-[#39FF14] border-2 border-[#39FF14]/20 shadow-[0_0_30px_rgba(57,255,20,0.1)] shrink-0" />
-            <div className="flex-1 text-center sm:text-left min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-[#F2FFF0] tracking-tight truncate">{user.name || 'Utilisateur'}</h1>
-              <p className="text-sm sm:text-base text-[#F2FFF0]/40 mt-1 sm:mt-2 font-light break-all">{user.email}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Stats Grid - 1 colonne mobile, 3 colonnes desktop */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-          {[
-            { label: 'Conversations', value: totalConversations, icon: MessageSquare },
-            { label: 'Messages', value: totalMessages, icon: Zap },
-            { label: 'Tokens utilisés', value: totalTokens > 0 ? `${(totalTokens / 1000).toFixed(1)}k` : '0', icon: Cpu },
-          ].map((stat, i) => (
-            <div key={i} className="rounded-xl sm:rounded-2xl border border-[#F2FFF0]/[6%] bg-[#0D0F0E]/60 p-4 sm:p-6 flex flex-col items-center justify-center gap-2 sm:gap-3 hover:border-[#39FF14]/20 transition-colors duration-300">
-              <stat.icon className="h-5 w-5 sm:h-6 sm:w-6 text-[#39FF14]/60" />
-              <div className="text-2xl sm:text-3xl font-bold text-[#F2FFF0]">{stat.value}</div>
-              <div className="text-[10px] sm:text-xs font-medium text-[#F2FFF0]/30 uppercase tracking-wider">{stat.label}</div>
-            </div>
-          ))}
-        </div>
-
-        {/* Section Infos Compte */}
-        <div className="rounded-2xl sm:rounded-3xl border border-[#F2FFF0]/[6%] bg-[#0D0F0E]/60 backdrop-blur-xl overflow-hidden">
-          <div className="px-5 sm:px-8 py-4 sm:py-5 border-b border-[#F2FFF0]/[4%]">
-            <h2 className="text-base sm:text-lg font-semibold text-[#F2FFF0]">Informations du compte</h2>
-          </div>
-          <div className="p-5 sm:p-8 space-y-6 sm:space-y-8">
-
-            {/* Nom */}
-            <div>
-              <label className="text-[10px] sm:text-xs font-bold text-[#F2FFF0]/30 uppercase tracking-widest mb-2 sm:mb-3 block">Nom d'affichage</label>
-              {!editing ? (
-                <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                  <div className="relative flex-1">
-                    <User className="absolute left-3 sm:left-4 top-1/2 h-4 sm:h-5 w-4 sm:w-5 -translate-y-1/2 text-[#F2FFF0]/20" />
-                    <input type="text" value={user.name || ''} disabled
-                      className="h-12 sm:h-14 w-full rounded-xl sm:rounded-2xl border border-[#F2FFF0]/[8%] bg-[#050505]/50 pl-10 sm:pl-12 pr-4 text-sm sm:text-base text-[#F2FFF0]/60 cursor-not-allowed" />
+      <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-6 lg:py-10 space-y-8 pb-24 lg:pb-10">
+        
+        {/* GRILLE PRINCIPALE : Identité (Gauche) + Options Fonctionnelles (Droite) */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
+          
+          {/* COLONNE GAUCHE : IDENTITÉ (3 colonnes sur desktop) */}
+          <div className="lg:col-span-4 space-y-6">
+            
+            {/* Carte Profil Premium */}
+            <div className="relative rounded-2xl border border-[var(--ey-border)] bg-[var(--ey-surface)] overflow-hidden p-6 flex flex-col items-center text-center gap-4">
+              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(57,255,20,0.06)_0%,transparent_50%)] pointer-events-none" />
+              
+              <Avatar src={user.avatarUrl} fallback={user.name?.[0]} size="lg"
+                className="w-24 h-24 text-3xl bg-[var(--ey-brand-dim)] text-[var(--ey-brand)] border-2 border-[var(--ey-brand)]/20 shadow-lg relative z-10" />
+              
+              <div className="w-full relative z-10">
+                {!editingName ? (
+                  <>
+                    <h1 className="text-xl font-bold text-[var(--ey-foreground)] truncate">{user.name || 'Utilisateur'}</h1>
+                    <p className="text-sm text-[var(--ey-muted-foreground)] mt-1 break-all">{user.email}</p>
+                    {user.role && (
+                      <div className="inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-full bg-[var(--ey-brand-dim)] border border-[var(--ey-brand)]/15">
+                        <ShieldCheck className="h-3 w-3 text-[var(--ey-brand)]" />
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--ey-brand)]">{user.role}</span>
+                      </div>
+                    )}
+                    <button onClick={() => setEditingName(true)} 
+                      className="mt-4 w-full h-10 rounded-xl border border-[var(--ey-border)] text-xs font-bold text-[var(--ey-muted-foreground)] hover:text-[var(--ey-brand)] hover:border-[var(--ey-brand)]/30 transition-all flex items-center justify-center gap-2 touch-manipulation">
+                      <Pencil className="h-3.5 w-3.5" /> Modifier le profil
+                    </button>
+                  </>
+                ) : (
+                  <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
+                    <input value={name} onChange={(e) => setName(e.target.value)} autoFocus maxLength={60}
+                      className="w-full h-10 rounded-xl border border-[var(--ey-brand)]/40 bg-[var(--ey-background)] px-3 text-sm text-[var(--ey-foreground)] focus:outline-none" placeholder="Votre nom" />
+                    <div className="flex gap-2">
+                      <button onClick={handleSaveName} disabled={saving || name.length < 3}
+                        className="flex-1 h-9 rounded-lg bg-[var(--ey-brand)] text-[var(--ey-brand-foreground)] text-xs font-bold active:scale-95 touch-manipulation">
+                        {saving ? <Loader2 className="h-3 w-3 animate-spin mx-auto" /> : 'Sauvegarder'}
+                      </button>
+                      <button onClick={() => setEditingName(false)}
+                        className="h-9 w-9 rounded-lg border border-[var(--ey-border)] text-[var(--ey-muted-foreground)] active:scale-95 touch-manipulation flex items-center justify-center">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
-                  <button onClick={() => { setEditing(true); setName(user.name || ''); }}
-                    className="h-12 sm:h-14 px-4 sm:px-6 rounded-xl sm:rounded-2xl flex items-center justify-center sm:justify-start gap-2 text-sm font-bold border border-[#F2FFF0]/[8%] text-[#F2FFF0]/50 hover:text-[#39FF14] hover:border-[#39FF14]/30 hover:bg-[#39FF14]/[5%] transition-all active:scale-95 w-full sm:w-auto">
-                    <Pencil className="h-4 w-4" /> Modifier
+                )}
+              </div>
+            </div>
+
+            {/* Détails Techniques Compte */}
+            <div className="rounded-2xl border border-[var(--ey-border)] bg-[var(--ey-surface)] overflow-hidden divide-y divide-[var(--ey-border)]">
+              {[
+                { icon: Mail, label: 'Email', value: user.email },
+                { icon: Calendar, label: 'Membre depuis', value: new Date(user.createdAt || Date.now()).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) },
+                { icon: Database, label: 'ID Utilisateur', value: user.id?.slice(0, 8) + '...' },
+              ].map((item, i) => (
+                <div key={i} className="px-4 py-3 flex items-center gap-3">
+                  <item.icon className="h-4 w-4 text-[var(--ey-muted-foreground)] shrink-0" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[10px] font-bold text-[var(--ey-muted-foreground)] uppercase tracking-wider">{item.label}</p>
+                    <p className="text-sm text-[var(--ey-foreground)] truncate font-mono">{item.value}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* COLONNE DROITE : OPTIONS FONCTIONNELLES (8 colonnes sur desktop) */}
+          <div className="lg:col-span-8 space-y-6">
+            
+            {/* Section Clé API (Fictive pour l'UX) */}
+            <div className="rounded-2xl border border-[var(--ey-border)] bg-[var(--ey-surface)] overflow-hidden">
+              <div className="px-5 py-4 border-b border-[var(--ey-border)] flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-[var(--ey-brand-dim)]"><Key className="h-4 w-4 text-[var(--ey-brand)]" /></div>
+                <div><h2 className="text-base font-semibold text-[var(--ey-foreground)]">Clé API</h2><p className="text-xs text-[var(--ey-muted-foreground)]">Utilisez cette clé pour accéder à l'API Eyano.</p></div>
+              </div>
+              <div className="p-5">
+                <div className="flex items-center gap-2 bg-[var(--ey-background)] border border-[var(--ey-border)] rounded-xl px-4 py-3 group focus-within:border-[var(--ey-brand)]/40 transition-colors">
+                  <code className="flex-1 text-sm font-mono text-[var(--ey-foreground)] truncate">
+                    {showKey ? apiKey : '••••••••••••••••••••••••••••••••'}
+                  </code>
+                  <button onClick={() => setShowKey(!showKey)} className="p-2 text-[var(--ey-muted-foreground)] hover:text-[var(--ey-foreground)] transition-colors touch-manipulation">
+                    {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
+                  <button onClick={() => { navigator.clipboard.writeText(apiKey); addToast('Clé copiée', 'success'); }} 
+                    className="px-3 py-1.5 rounded-lg bg-[var(--ey-surface-2)] text-xs font-bold text-[var(--ey-foreground)] hover:bg-[var(--ey-brand-dim)] hover:text-[var(--ey-brand)] transition-all touch-manipulation">
+                    Copier
                   </button>
                 </div>
-              ) : (
-                <div className="space-y-3 animate-in fade-in slide-in-from-top-2 duration-200">
-                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                    <div className="relative flex-1 group">
-                      <User className="absolute left-3 sm:left-4 top-1/2 h-4 sm:h-5 w-4 sm:w-5 -translate-y-1/2 text-[#F2FFF0]/20 group-focus-within:text-[#39FF14] transition-colors" />
-                      <input type="text" value={name} onChange={(e) => setName(e.target.value)} maxLength={60} autoFocus
-                        className={cn('h-12 sm:h-14 w-full rounded-xl sm:rounded-2xl border bg-[#050505] pl-10 sm:pl-12 pr-14 sm:pr-16 text-sm sm:text-base text-[#F2FFF0] placeholder:text-[#F2FFF0]/20 focus:outline-none transition-all',
-                          name.length > 0 && name.length < 3 ? 'border-red-500/40 focus:border-red-500/60' : 'border-[#39FF14]/40 focus:border-[#39FF14]/60')}
-                        placeholder="Votre nom complet" />
-                      <span className={cn('absolute right-3 sm:right-4 top-1/2 -translate-y-1/2 text-[10px] sm:text-xs font-bold', name.length >= 60 ? 'text-yellow-400/70' : 'text-[#F2FFF0]/20')}>{name.length}/60</span>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      <button onClick={handleSave} disabled={saving || name.trim().length < 3}
-                        className={cn('h-12 sm:h-14 px-4 sm:px-6 rounded-xl sm:rounded-2xl flex items-center gap-2 text-sm font-bold transition-all flex-1 sm:flex-none justify-center',
-                          name.trim().length >= 3 ? 'bg-[#39FF14] text-[#050505] hover:brightness-110 active:scale-95' : 'bg-[#F2FFF0]/[6%] text-[#F2FFF0]/20 cursor-not-allowed')}>
-                        {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />} Sauvegarder
-                      </button>
-                      <button onClick={() => { setEditing(false); setName(user.name || ''); }}
-                        className="h-12 sm:h-14 w-12 sm:w-14 rounded-xl sm:rounded-2xl flex items-center justify-center border border-[#F2FFF0]/[8%] text-[#F2FFF0]/30 hover:text-red-400 hover:border-red-500/30 hover:bg-red-500/10 transition-all active:scale-95 shrink-0">
-                        <X className="h-4 sm:h-5 w-4 sm:w-5" />
-                      </button>
-                    </div>
-                  </div>
-                  {name.length > 0 && name.length < 3 && <p className="text-[10px] sm:text-xs text-red-400/70 ml-1">Minimum 3 caractères requis.</p>}
+                <p className="text-[10px] text-[var(--ey-muted-foreground)] mt-2 ml-1">Ne partagez jamais votre clé API publiquement.</p>
+              </div>
+            </div>
+
+            {/* Grille de Préférences App */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              
+              {/* Thème */}
+              <div className="rounded-2xl border border-[var(--ey-border)] bg-[var(--ey-surface)] p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 rounded-lg bg-[var(--ey-surface-2)]"><Palette className="h-4 w-4 text-[var(--ey-muted-foreground)]" /></div>
+                  <h3 className="text-sm font-semibold text-[var(--ey-foreground)]">Apparence</h3>
                 </div>
-              )}
+                <div className="flex bg-[var(--ey-background)] rounded-xl p-1 border border-[var(--ey-border)]">
+                  {(['system', 'dark', 'light'] as const).map((t) => (
+                    <button key={t} onClick={() => setTheme(t)}
+                      className={cn("flex-1 py-2 rounded-lg text-xs font-bold capitalize transition-all touch-manipulation",
+                        theme === t ? 'bg-[var(--ey-surface-2)] text-[var(--ey-foreground)] shadow-sm' : 'text-[var(--ey-muted-foreground)] hover:text-[var(--ey-foreground)]')}>
+                      {t === 'system' ? 'Auto' : t === 'dark' ? 'Sombre' : 'Clair'}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Langue & Région */}
+              <div className="rounded-2xl border border-[var(--ey-border)] bg-[var(--ey-surface)] p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 rounded-lg bg-[var(--ey-surface-2)]"><Globe className="h-4 w-4 text-[var(--ey-muted-foreground)]" /></div>
+                  <h3 className="text-sm font-semibold text-[var(--ey-foreground)]">Langue</h3>
+                </div>
+                <select value={prefs.language} onChange={(e) => setPrefs({...prefs, language: e.target.value})}
+                  className="w-full h-10 rounded-xl bg-[var(--ey-background)] border border-[var(--ey-border)] px-3 text-sm text-[var(--ey-foreground)] focus:outline-none appearance-none cursor-pointer touch-manipulation">
+                  <option value="fr">Français 🇫</option>
+                  <option value="en">English 🇬🇧</option>
+                  <option value="ln">Lingala 🇨🇩</option>
+                </select>
+              </div>
+
+              {/* Notifications */}
+              <div className="rounded-2xl border border-[var(--ey-border)] bg-[var(--ey-surface)] p-5 flex flex-col justify-between">
+                <div className="flex items-center gap-3 mb-2">
+                  <div className="p-2 rounded-lg bg-[var(--ey-surface-2)]"><Bell className="h-4 w-4 text-[var(--ey-muted-foreground)]" /></div>
+                  <h3 className="text-sm font-semibold text-[var(--ey-foreground)]">Notifications</h3>
+                </div>
+                <label className="flex items-center justify-between cursor-pointer group touch-manipulation">
+                  <span className="text-xs text-[var(--ey-muted-foreground)]">Alertes par email</span>
+                  <div className={cn("w-11 h-6 rounded-full transition-colors relative", prefs.notifications ? 'bg-[var(--ey-brand)]' : 'bg-[var(--ey-surface-2)]')}>
+                    <div className={cn("absolute top-1 w-4 h-4 rounded-full bg-white transition-transform", prefs.notifications ? 'left-6' : 'left-1')} />
+                  </div>
+                  <input type="checkbox" checked={prefs.notifications} onChange={() => setPrefs({...prefs, notifications: !prefs.notifications})} className="hidden" />
+                </label>
+              </div>
+
+              {/* Rétention Données */}
+              <div className="rounded-2xl border border-[var(--ey-border)] bg-[var(--ey-surface)] p-5">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="p-2 rounded-lg bg-[var(--ey-surface-2)]"><Database className="h-4 w-4 text-[var(--ey-muted-foreground)]" /></div>
+                  <h3 className="text-sm font-semibold text-[var(--ey-foreground)]">Historique</h3>
+                </div>
+                <div className="space-y-2">
+                  {['7d', '30d', 'forever'].map((val) => (
+                    <button key={val} onClick={() => setPrefs({...prefs, dataRetention: val})}
+                      className={cn("w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-all touch-manipulation",
+                        prefs.dataRetention === val ? 'bg-[var(--ey-brand-dim)] text-[var(--ey-brand)] border border-[var(--ey-brand)]/20' : 'text-[var(--ey-muted-foreground)] hover:bg-[var(--ey-surface-2)]')}>
+                      <span>{val === '7d' ? '7 jours' : val === '30d' ? '30 jours' : 'Illimité'}</span>
+                      {prefs.dataRetention === val && <ChevronRight className="h-3 w-3" />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
             </div>
 
-            {/* Email */}
-            <div>
-              <label className="text-[10px] sm:text-xs font-bold text-[#F2FFF0]/30 uppercase tracking-widest mb-2 sm:mb-3 block">Adresse email</label>
-              <div className="relative">
-                <Mail className="absolute left-3 sm:left-4 top-1/2 h-4 sm:h-5 w-4 sm:w-5 -translate-y-1/2 text-[#F2FFF0]/20" />
-                <input type="email" value={user.email} disabled
-                  className="h-12 sm:h-14 w-full rounded-xl sm:rounded-2xl border border-[#F2FFF0]/[8%] bg-[#050505]/50 pl-10 sm:pl-12 pr-4 text-sm sm:text-base text-[#F2FFF0]/40 cursor-not-allowed" />
+            {/* Zone Danger */}
+            <div className="rounded-2xl border border-red-500/10 bg-red-500/[2%] overflow-hidden p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <h3 className="text-sm font-bold text-red-400">Session active</h3>
+                <p className="text-xs text-[var(--ey-muted-foreground)] mt-1">Déconnectez-vous de tous les appareils.</p>
               </div>
-              <p className="text-[10px] sm:text-xs text-[#F2FFF0]/20 mt-1.5 sm:mt-2 ml-1">L'email ne peut pas être modifié.</p>
+              <button onClick={handleLogout} 
+                className="w-full sm:w-auto h-10 px-5 rounded-xl border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/10 transition-all active:scale-95 touch-manipulation flex items-center justify-center gap-2">
+                <LogOut className="h-3.5 w-3.5" /> Se déconnecter
+              </button>
             </div>
 
-            {/* Date membre */}
-            <div>
-              <label className="text-[10px] sm:text-xs font-bold text-[#F2FFF0]/30 uppercase tracking-widest mb-2 sm:mb-3 block">Membre depuis</label>
-              <div className="relative">
-                <Calendar className="absolute left-3 sm:left-4 top-1/2 h-4 sm:h-5 w-4 sm:w-5 -translate-y-1/2 text-[#F2FFF0]/20" />
-                <input type="text" value={new Date(user.createdAt || Date.now()).toLocaleDateString('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })} disabled
-                  className="h-12 sm:h-14 w-full rounded-xl sm:rounded-2xl border border-[#F2FFF0]/[8%] bg-[#050505]/50 pl-10 sm:pl-12 pr-4 text-sm sm:text-base text-[#F2FFF0]/40 cursor-not-allowed" />
-              </div>
-            </div>
           </div>
         </div>
-
-        {/* Zone Danger */}
-        <div className="rounded-2xl sm:rounded-3xl border border-red-500/10 bg-[#0D0F0E]/60 backdrop-blur-xl overflow-hidden">
-          <div className="px-5 sm:px-8 py-4 sm:py-5 border-b border-red-500/10">
-            <h2 className="text-base sm:text-lg font-semibold text-red-400/80">Zone de danger</h2>
-          </div>
-          <div className="p-5 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-4 sm:gap-6">
-            <div className="text-center sm:text-left">
-              <p className="text-sm sm:text-base text-[#F2FFF0]/80 font-semibold">Se déconnecter</p>
-              <p className="text-xs sm:text-sm text-[#F2FFF0]/30 mt-1">Vous devrez vous reconnecter pour accéder à votre compte.</p>
-            </div>
-            <button onClick={handleLogout}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 px-5 sm:px-6 py-3 sm:py-3.5 rounded-xl sm:rounded-2xl border border-red-500/20 text-red-400 text-sm font-bold hover:bg-red-500/10 hover:border-red-500/30 transition-all active:scale-95">
-              <LogOut className="h-4 w-4" /> Déconnexion
-            </button>
-          </div>
-        </div>
-
-        {/* Footer */}
-        <p className="text-center text-[10px] text-[#F2FFF0]/15 select-none pt-4">Eyano v1.0 — Propulsé par l'IA</p>
+        
+        <p className="text-center text-[10px] text-[var(--ey-muted-foreground)]/40 select-none pt-4">Eyano v1.0 — Propulsé par Gnoxe AI</p>
       </main>
     </div>
   );

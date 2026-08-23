@@ -23,12 +23,12 @@ function Attachments({ attachments }: { attachments: MessageAttachment[] }) {
       {images.length > 0 && (
         <div className="flex flex-wrap gap-2">
           {images.map((att, i) => (
-            <div key={i} className="relative rounded-xl overflow-hidden border border-[#F2FFF0]/[8%] max-w-[240px]">
+            <div key={i} className="relative rounded-xl overflow-hidden border border-border max-w-[240px]">
               {att.url ? (
                 <img src={att.url} alt={att.fileName} className="w-full h-auto max-h-[200px] object-cover" />
               ) : (
-                <div className="w-full h-32 bg-[#F2FFF0]/[4%] flex items-center justify-center">
-                  <span className="text-xs text-[#F2FFF0]/30">{att.fileName}</span>
+                <div className="w-full h-32 bg-surface-2 flex items-center justify-center">
+                  <span className="text-xs text-foreground/30">{att.fileName}</span>
                 </div>
               )}
             </div>
@@ -38,9 +38,9 @@ function Attachments({ attachments }: { attachments: MessageAttachment[] }) {
       {files.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {files.map((att, i) => (
-            <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-[#F2FFF0]/[4%] border border-[#F2FFF0]/[6%]">
-              <FileText className="h-3.5 w-3.5 text-[#F2FFF0]/40 shrink-0" />
-              <span className="text-xs text-[#F2FFF0]/50 truncate max-w-[120px]">{att.fileName}</span>
+            <div key={i} className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-surface-2 border border-border">
+              <FileText className="h-3.5 w-3.5 text-foreground/40 shrink-0" />
+              <span className="text-xs text-foreground/50 truncate max-w-[120px]">{att.fileName}</span>
             </div>
           ))}
         </div>
@@ -80,25 +80,25 @@ export function MessageBubble({ message, isStreaming, onRetry, onEdit }: Message
           <div className="flex items-center gap-1">
             <button
               onClick={() => { setEditContent(message.content); setIsEditing(true); }}
-              className="p-1.5 rounded-lg transition-all duration-150 text-[#F2FFF0]/30 hover:text-[#F2FFF0]/60 hover:bg-[#F2FFF0]/[6%]"
+              className="p-1.5 rounded-lg transition-all duration-150 text-foreground/30 hover:text-foreground/60 hover:bg-surface-2"
               title="Modifier"
             >
               <Pencil className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={handleCopy}
-              className="p-1.5 rounded-lg transition-all duration-150 text-[#F2FFF0]/30 hover:text-[#F2FFF0]/60 hover:bg-[#F2FFF0]/[6%]"
+              className="p-1.5 rounded-lg transition-all duration-150 text-foreground/30 hover:text-foreground/60 hover:bg-surface-2"
               title="Copier"
             >
               {copied ? (
-                <Check className="h-3.5 w-3.5 text-[#39FF14]" />
+                <Check className="h-3.5 w-3.5 text-brand" />
               ) : (
                 <Copy className="h-3.5 w-3.5" />
               )}
             </button>
           </div>
-          <div className="text-[11px] text-[#F2FFF0]/20 whitespace-nowrap pb-1">{time}</div>
-          <div className="rounded-2xl rounded-br-md border border-[#F2FFF0]/[6%] overflow-hidden bg-[#F2FFF0]/[6%]">
+          <div className="text-[11px] text-foreground/20 whitespace-nowrap pb-1">{time}</div>
+          <div className="rounded-2xl rounded-br-md border border-border overflow-hidden bg-surface-2">
             {hasAttachments && (
               <div className="px-4 pt-3">
                 <Attachments attachments={message.attachments!} />
@@ -109,26 +109,26 @@ export function MessageBubble({ message, isStreaming, onRetry, onEdit }: Message
                 <textarea
                   value={editContent}
                   onChange={(e) => setEditContent(e.target.value)}
-                  className="w-full min-h-[80px] bg-[#050505] border border-[#39FF14]/30 rounded-xl p-3 text-sm text-[#F2FFF0] focus:outline-none focus:border-[#39FF14]/50 resize-none"
+                  className="w-full min-h-[80px] bg-background border border-brand/30 rounded-xl p-3 text-sm text-foreground focus:outline-none focus:border-brand/50 resize-none"
                   autoFocus
                 />
                 <div className="flex justify-end gap-2 mt-2">
                   <button
                     onClick={() => setIsEditing(false)}
-                    className="px-3 py-1.5 text-xs text-[#F2FFF0]/40 hover:text-[#F2FFF0] transition-colors"
+                    className="px-3 py-1.5 text-xs text-foreground/40 hover:text-foreground transition-colors"
                   >
                     Annuler
                   </button>
                   <button
                     onClick={handleSaveEdit}
-                    className="px-3 py-1.5 text-xs bg-[#39FF14] text-[#050505] rounded-lg font-medium hover:brightness-110 transition-all"
+                    className="px-3 py-1.5 text-xs bg-brand text-brand-foreground rounded-lg font-medium hover:brightness-110 transition-all"
                   >
                     Sauvegarder
                   </button>
                 </div>
               </div>
             ) : message.content ? (
-              <div className="px-4 py-3 text-[14px] leading-relaxed text-[#F2FFF0]/90">
+              <div className="px-4 py-3 text-[14px] leading-relaxed text-foreground/90">
                 <p className="whitespace-pre-wrap">{message.content}</p>
               </div>
             ) : null}
@@ -141,17 +141,17 @@ export function MessageBubble({ message, isStreaming, onRetry, onEdit }: Message
   return (
     <div className="flex gap-3 animate-slide-up">
       <div className="shrink-0 mt-1">
-        <div className="w-8 h-8 rounded-xl bg-[#39FF14]/10 border border-[#39FF14]/12%] flex items-center justify-center overflow-hidden">
+        <div className="w-8 h-8 rounded-xl bg-brand/10 border border-brand/12%] flex items-center justify-center overflow-hidden">
           <Logo size="sm" />
         </div>
       </div>
 
       <div className="flex flex-col gap-1 min-w-0 max-w-[85%]">
-        <div className={cn('text-[14px] leading-relaxed', isFailed ? 'text-red-400/80' : 'text-[#F2FFF0]/80')}>
+        <div className={cn('text-[14px] leading-relaxed', isFailed ? 'text-red-400/80' : 'text-foreground/80')}>
           {isStreaming ? (
             <div className="animate-fade-in">
               <MarkdownRenderer content={message.content} />
-              <span className="inline-block w-[3px] h-4 ml-0.5 animate-pulse-subtle bg-[#39FF14] rounded-full align-text-bottom" />
+              <span className="inline-block w-[3px] h-4 ml-0.5 animate-pulse-subtle bg-brand rounded-full align-text-bottom" />
             </div>
           ) : isFailed ? (
             <div className="flex items-start gap-2">
@@ -168,7 +168,7 @@ export function MessageBubble({ message, isStreaming, onRetry, onEdit }: Message
             {isFailed && onRetry && (
               <button
                 onClick={onRetry}
-                className="p-1.5 rounded-lg transition-all duration-150 text-[#F2FFF0]/30 hover:text-[#39FF14] hover:bg-[#39FF14]/[10%]"
+                className="p-1.5 rounded-lg transition-all duration-150 text-foreground/30 hover:text-brand hover:bg-brand/[10%]"
                 title="Reessayer"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
@@ -178,22 +178,22 @@ export function MessageBubble({ message, isStreaming, onRetry, onEdit }: Message
               <>
                 <button
                   onClick={handleCopy}
-                  className="p-1.5 rounded-lg transition-all duration-150 text-[#F2FFF0]/30 hover:text-[#F2FFF0]/60 hover:bg-[#F2FFF0]/[6%]"
+                  className="p-1.5 rounded-lg transition-all duration-150 text-foreground/30 hover:text-foreground/60 hover:bg-surface-2"
                   title="Copier"
                 >
                   {copied ? (
-                    <Check className="h-3.5 w-3.5 text-[#39FF14]" />
+                    <Check className="h-3.5 w-3.5 text-brand" />
                   ) : (
                     <Copy className="h-3.5 w-3.5" />
                   )}
                 </button>
-                <button className="p-1.5 rounded-lg transition-all duration-150 text-[#F2FFF0]/30 hover:text-[#F2FFF0]/60 hover:bg-[#F2FFF0]/[6%]" title="Utile">
+                <button className="p-1.5 rounded-lg transition-all duration-150 text-foreground/30 hover:text-foreground/60 hover:bg-surface-2" title="Utile">
                   <ThumbsUp className="h-3.5 w-3.5" />
                 </button>
-                <button className="p-1.5 rounded-lg transition-all duration-150 text-[#F2FFF0]/30 hover:text-[#F2FFF0]/60 hover:bg-[#F2FFF0]/[6%]" title="Pas utile">
+                <button className="p-1.5 rounded-lg transition-all duration-150 text-foreground/30 hover:text-foreground/60 hover:bg-surface-2" title="Pas utile">
                   <ThumbsDown className="h-3.5 w-3.5" />
                 </button>
-                <button className="p-1.5 rounded-lg transition-all duration-150 text-[#F2FFF0]/30 hover:text-[#F2FFF0]/60 hover:bg-[#F2FFF0]/[6%]" title="Ecouter">
+                <button className="p-1.5 rounded-lg transition-all duration-150 text-foreground/30 hover:text-foreground/60 hover:bg-surface-2" title="Ecouter">
                   <Volume2 className="h-3.5 w-3.5" />
                 </button>
               </>
@@ -202,7 +202,7 @@ export function MessageBubble({ message, isStreaming, onRetry, onEdit }: Message
         )}
 
         {!isStreaming && message.latencyMs && (
-          <div className="text-[10px] text-[#F2FFF0]/15 mt-1">
+          <div className="text-[10px] text-foreground/15 mt-1">
             {Math.round(message.latencyMs / 1000)}s
             {message.inputTokens && message.outputTokens && (
               <span> - {message.inputTokens + message.outputTokens} tokens</span>

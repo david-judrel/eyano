@@ -21,16 +21,16 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
   };
 
   return (
-    <div className="relative group my-3 rounded-xl border border-[#F2FFF0]/[8%] overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-2 bg-[#F2FFF0]/[4%] border-b border-[#F2FFF0]/[6%]">
-        <span className="text-[11px] font-medium text-[#F2FFF0]/30">{language}</span>
+    <div className="relative group my-3 rounded-xl border border-border overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-2 bg-surface border-b border-border">
+        <span className="text-[11px] font-medium text-muted">{language}</span>
         <button
           onClick={handleCopy}
           className={cn(
             'flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-medium transition-all duration-150',
             copied
-              ? 'bg-[#39FF14]/10 text-[#39FF14]'
-              : 'text-[#F2FFF0]/25 hover:text-[#F2FFF0]/50 hover:bg-[#F2FFF0]/[6%]',
+              ? 'bg-brand/10 text-brand'
+              : 'text-muted hover:text-foreground hover:bg-surface-2',
           )}
         >
           {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
@@ -43,7 +43,7 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
         customStyle={{
           margin: 0,
           borderRadius: 0,
-          backgroundColor: '#050505',
+          backgroundColor: '#0a0a0a',
           padding: '16px',
           fontSize: '13px',
           lineHeight: '1.6',
@@ -72,7 +72,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
 
             return (
               <code
-                className="px-1.5 py-0.5 rounded-lg bg-[#F2FFF0]/[8%] text-[0.875em] text-[#39FF14]/80 border border-[#F2FFF0]/[6%] font-medium"
+                className="px-1.5 py-0.5 rounded-lg bg-brand/10 text-[0.875em] text-brand border border-brand/20 font-medium"
                 {...props}
               >
                 {children}
@@ -80,56 +80,56 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
             );
           },
           p({ children }) {
-            return <p className="mb-3 last:mb-0 leading-[1.75] text-[#F2FFF0]/75">{children}</p>;
+            return <p className="mb-3 last:mb-0 leading-[1.75] text-foreground/80">{children}</p>;
           },
           ul({ children }) {
-            return <ul className="list-disc pl-5 mb-3 space-y-1.5 text-[#F2FFF0]/75">{children}</ul>;
+            return <ul className="list-disc pl-5 mb-3 space-y-1.5 text-foreground/80">{children}</ul>;
           },
           ol({ children }) {
-            return <ol className="list-decimal pl-5 mb-3 space-y-1.5 text-[#F2FFF0]/75">{children}</ol>;
+            return <ol className="list-decimal pl-5 mb-3 space-y-1.5 text-foreground/80">{children}</ol>;
           },
           li({ children }) {
             return <li className="leading-[1.75]">{children}</li>;
           },
           strong({ children }) {
-            return <strong className="font-semibold text-[#F2FFF0]">{children}</strong>;
+            return <strong className="font-semibold text-foreground">{children}</strong>;
           },
           h1({ children }) {
-            return <h1 className="text-xl font-bold mb-3 mt-5 text-[#39FF14]">{children}</h1>;
+            return <h1 className="text-xl font-bold mb-3 mt-5 text-brand">{children}</h1>;
           },
           h2({ children }) {
-            return <h2 className="text-lg font-bold mb-2 mt-4 text-[#39FF14]">{children}</h2>;
+            return <h2 className="text-lg font-bold mb-2 mt-4 text-brand">{children}</h2>;
           },
           h3({ children }) {
-            return <h3 className="text-[15px] font-semibold mb-2 mt-3 text-[#F2FFF0]/90">{children}</h3>;
+            return <h3 className="text-[15px] font-semibold mb-2 mt-3 text-foreground">{children}</h3>;
           },
           blockquote({ children }) {
             return (
-              <blockquote className="pl-4 my-3 text-[#F2FFF0]/50 border-l-2 border-[#39FF14]/30 bg-[#39FF14]/[3%] rounded-r-xl py-2 pr-3">
+              <blockquote className="pl-4 my-3 text-muted border-l-2 border-brand/30 bg-brand/[3%] rounded-r-xl py-2 pr-3">
                 {children}
               </blockquote>
             );
           },
           hr() {
-            return <hr className="my-5 border-[#F2FFF0]/[6%]" />;
+            return <hr className="my-5 border-border" />;
           },
           table({ children }) {
             return (
-              <div className="overflow-x-auto my-3 rounded-xl border border-[#F2FFF0]/[8%]">
+              <div className="overflow-x-auto my-3 rounded-xl border border-border">
                 <table className="w-full text-[13px]">{children}</table>
               </div>
             );
           },
           th({ children }) {
             return (
-              <th className="px-3 py-2.5 text-left font-semibold bg-[#F2FFF0]/[4%] text-[#F2FFF0]/60 text-[11px] uppercase tracking-wider">
+              <th className="px-3 py-2.5 text-left font-semibold bg-surface text-muted text-[11px] uppercase tracking-wider">
                 {children}
               </th>
             );
           },
           td({ children }) {
             return (
-              <td className="px-3 py-2.5 border-t border-[#F2FFF0]/[6%] text-[#F2FFF0]/60">{children}</td>
+              <td className="px-3 py-2.5 border-t border-border text-foreground/60">{children}</td>
             );
           },
           a({ href, children }) {
@@ -138,7 +138,7 @@ export function MarkdownRenderer({ content }: MarkdownRendererProps) {
                 href={href}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="font-medium text-[#39FF14] underline underline-offset-4 decoration-[#39FF14]/30 hover:decoration-[#39FF14] transition-colors"
+                className="font-medium text-brand underline underline-offset-4 decoration-brand/30 hover:decoration-brand transition-colors"
               >
                 {children}
               </a>
