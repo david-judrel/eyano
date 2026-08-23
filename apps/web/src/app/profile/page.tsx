@@ -82,7 +82,7 @@ export default function ProfilePage() {
   if (!user) return null;
 
   return (
-    <div className="min-h-[100dvh] lg:min-h-screen w-full bg-[var(--ey-background)] flex flex-col">
+    <div className="h-full w-full bg-background flex flex-col overflow-y-auto overflow-x-hidden">
       <ToastContainer />
 
       {/* Header App IA Pro */}

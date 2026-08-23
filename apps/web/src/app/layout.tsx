@@ -4,9 +4,18 @@ import { PWAProvider } from '@/components/PWAProvider';
 import { SWRegister } from '@/components/SWRegister';
 import { ThemeProvider } from '@/lib/theme-provider';
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+  viewportFit: 'cover',
+  themeColor: '#050505',
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className="h-screen h-dvh dark" suppressHydrationWarning>
+    <html lang="fr" className="dark" suppressHydrationWarning>
       <head>
         <Script id="theme-init" strategy="beforeInteractive">{`
           (function() {
@@ -17,7 +26,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           })();
         `}</Script>
       </head>
-      <body className="h-screen h-dvh bg-background text-foreground antialiased overflow-hidden">
+      <body className="h-dvh bg-background text-foreground antialiased overflow-hidden">
         <ThemeProvider>
           <PWAProvider>
             {children}

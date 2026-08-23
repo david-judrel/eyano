@@ -36,6 +36,7 @@ const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const MAX_FILE_SIZE = 50 * 1024 * 1024;
 const MAX_IMAGES = 4;
 const MAX_FILES = 5;
+const MAX_CHARS = 10000;
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} o`;
@@ -105,6 +106,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
 
   // Verrou anti-double-soumission
   const isSubmittingRef = useRef(false);
+  const lastSubmitTime = useRef(0);
 
   const router = useRouter();
 
@@ -348,8 +350,9 @@ export function Composer({ onRequireLogin }: ComposerProps) {
    * Envoi du message
    */
   const handleSubmit = async () => {
-    // Couche 1 : protection immédiate
-    if (isSubmittingRef.current || isStreaming) {
+    // Couche 1 : protection immediata
+    const now = Date.now();
+    if (isSubmittingRef.current || isStreaming || now - lastSubmitTime.current < 1500) {
       return;
     }
 
@@ -357,8 +360,9 @@ export function Composer({ onRequireLogin }: ComposerProps) {
       return;
     }
 
-    // Verrouillage immédiat
+    // Verrouillage immediat
     isSubmittingRef.current = true;
+    lastSubmitTime.current = now;
 
     try {
       /**
@@ -585,12 +589,10 @@ export function Composer({ onRequireLogin }: ComposerProps) {
       setStreamingMessageId(null);
       abortRef.current = null;
     } finally {
-      /**
-       * Déverrouillage avec petit délai de sécurité
-       */
+      // Deverrouillage avec delai de securite
       setTimeout(() => {
         isSubmittingRef.current = false;
-      }, 800);
+      }, 500);
     }
   };
 
@@ -733,10 +735,19 @@ export function Composer({ onRequireLogin }: ComposerProps) {
                     ? 'Ajouter un message...'
                     : 'Posez votre question à Eyano...'
                 }
+                maxLength={MAX_CHARS}
                 rows={1}
                 className="w-full min-w-0 bg-transparent resize-none text-[15px] leading-relaxed py-2.5 pr-2 text-foreground/90 placeholder:text-foreground/25 focus:outline-none focus:ring-0 overflow-y-auto overflow-x-hidden break-words whitespace-pre-wrap scrollbar-hide"
                 style={{ maxHeight: '200px' }}
               />
+              {input.length > MAX_CHARS * 0.8 && (
+                <div className={cn(
+                  "absolute -bottom-1 right-0 text-[10px] font-medium tabular-nums",
+                  input.length >= MAX_CHARS ? "text-red-400" : "text-muted"
+                )}>
+                  {input.length}/{MAX_CHARS}
+                </div>
+              )}
             </div>
 
             {isStreaming ? (
@@ -878,8 +889,8 @@ export function Composer({ onRequireLogin }: ComposerProps) {
         }}
       />
 
-      <p className="text-center text-[10px] text-foreground/15 mt-3 select-none">
-        Eyano — Propulsé par l&apos;IA pour un avenir meilleur
+      <p className="text-center text-[10px] text-foreground/15 mt-3 select-none px-4">
+        Eyano peut faire des erreurs. Verifiez les informations importantes.
       </p>
     </div>
   );

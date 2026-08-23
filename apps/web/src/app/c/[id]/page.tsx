@@ -23,5 +23,9 @@ export default function ConversationPage() {
     }
   }, [params.id, router]);
 
-  return <ChatApp />;
+  return (
+    <div className="h-full w-full overflow-hidden">
+      <ChatApp />
+    </div>
+  );
 }

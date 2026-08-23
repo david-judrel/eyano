@@ -90,7 +90,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen w-full bg-[#050505] overflow-hidden">
+    <div className="flex h-full w-full bg-background overflow-y-auto overflow-x-hidden">
       <ToastContainer />
       
       {/* PARTIE GAUCHE - BRANDING DESKTOP */}

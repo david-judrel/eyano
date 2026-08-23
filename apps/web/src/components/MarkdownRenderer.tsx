@@ -2,8 +2,9 @@
 
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
+import { vscDarkPlus } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import remarkGfm from 'remark-gfm';
-import { Copy, Check } from 'lucide-react';
+import { Copy, Check, Terminal } from 'lucide-react';
 import { useState } from 'react';
 import { cn } from '@/lib/utils';
 
@@ -21,33 +22,46 @@ function CodeBlock({ language, code }: { language: string; code: string }) {
   };
 
   return (
-    <div className="relative group my-3 rounded-xl border border-border overflow-hidden">
-      <div className="flex items-center justify-between px-4 py-2 bg-surface border-b border-border">
-        <span className="text-[11px] font-medium text-muted">{language}</span>
+    <div className="relative group my-4 rounded-2xl border border-white/[8%] overflow-hidden bg-[#0c0c0c] shadow-[0_8px_32px_rgba(0,0,0,0.4)]">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-2.5 bg-[#141414] border-b border-white/[6%]">
+        <div className="flex items-center gap-2.5">
+          <div className="flex gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-[#ff5f57]/80" />
+            <div className="w-2.5 h-2.5 rounded-full bg-[#febc2e]/80" />
+            <div className="w-2.5 h-2.5 rounded-full bg-[#28c840]/80" />
+          </div>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/[5%] border border-white/[6%]">
+            <Terminal className="h-3 w-3 text-white/30" />
+            <span className="text-[10px] font-semibold uppercase tracking-wider text-white/40">{language}</span>
+          </div>
+        </div>
         <button
           onClick={handleCopy}
           className={cn(
-            'flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-medium transition-all duration-150',
+            'flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium transition-all duration-200',
             copied
-              ? 'bg-brand/10 text-brand'
-              : 'text-muted hover:text-foreground hover:bg-surface-2',
+              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/20'
+              : 'text-white/30 hover:text-white/60 hover:bg-white/[5%] border border-transparent'
           )}
         >
           {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
           {copied ? 'Copie' : 'Copier'}
         </button>
       </div>
+
+      {/* Code */}
       <SyntaxHighlighter
         language={language}
         PreTag="div"
+        style={vscDarkPlus}
         customStyle={{
           margin: 0,
           borderRadius: 0,
-          backgroundColor: '#0a0a0a',
-          padding: '16px',
+          backgroundColor: 'transparent',
+          padding: '16px 20px',
           fontSize: '13px',
-          lineHeight: '1.6',
-          color: '#e8eaed',
+          lineHeight: '1.7',
         }}
       >
         {code}
