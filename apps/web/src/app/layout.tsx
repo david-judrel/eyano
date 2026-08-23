@@ -20,6 +20,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr" className="dark" suppressHydrationWarning>
       <head>
+        <link rel="icon" href="/icon-192.png" sizes="192x192" />
+        <link rel="apple-touch-icon" href="/icon-512.png" sizes="512x512" />
         <Script id="theme-init" strategy="beforeInteractive">{`
           (function() {
             var saved = localStorage.getItem('eyano-theme');
