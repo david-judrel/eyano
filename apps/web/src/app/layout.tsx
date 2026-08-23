@@ -3,6 +3,9 @@ import Script from 'next/script';
 import { PWAProvider } from '@/components/PWAProvider';
 import { SWRegister } from '@/components/SWRegister';
 import { ThemeProvider } from '@/lib/theme-provider';
+import { getDefaultMetadata } from '@/lib/metadata';
+
+export const metadata = getDefaultMetadata();
 
 export const viewport = {
   width: 'device-width',

@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { ConversationContent } from '@/components/ConversationContent';
 import { siteConfig } from '@/lib/metadata';
 
 type Props = {
@@ -38,9 +37,16 @@ export function generateMetadata({ params }: Props): Metadata {
       description: `Consultez cette conversation sur ${siteConfig.name}.`,
       images: [siteConfig.ogImage],
     },
+    other: {
+      'og:see-also': conversationUrl,
+    },
   };
 }
 
-export default function ConversationPage({ params }: Props) {
-  return <ConversationContent />;
+export default function ConversationLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <>{children}</>;
 }

@@ -98,10 +98,12 @@ export function ChatView({ onRequireLogin }: ChatViewProps) {
 
   useEffect(() => {
     if (activeConversationId && activeConversationId !== prevConversationId.current) {
-      setMessages([]);
-      api.getMessages(activeConversationId)
-        .then(setMessages)
-        .catch(() => {});
+      if (!isStreaming) {
+        setMessages([]);
+        api.getMessages(activeConversationId)
+          .then(setMessages)
+          .catch(() => {});
+      }
       prevConversationId.current = activeConversationId;
     } else if (!activeConversationId) {
       setMessages([]);

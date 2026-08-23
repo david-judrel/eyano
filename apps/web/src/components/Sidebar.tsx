@@ -253,7 +253,7 @@ export function Sidebar() {
         </div>
 
         {/* Footer Utilisateur & Pro */}
-        <div className="p-4 border-t border-border bg-gradient-to-b from-transparent to-surface/80 shrink-0">
+        <div className="p-4 border-t border-border bg-gradient-to-b from-transparent to-surface/80 shrink-0 max-h-[45%] overflow-y-auto scrollbar-hide">
           
           {/* Theme Switcher */}
           <ThemeSwitcherRow />

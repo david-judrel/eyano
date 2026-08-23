@@ -1,22 +1,34 @@
-'use client';
+import type { Metadata } from 'next';
+import { HomeContent } from '@/components/HomeContent';
+import { siteConfig } from '@/lib/metadata';
 
-import { useEffect } from 'react';
-import { ChatApp } from '@/components/ChatApp';
-import { ToastContainer } from '@/components/Toast';
-import { useAppStore } from '@/lib/store';
+export const metadata: Metadata = {
+  title: siteConfig.title,
+  description: siteConfig.description,
+  openGraph: {
+    title: siteConfig.title,
+    description: siteConfig.description,
+    url: siteConfig.url,
+    siteName: siteConfig.name,
+    type: 'website',
+    locale: 'fr_FR',
+    images: [
+      {
+        url: siteConfig.ogImage,
+        width: 1200,
+        height: 630,
+        alt: `${siteConfig.name} — Assistant IA Intelligent`,
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: siteConfig.title,
+    description: siteConfig.description,
+    images: [siteConfig.ogImage],
+  },
+};
 
 export default function Home() {
-  const { setActiveConversationId, setMessages } = useAppStore();
-
-  useEffect(() => {
-    setActiveConversationId(null);
-    setMessages([]);
-  }, []);
-
-  return (
-    <div className="flex flex-col h-full w-full overflow-hidden">
-      <ToastContainer />
-      <ChatApp />
-    </div>
-  );
+  return <HomeContent />;
 }
