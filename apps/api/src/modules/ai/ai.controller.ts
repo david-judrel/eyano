@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Req, Res } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Req, Res, NotFoundException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { AiService } from './ai.service';
@@ -107,6 +107,15 @@ export class AiController {
   @ApiOperation({ summary: 'Regenerer la derniere reponse' })
   async regenerate(@Req() req: any, @Body() body: RegenerateDto) {
     const { prisma } = await import('@eyano/database');
+
+    const conversation = await prisma.conversation.findUnique({
+      where: { id: body.conversationId },
+      select: { userId: true },
+    });
+    if (!conversation || conversation.userId !== req.user.userId) {
+      throw new NotFoundException('Conversation non trouvee');
+    }
+
     const lastUserMessage = await prisma.message.findFirst({
       where: {
         conversationId: body.conversationId,
@@ -116,7 +125,7 @@ export class AiController {
     });
 
     if (!lastUserMessage) {
-      throw new Error('Aucun message utilisateur trouve');
+      throw new NotFoundException('Aucun message utilisateur trouve');
     }
 
     return this.aiService.chat(

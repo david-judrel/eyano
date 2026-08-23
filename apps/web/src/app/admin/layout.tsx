@@ -58,7 +58,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   return (
-    <div className="flex min-h-screen w-full bg-[#050505]">
+    <div className="flex h-full w-full bg-[#050505]">
       {/* Sidebar */}
       <aside className={cn(
         'fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r border-[#F2FFF0]/[6%] bg-[#0A0C0B] transition-transform duration-300 lg:static lg:translate-x-0',

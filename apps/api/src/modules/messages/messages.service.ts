@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { prisma } from '../../lib/prisma';
 import { MessageStatus, MessageRole } from '@prisma/client';
 
@@ -81,7 +81,16 @@ export class MessagesService {
     });
   }
 
-  async findByConversation(conversationId: string) {
+  async findByConversation(conversationId: string, userId?: string) {
+    if (userId) {
+      const conversation = await prisma.conversation.findUnique({
+        where: { id: conversationId },
+        select: { userId: true },
+      });
+      if (!conversation || conversation.userId !== userId) {
+        throw new NotFoundException('Conversation non trouvee');
+      }
+    }
     return prisma.message.findMany({
       where: { conversationId },
       orderBy: { createdAt: 'asc' },
