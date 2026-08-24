@@ -1,15 +1,17 @@
 import { ImageResponse } from 'next/og';
+import { readFile } from 'fs/promises';
+import { join } from 'path';
 
-export const runtime = 'edge';
+export const runtime = 'nodejs';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const title = searchParams.get('title') || 'Eyano';
   const subtitle = searchParams.get('subtitle') || 'Assistant intelligent propulse par Gnoxe AI';
 
-  const logoUrl = new URL('/icon-512.png', request.url).toString();
-  const logoRes = await fetch(logoUrl);
-  const logoData = await logoRes.arrayBuffer();
+  const logoPath = join(process.cwd(), 'public', 'icon-512.png');
+  const logoData = await readFile(logoPath);
+  const logoBase64 = `data:image/png;base64,${logoData.toString('base64')}`;
 
   return new ImageResponse(
     (
@@ -26,7 +28,6 @@ export async function GET(request: Request) {
           overflow: 'hidden',
         }}
       >
-        {/* Background glow */}
         <div
           style={{
             position: 'absolute',
@@ -40,9 +41,8 @@ export async function GET(request: Request) {
           }}
         />
 
-        {/* Logo */}
         <img
-          src={logoData as any}
+          src={logoBase64}
           width={120}
           height={120}
           style={{
@@ -54,7 +54,6 @@ export async function GET(request: Request) {
           }}
         />
 
-        {/* Title */}
         <div
           style={{
             fontSize: '64px',
@@ -70,7 +69,6 @@ export async function GET(request: Request) {
           {title}
         </div>
 
-        {/* Subtitle */}
         <div
           style={{
             fontSize: '22px',
@@ -84,7 +82,6 @@ export async function GET(request: Request) {
           {subtitle}
         </div>
 
-        {/* Accent line */}
         <div
           style={{
             width: '80px',
@@ -97,7 +94,6 @@ export async function GET(request: Request) {
           }}
         />
 
-        {/* URL */}
         <div
           style={{
             position: 'absolute',
