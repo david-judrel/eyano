@@ -1,11 +1,15 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import { usePathname } from 'next/navigation';
 import { usePWAInstall } from '@/hooks/usePWAInstall';
 import { Logo } from './ui/logo';
 import { X, Download, Loader2, Share, Plus, Menu } from 'lucide-react';
 
 export function MobileInstallGate({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const isUpdatePage = pathname === '/update';
+
   const {
     isInstalled,
     isMobileDevice,
@@ -20,13 +24,13 @@ export function MobileInstallGate({ children }: { children: React.ReactNode }) {
   const [dismissed, setDismissed] = useState(false);
 
   useEffect(() => {
-    if (isInstalled || dismissed) return;
+    if (isInstalled || dismissed || isUpdatePage) return;
 
     if (isMobileDevice && (isAndroidDevice || isIOSDevice)) {
       const timer = setTimeout(() => setShowPopup(true), 2000);
       return () => clearTimeout(timer);
     }
-  }, [isMobileDevice, isAndroidDevice, isIOSDevice, isInstalled, dismissed]);
+  }, [isMobileDevice, isAndroidDevice, isIOSDevice, isInstalled, dismissed, isUpdatePage]);
 
   const handleDismiss = () => {
     setShowPopup(false);
@@ -48,7 +52,7 @@ export function MobileInstallGate({ children }: { children: React.ReactNode }) {
     <>
       {children}
 
-      {showPopup && (
+      {showPopup && !isUpdatePage && (
         <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center bg-[#050505]/80 backdrop-blur-sm animate-fade-in">
           <div className="w-full sm:max-w-[380px] bg-[#0D0F0E] border border-[#F2FFF0]/[8%] rounded-t-2xl sm:rounded-2xl shadow-2xl animate-slide-up overflow-hidden">
             

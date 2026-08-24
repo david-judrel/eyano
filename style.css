@@ -1,0 +1,701 @@
+/* ==========================================================================
+   RESET & VARIABLES
+   ========================================================================== */
+:root {
+    /* Identité visuelle (Vert Néon) */
+    --bg-black: #050505;
+    --neon-green: #39FF14;
+    --deep-green: #104010;
+    --metal-grey: #a0a0a0;
+    --text-white: #f0f0f0;
+    --glass-bg: rgba(20, 40, 20, 0.4);
+    --glass-border: rgba(57, 255, 20, 0.2);
+
+    /* Glows & Ombres */
+    --neon-glow: 0 0 15px var(--neon-green), 0 0 30px rgba(57, 255, 20, 0.6);
+    --metal-shadow: inset 0 2px 5px rgba(255, 255, 255, 0.1);
+
+    /* Typographie */
+    --font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background-color: var(--bg-black);
+    color: var(--text-white);
+    font-family: var(--font-family);
+    overflow: hidden; /* Géré par JS pour mobile si nécessaire */
+    height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+/* ==========================================================================
+   FONDS ET EFFETS
+   ========================================================================== */
+#particles-container {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -2;
+}
+
+.tech-grid-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: linear-gradient(var(--bg-black) 98%, var(--deep-green) 98%), linear-gradient(90deg, var(--bg-black) 98%, var(--deep-green) 98%);
+    background-size: 50px 50px;
+    opacity: 0.1;
+    z-index: -1;
+}
+
+/* ==========================================================================
+   HEADER
+   ========================================================================== */
+.page-header {
+    text-align: center;
+    padding: 40px 20px;
+    z-index: 10;
+}
+
+.main-logo-wrapper {
+    position: relative;
+    display: inline-block;
+    margin-bottom: 20px;
+}
+
+.main-logo {
+    width: 160px; /* Taille Desktop */
+    filter: drop-shadow(0 0 15px rgba(57, 255, 20, 0.5));
+    animation: slowSpin 20s linear infinite;
+}
+
+.logo-halo-effect {
+    position: absolute;
+    top: -20%;
+    left: -20%;
+    width: 140%;
+    height: 140%;
+    background: radial-gradient(circle, var(--neon-green) 0%, rgba(57, 255, 20, 0) 60%);
+    border-radius: 50%;
+    filter: blur(20px);
+    opacity: 0.2;
+    z-index: -1;
+}
+
+.main-title {
+    font-size: 4rem;
+    font-weight: 300;
+    letter-spacing: 0.05em;
+    margin-bottom: 10px;
+}
+
+.neon-green {
+    color: var(--neon-green);
+    text-shadow: 0 0 10px var(--neon-green), 0 0 20px var(--neon-green-alpha);
+    font-weight: 600;
+}
+
+.thanks-msg {
+    font-size: 1.2rem;
+    opacity: 0.8;
+}
+
+.author-name {
+    color: var(--neon-green);
+    font-size: 1.4rem;
+    margin-top: 5px;
+}
+
+/* ==========================================================================
+   MAIN CONTENT
+   ========================================================================== */
+.cinematic-container {
+    flex-grow: 1;
+    display: grid;
+    grid-template-columns: 300px 1fr 300px;
+    align-items: center;
+    justify-items: center;
+    padding: 0 40px;
+}
+
+/* ==========================================================================
+   PANNEAUX (Glassmorphism)
+   ========================================================================== */
+.panel {
+    width: 100%;
+    max-width: 300px;
+    padding: 25px;
+    border-radius: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+.glassmorphism {
+    background: var(--glass-bg);
+    border: 1px solid var(--glass-border);
+    backdrop-filter: blur(5px);
+    box-shadow: 0 4px 30px rgba(0, 0, 0, 0.5);
+}
+
+.panel-header {
+    margin-bottom: 25px;
+    width: 100%;
+}
+
+.panel-header h2 {
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: var(--metal-grey);
+    letter-spacing: 0.1em;
+}
+
+.panel-divider {
+    height: 2px;
+    background: linear-gradient(90deg, rgba(57, 255, 20, 0) 0%, var(--neon-green) 50%, rgba(57, 255, 20, 0) 100%);
+    margin-top: 5px;
+}
+
+/* Panneau Gauche : Progression */
+.circular-progress-wrapper {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin-bottom: 20px;
+}
+
+.progress-ring__circle_bg {
+    stroke: var(--deep-green);
+    opacity: 0.5;
+}
+
+.progress-ring__circle {
+    stroke: var(--neon-green);
+    filter: drop-shadow(0 0 5px var(--neon-green));
+    stroke-linecap: round;
+    transform: rotate(-90deg);
+    transform-origin: 50% 50%;
+    stroke-dasharray: 326.7; /* Initiallement 0% */
+    stroke-dashoffset: 326.7;
+    transition: stroke-dashoffset 0.5s linear;
+}
+
+.progress-label {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-weight: bold;
+    color: var(--neon-green);
+}
+
+.progress-percent {
+    font-size: 2.2rem;
+}
+
+.percent-symbol {
+    font-size: 1.2rem;
+}
+
+.steps-list {
+    list-style: none;
+    text-align: left;
+    width: 100%;
+}
+
+.steps-list li {
+    font-size: 1.1rem;
+    color: var(--metal-grey);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+}
+
+.steps-list li.active-step {
+    color: var(--neon-green);
+    text-shadow: 0 0 5px var(--neon-green-alpha);
+}
+
+.status-indicator {
+    width: 10px;
+    height: 10px;
+    background-color: var(--deep-green);
+    border-radius: 50%;
+    margin-right: 12px;
+}
+
+.steps-list li.active-step .status-indicator {
+    background-color: var(--neon-green);
+    box-shadow: 0 0 5px var(--neon-green);
+    animation: pulsateStepStatus 1.5s infinite alternate;
+}
+
+/* Panneau Droite : Sécurité */
+.security-icon-wrapper {
+    position: relative;
+    width: 100px;
+    margin-bottom: 15px;
+}
+
+.security-shield {
+    stroke: var(--deep-green);
+    fill: none;
+    transition: stroke 0.3s;
+}
+
+.security-shield .shield-check {
+    stroke: var(--neon-green);
+    filter: drop-shadow(0 0 5px var(--neon-green));
+    stroke-dasharray: 40;
+    stroke-dashoffset: 40;
+}
+
+.icon-halo {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: radial-gradient(circle, var(--neon-green) 0%, rgba(57, 255, 20, 0) 70%);
+    filter: blur(5px);
+    opacity: 0;
+    transition: opacity 0.3s;
+}
+
+.right-panel:hover .security-shield {
+    stroke: var(--neon-green);
+}
+
+.right-panel:hover .security-shield .shield-check {
+    stroke-dashoffset: 0;
+}
+
+.right-panel:hover .icon-halo {
+    opacity: 0.1;
+}
+
+.conn-status-msg {
+    font-size: 1rem;
+    color: var(--metal-grey);
+}
+
+.data-transfer-animation {
+    width: 100%;
+    height: 15px;
+    background-image: linear-gradient(90deg, var(--bg-black) 70%, var(--neon-green) 100%);
+    background-size: 20px 15px;
+    animation: streamData 1s linear infinite;
+    border-radius: 7px;
+}
+
+/* ==========================================================================
+   ROBOT SECTION
+   ========================================================================== */
+.robot-section {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    z-index: 5;
+}
+
+.robot-infrastructure {
+    position: relative;
+    width: 600px; /* Taille Desktop */
+    height: 600px;
+    display: flex;
+    justify-content: center;
+    align-items: flex-end; /* Poser le robot sur la plateforme */
+}
+
+/* Anneaux énergétiques */
+.energy-ring {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) rotateX(75deg);
+    border: 3px solid rgba(57, 255, 20, 0.3);
+    border-radius: 50%;
+    filter: blur(2px);
+    animation: rotateRing 15s linear infinite;
+}
+
+.r-1 { width: 180px; height: 180px; animation-duration: 10s; }
+.r-2 { width: 300px; height: 300px; animation-direction: reverse; animation-duration: 20s; }
+.r-3 { width: 450px; height: 450px; animation-duration: 30s; }
+
+/* Câbles lumineux */
+.cables-system {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: -1;
+}
+
+.cable {
+    position: absolute;
+    background: linear-gradient(90deg, #101010 0%, #303030 50%, #101010 100%);
+    border-radius: 5px;
+    box-shadow: inset 0 2px 3px rgba(255,255,255,0.1);
+    overflow: hidden;
+}
+
+.cable::after {
+    content: '';
+    position: absolute;
+    width: 6px;
+    height: 100%;
+    background: linear-gradient(90deg, rgba(57, 255, 20, 0) 0%, var(--neon-green) 50%, rgba(57, 255, 20, 0) 100%);
+    filter: blur(1px);
+    animation: energyPulse 4s infinite linear;
+    opacity: 0;
+}
+
+/* Positions précises des câbles (basées sur la maquette IMAGE 2) */
+.cable-tl-1, .cable-tl-2 { width: 6px; height: 100px; top: 0; }
+.cable-tl-1 { left: 35%; transform: rotate(-5deg); }
+.cable-tl-2 { left: 40%; transform: rotate(-10deg); }
+
+.cable-tr-1, .cable-tr-2 { width: 6px; height: 100px; top: 0; }
+.cable-tr-1 { right: 35%; transform: rotate(5deg); }
+.cable-tr-2 { right: 40%; transform: rotate(10deg); }
+
+.cable-ml-1, .cable-ml-2, .cable-mr-1, .cable-mr-2 { width: 120px; height: 6px; }
+.cable-ml-1 { left: 10%; top: 30%; transform: rotate(-10deg); }
+.cable-ml-2 { left: 10%; top: 40%; transform: rotate(-20deg); }
+.cable-mr-1 { right: 10%; top: 30%; transform: rotate(10deg); }
+.cable-mr-2 { right: 10%; top: 40%; transform: rotate(20deg); }
+
+.cable-bl-1, .cable-bl-2, .cable-br-1, .cable-br-2 { width: 8px; height: 120px; }
+.cable-bl-1 { left: 25%; bottom: 20px; transform: rotate(-10deg); }
+.cable-bl-2 { left: 30%; bottom: 25px; transform: rotate(-15deg); }
+.cable-br-1 { right: 25%; bottom: 20px; transform: rotate(10deg); }
+.cable-br-2 { right: 30%; bottom: 25px; transform: rotate(15deg); }
+
+/* Animation spécifique pour câbles horizontaux */
+.cable-ml-1::after, .cable-ml-2::after, .cable-mr-1::after, .cable-mr-2::after {
+    width: 50%;
+    height: 6px;
+    animation-name: energyPulseHorizontal;
+}
+
+/* Delais pour un effet organique */
+.cable-tl-1::after { animation-delay: 0s; }
+.cable-tr-1::after { animation-delay: 1s; }
+.cable-ml-1::after { animation-delay: 2s; }
+.cable-mr-1::after { animation-delay: 3s; }
+
+/* Le Robot lui-même */
+.robot-assembly {
+    width: 120px;
+    height: 250px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    position: relative;
+    z-index: 10;
+}
+
+.robot-head {
+    width: 80px;
+    height: 80px;
+    background: radial-gradient(circle at 30% 30%, #404040 0%, #101010 100%);
+    border-radius: 50% 50% 40% 40%;
+    box-shadow: var(--metal-shadow), 0 5px 15px rgba(0,0,0,0.5);
+    display: flex;
+    justify-content: center;
+    align-items: flex-end;
+    overflow: hidden;
+    margin-bottom: -10px;
+    z-index: 2;
+}
+
+.screen-face {
+    width: 50px;
+    height: 30px;
+    background: #000;
+    border-radius: 10px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: inset 0 2px 5px rgba(0,0,0,0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.eyes {
+    display: flex;
+    gap: 10px;
+}
+
+.eye {
+    width: 10px;
+    height: 15px;
+    background-color: var(--neon-green);
+    border-radius: 5px;
+    box-shadow: 0 0 10px var(--neon-green);
+    animation: breathingEyes 3s infinite alternate;
+}
+
+.robot-torso {
+    width: 120px;
+    height: 120px;
+    background: linear-gradient(180deg, #303030 0%, #101010 100%);
+    border-radius: 20px 20px 10px 10px;
+    box-shadow: var(--metal-shadow);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: space-around;
+    padding: 10px;
+    border: 1px solid rgba(255,255,255,0.05);
+    z-index: 1;
+}
+
+.chest-plate {
+    position: relative;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.torso-logo {
+    width: 45px; /* Taille fidèle du logo sur le robot */
+    filter: drop-shadow(0 0 8px rgba(57, 255, 20, 0.6));
+    animation: pulsateTorsoLogo 3s infinite alternate;
+}
+
+.torso-logo-glow {
+    position: absolute;
+    width: 60px;
+    height: 60px;
+    background: radial-gradient(circle, rgba(57, 255, 20, 0.8) 0%, rgba(57, 255, 20, 0) 70%);
+    filter: blur(10px);
+    opacity: 0.1;
+    z-index: -1;
+}
+
+.torso-connectors {
+    display: flex;
+    gap: 12px;
+}
+
+.connector {
+    width: 20px;
+    height: 20px;
+    background: #202020;
+    border-radius: 4px;
+    border: 1px solid var(--glass-border);
+    position: relative;
+}
+
+.connector::after {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 6px;
+    height: 6px;
+    background-color: var(--deep-green);
+    border-radius: 50%;
+}
+
+.connector.c-1::after { animation: connectorStatus 1.5s infinite alternate; }
+.connector.c-2::after { animation: connectorStatus 1.5s infinite alternate 0.5s; }
+.connector.c-3::after { animation: connectorStatus 1.5s infinite alternate 1s; }
+
+.robot-platform {
+    width: 180px;
+    height: 50px;
+    position: relative;
+    margin-top: -10px;
+}
+
+.base-plate {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 12px;
+    background: linear-gradient(180deg, #202020 0%, #101010 100%);
+    border-radius: 10px;
+    border-bottom: 2px solid var(--deep-green);
+}
+
+.hover-rings {
+    position: absolute;
+    bottom: 12px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.h-ring {
+    height: 6px;
+    background-color: var(--neon-green);
+    border-radius: 50%;
+    opacity: 0.8;
+}
+
+.r-inner { width: 140px; }
+.r-outer { width: 160px; margin-top: -3px; }
+
+.platform-light {
+    position: absolute;
+    bottom: -15px;
+    left: 50%;
+    transform: translateX(-50%) rotateX(80deg);
+    width: 200px;
+    height: 200px;
+    background: radial-gradient(circle, var(--neon-green) 0%, rgba(57, 255, 20, 0) 70%);
+    border-radius: 50%;
+    filter: blur(15px);
+    opacity: 0.3;
+    animation: pulsateGlow 5s infinite alternate;
+}
+
+/* ==========================================================================
+   FOOTER
+   ========================================================================== */
+.bottom-loading-bar {
+    text-align: center;
+    padding: 15px;
+    width: 100%;
+    max-width: 600px;
+    margin: 40px auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 15px;
+    font-size: 1.1rem;
+    z-index: 10;
+}
+
+.message-wrapper {
+    color: var(--neon-green);
+    display: flex;
+    align-items: center;
+    text-shadow: 0 0 5px var(--neon-green-alpha);
+}
+
+.loading-spinner {
+    width: 20px;
+    height: 20px;
+    border: 3px solid rgba(57, 255, 20, 0.4);
+    border-top: 3px solid var(--neon-green);
+    border-radius: 50%;
+    margin-right: 12px;
+    animation: slowSpin 1s linear infinite;
+}
+
+.sub-message {
+    color: var(--metal-grey);
+}
+
+/* ==========================================================================
+   ANIMATIONS KEYFRAMES
+   ========================================================================== */
+@keyframes breathingEyes {
+    0% { opacity: 0.7; box-shadow: 0 0 5px var(--neon-green); }
+    100% { opacity: 1; box-shadow: 0 0 10px var(--neon-green); }
+}
+
+@keyframes pulsateGlow {
+    0% { opacity: 0.2; }
+    100% { opacity: 0.4; }
+}
+
+@keyframes slowSpin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+@keyframes rotateRing {
+    0% { transform: translate(-50%, -50%) rotateX(75deg) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotateX(75deg) rotate(360deg); }
+}
+
+@keyframes energyPulse {
+    0% { top: 0; opacity: 0; }
+    30% { opacity: 1; }
+    100% { top: 100%; opacity: 0; }
+}
+
+@keyframes energyPulseHorizontal {
+    0% { left: 0; opacity: 0; }
+    30% { opacity: 1; }
+    100% { left: 100%; opacity: 0; }
+}
+
+@keyframes streamData {
+    0% { background-position: 0px 0px; }
+    100% { background-position: 200px 0px; }
+}
+
+@keyframes connectorStatus {
+    0% { background-color: var(--deep-green); box-shadow: none; }
+    100% { background-color: var(--neon-green); box-shadow: 0 0 5px var(--neon-green); }
+}
+
+@keyframes pulsateStepStatus {
+    0% { opacity: 0.5; }
+    100% { opacity: 1; }
+}
+
+@keyframes pulsateTorsoLogo {
+    0% { filter: drop-shadow(0 0 5px rgba(57, 255, 20, 0.6)); }
+    100% { filter: drop-shadow(0 0 10px rgba(57, 255, 20, 0.9)); }
+}
+
+/* ==========================================================================
+   RESPONSIVE DESIGN
+   ========================================================================== */
+
+/* Tablette (1024px et moins) */
+@media (max-width: 1024px) {
+    .main-logo { width: 130px; }
+    .main-title { font-size: 3rem; }
+    .cinematic-container { grid-template-columns: 1fr; grid-template-rows: repeat(3, auto); gap: 30px; padding: 0 20px; }
+    .desktop-only { display: none; } /* Masquer panels sur tablette */
+    .robot-infrastructure { width: 400px; height: 400px; }
+}
+
+/* Mobile (768px et moins) */
+@media (max-width: 768px) {
+    .main-logo { width: 100px; }
+    .main-title { font-size: 2rem; }
+    .thanks-msg { font-size: 1rem; }
+    .author-name { font-size: 1.1rem; }
+    .robot-infrastructure { width: 300px; height: 300px; }
+    
+    /* Masquer câbles sur mobile */
+    .cables-system { display: none; }
+    
+    .robot-assembly { width: 100px; }
+    .robot-head { width: 60px; height: 60px; }
+    .robot-torso { width: 100px; height: 100px; }
+    
+    .bottom-loading-bar { max-width: 90%; font-size: 0.9rem; }
+}
+
+/* Petit mobile (390px et moins) */
+@media (max-width: 390px) {
+    .main-title { font-size: 1.8rem; }
+    .progress-percent { font-size: 1.8rem; }
+}

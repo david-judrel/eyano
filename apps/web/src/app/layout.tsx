@@ -34,8 +34,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="h-dvh bg-background text-foreground antialiased overflow-hidden">
         <ThemeProvider>
           <PWAProvider>
-            {children}
-            <SWRegister />
+          {children}
+          {/* <SWRegister /> */}
           </PWAProvider>
         </ThemeProvider>
       </body>

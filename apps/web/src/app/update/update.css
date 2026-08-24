@@ -1,0 +1,56 @@
+.update-page { background-color: #050505; color: #ffffff; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; overflow: hidden; min-height: 100vh; height: 100dvh; display: flex; flex-direction: column; align-items: center; position: relative; }
+@media (min-width: 769px) { .update-page { overflow-y: auto; } }
+
+.update-grid-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-image: linear-gradient(rgba(57, 255, 20, 0.03) 1px, transparent 1px), linear-gradient(90deg, rgba(57, 255, 20, 0.03) 1px, transparent 1px); background-size: 50px 50px; z-index: -1; pointer-events: none; }
+.update-vignette { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: radial-gradient(circle at center, transparent 0%, #050505 90%); z-index: -1; pointer-events: none; }
+.update-page main { width: 100%; max-width: 1400px; padding: 2rem; display: flex; flex-direction: column; align-items: center; justify-content: center; flex-grow: 1; position: relative; z-index: 10; }
+.update-page header { text-align: center; margin-bottom: 2rem; animation: ud-fadeInDown 1s ease-out; }
+.update-main-logo-container { width: 150px; height: 150px; margin: 0 auto 1.5rem; position: relative; filter: drop-shadow(0 0 20px rgba(57, 255, 20, 0.4)); }
+.update-main-logo { width: 100%; height: 100%; object-fit: contain; border-radius: 20px; }
+.update-page h1 { font-size: 2.5rem; font-weight: 300; letter-spacing: 1px; margin-bottom: 0.5rem; }
+.update-page h1 span.highlight { color: #39ff14; font-weight: 600; text-shadow: 0 0 10px rgba(57, 255, 20, 0.5); }
+.update-sub-text { color: #888; font-size: 1.1rem; margin-bottom: 0.5rem; }
+.update-author-text { color: #39ff14; font-size: 1.2rem; font-weight: 500; text-shadow: 0 0 5px rgba(57, 255, 20, 0.3); }
+.update-robot-container { position: relative; width: 400px; height: 500px; display: flex; justify-content: center; align-items: center; margin: 2rem 0; }
+.update-platform { position: absolute; bottom: 0; width: 300px; height: 60px; background: radial-gradient(ellipse at center, rgba(57, 255, 20, 0.2) 0%, transparent 70%); border-radius: 50%; transform: rotateX(60deg); box-shadow: 0 0 30px rgba(57, 255, 20, 0.1); }
+.update-platform-ring { position: absolute; bottom: -10px; width: 250px; height: 250px; border: 2px solid rgba(57, 255, 20, 0.3); border-radius: 50%; transform: rotateX(70deg); animation: ud-ring-pulse 3s infinite alternate; }
+.update-robot { position: relative; width: 200px; height: 300px; z-index: 5; animation: ud-float 4s ease-in-out infinite; }
+.update-robot-head { width: 140px; height: 100px; background: linear-gradient(135deg, #2a2a2a, #111); border-radius: 40px 40px 20px 20px; margin: 0 auto; position: relative; border: 1px solid #333; box-shadow: inset 0 0 20px rgba(0,0,0,0.8); z-index: 2; }
+.update-robot-face { width: 100px; height: 50px; background: #000; border-radius: 10px; margin: 25px auto 0; display: flex; justify-content: space-around; align-items: center; padding: 0 15px; box-shadow: inset 0 0 10px rgba(57, 255, 20, 0.1); }
+.update-eye { width: 12px; height: 25px; background: #39ff14; border-radius: 6px; box-shadow: 0 0 10px #39ff14, 0 0 20px #39ff14; animation: ud-blink 4s infinite; }
+.update-robot-torso { width: 160px; height: 140px; background: linear-gradient(to bottom, #222, #0a0a0a); margin: -10px auto 0; border-radius: 20px 20px 40px 40px; position: relative; border: 1px solid #333; display: flex; justify-content: center; align-items: center; z-index: 1; }
+.update-torso-logo { width: 60px; height: 60px; opacity: 0.9; filter: drop-shadow(0 0 5px #39ff14); border-radius: 12px; }
+.update-robot-base { width: 180px; height: 40px; background: #111; margin: -5px auto 0; border-radius: 0 0 20px 20px; border: 1px solid #333; position: relative; }
+.update-base-light { width: 100%; height: 2px; background: #39ff14; box-shadow: 0 0 10px #39ff14; position: absolute; bottom: 10px; opacity: 0.7; }
+.update-cable { position: absolute; background: #111; border: 1px solid #333; border-radius: 10px; z-index: 0; overflow: hidden; }
+.update-cable::after { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, #39ff14, transparent); opacity: 0.6; animation: ud-flow 2s linear infinite; }
+.update-cable-1 { width: 120px; height: 8px; top: 200px; left: -80px; transform: rotate(-20deg); transform-origin: right center; }
+.update-cable-2 { width: 140px; height: 8px; top: 220px; left: -90px; transform: rotate(-10deg); transform-origin: right center; }
+.update-cable-3 { width: 120px; height: 8px; top: 200px; right: -80px; transform: rotate(20deg); transform-origin: left center; }
+.update-cable-4 { width: 140px; height: 8px; top: 220px; right: -90px; transform: rotate(10deg); transform-origin: left center; }
+.update-connector { position: absolute; width: 12px; height: 16px; background: #444; border: 1px solid #39ff14; z-index: 2; }
+.update-conn-l1 { top: 196px; left: 30px; transform: rotate(-20deg); }
+.update-conn-l2 { top: 216px; left: 20px; transform: rotate(-10deg); }
+.update-conn-r1 { top: 196px; right: 30px; transform: rotate(20deg); }
+.update-conn-r2 { top: 216px; right: 20px; transform: rotate(10deg); }
+.update-message { color: #39ff14; font-size: 1.2rem; font-weight: 600; text-align: center; line-height: 1.8; margin-top: 1rem; text-shadow: 0 0 10px rgba(57, 255, 20, 0.3); animation: ud-slideUp 1s ease-out 0.5s backwards; }
+
+@keyframes ud-spin { 100% { transform: rotate(360deg); } }
+@keyframes ud-pulse { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; box-shadow: 0 0 5px #39ff14; } }
+@keyframes ud-blink { 0%, 96%, 100% { transform: scaleY(1); } 98% { transform: scaleY(0.1); } }
+@keyframes ud-float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+@keyframes ud-flow { 0% { transform: translateX(-100%); } 100% { transform: translateX(100%); } }
+@keyframes ud-ring-pulse { 0% { transform: rotateX(70deg) scale(0.9); opacity: 0.3; } 100% { transform: rotateX(70deg) scale(1.1); opacity: 0.6; } }
+@keyframes ud-fadeInDown { from { opacity: 0; transform: translateY(-20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes ud-slideUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+@media (max-width: 768px) {
+  .update-page h1 { font-size: 1.8rem; }
+  .update-robot-container { transform: scale(0.8); }
+}
+@media (max-width: 480px) {
+  .update-robot-container { transform: scale(0.6); height: 300px; }
+  .update-main-logo-container { width: 100px; height: 100px; }
+  .update-page h1 { font-size: 1.5rem; }
+  .update-sub-text, .update-author-text { font-size: 0.9rem; }
+}
