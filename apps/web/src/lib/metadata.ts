@@ -8,7 +8,7 @@ export const siteConfig = {
   description:
     "Connectez-vous, partagez et decouvrez sur Eyano. Assistant intelligent propulse par Gnoxe AI.",
   url: PRODUCTION_URL,
-  ogImage: `${PRODUCTION_URL}/og-default.svg`,
+  ogImage: `${PRODUCTION_URL}/api/og`,
   creator: 'Gnoxe Technology',
   keywords: [
     'assistant IA',
@@ -45,7 +45,6 @@ export function getDefaultMetadata(overrides?: Partial<Metadata>): Metadata {
           width: 1200,
           height: 630,
           alt: `${siteConfig.name} — Assistant IA Intelligent`,
-          type: 'image/svg+xml',
         },
       ],
     },
