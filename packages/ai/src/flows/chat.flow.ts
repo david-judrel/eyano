@@ -9,6 +9,7 @@ export interface ChatFlowInput {
   messages: ChatMessage[];
   model?: string;
   userName?: string;
+  channel?: string;
 }
 
 export interface ChatFlowOutput {
@@ -22,7 +23,7 @@ export async function* chatFlow(
   input: ChatFlowInput
 ): AsyncIterable<{ type: 'text' | 'tool_call' | 'tool_result' | 'done'; content: string; model?: string; inputTokens?: number; outputTokens?: number }> {
   const provider = getAIProvider();
-  const context = buildChatContext(input.messages, 20, input.userName);
+  const context = buildChatContext(input.messages, 20, input.userName, input.channel);
   const model = input.model || 'gnoxe-brains-1';
 
   let fullResponse = '';
@@ -45,7 +46,7 @@ export async function* chatFlow(
 
 export async function chatFlowSync(input: ChatFlowInput): Promise<ChatFlowOutput> {
   const provider = getAIProvider();
-  const context = buildChatContext(input.messages, 20, input.userName);
+  const context = buildChatContext(input.messages, 20, input.userName, input.channel);
   const model = input.model || 'gnoxe-brains-1';
 
   const response = await provider.generate(context, { model });

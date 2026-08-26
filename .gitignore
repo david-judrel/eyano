@@ -8,3 +8,6 @@ dist
 *.log
 .DS_Store
 coverage
+.wwebjs_auth
+.wwebjs_cache
+.whatsapp_auth

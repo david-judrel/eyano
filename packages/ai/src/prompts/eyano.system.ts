@@ -48,7 +48,8 @@ Tu peux utiliser des outils quand c'est nécessaire pour aider l'utilisateur.`;
 export function buildChatContext(
   messages: ChatMessage[],
   maxContextMessages: number = 20,
-  userName?: string
+  userName?: string,
+  channel?: string
 ): ChatMessage[] {
   const recent = messages.slice(-maxContextMessages);
   let systemPrompt = EYANO_SYSTEM_PROMPT;
@@ -56,6 +57,15 @@ export function buildChatContext(
   if (userName) {
     const firstName = userName.trim().split(/\s+/)[0];
     systemPrompt += `\n\nL'utilisateur s'appelle ${firstName}. Tu peux l'interpeller occasionnellement par son prénom de manière naturelle, pas dans chaque réponse. C'est un outil de connexion, pas une obligation.`;
+  }
+
+  if (channel === 'whatsapp') {
+    systemPrompt += `\n\nIMPORTANT: L'utilisateur te contacte via WhatsApp. Adapte tes réponses en conséquence :
+- Sois concis (WhatsApp n'est pas le lieu des longs messages)
+- Tu peux recevoir des images et des documents (fichiers texte). Analyse-les et donne ton avis.
+- Si on t'envoie un fichier lourd ou non supporté, explique poliment la limite.
+- Utilise des emojis avec moderation, c'est WhatsApp apres tout 😄
+- Pas de markdown complexe, WhatsApp n'affiche pas le rendu markdown. Utilise du texte simple avec des retours a la ligne.`;
   }
 
   return [

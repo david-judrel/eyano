@@ -8,7 +8,7 @@ export const siteConfig = {
   description:
     "Connectez-vous, partagez et decouvrez sur Eyano. Assistant intelligent propulse par Gnoxe AI.",
   url: PRODUCTION_URL,
-  ogImage: `${PRODUCTION_URL}/api/og`,
+  ogImage: `${PRODUCTION_URL}/icon-512.png`,
   creator: 'Gnoxe Technology',
   keywords: [
     'assistant IA',
@@ -42,9 +42,10 @@ export function getDefaultMetadata(overrides?: Partial<Metadata>): Metadata {
       images: [
         {
           url: siteConfig.ogImage,
-          width: 1200,
-          height: 630,
+          width: 512,
+          height: 512,
           alt: `${siteConfig.name} — Assistant IA Intelligent`,
+          type: 'image/png',
         },
       ],
     },
@@ -54,6 +55,13 @@ export function getDefaultMetadata(overrides?: Partial<Metadata>): Metadata {
       description: siteConfig.description,
       images: [siteConfig.ogImage],
       creator: '@eyano',
+    },
+    other: {
+      'og:image:secure_url': siteConfig.ogImage,
+      'og:image:width': '512',
+      'og:image:height': '512',
+      'theme-color': '#050505',
+      'msapplication-TileColor': '#050505',
     },
     robots: {
       index: true,
