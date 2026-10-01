@@ -1,6 +1,7 @@
 import { ChatMessage } from '@eyano/types';
 import { applyRecallGuard } from './recall-guard';
 import { buildRecallLookup } from '../recall/recall-resolver';
+import { describeVisibleTurns, missingTurns } from '../recall/visible-turns';
 
 /**
  * System instruction : ce que la couche superieure injecte, plus les
@@ -19,17 +20,35 @@ import { buildRecallLookup } from '../recall/recall-resolver';
  * a un trou, il complete. Lui donner les bornes exactes lui permet de
  * separer "absent de la fenetre" de "jamais arrive".
  *
- * Aucune valeur n'est ecrite en dur : tout derive de `total` et `max`.
+ * Aucune valeur n'est ecrite en dur : tout derive de l'historique et de `max`.
+ *
+ * Etape 37 : les bornes sont donnees en TOURS, plus en positions de
+ * message. "les messages 8 a 27" etait relu comme "a partir du huitieme
+ * tour" (e36, ON-1), alors que les tours 5 a 7 etaient visibles.
  */
-function visibleWindowStatement(total: number, max: number): string {
-  const visible = Math.min(max, total);
-  const first = total - visible + 1;
-  const last = total;
-  const dropped = first - 1;
+function visibleWindowStatement(messages: ChatMessage[], max: number): string {
+  const turns = describeVisibleTurns(messages, max);
+  const missing = missingTurns(turns);
+
+  const sentences: string[] = [];
+  if (turns.first !== null && turns.last !== null) {
+    sentences.push(
+      `Ce contexte contient les tours ${turns.first} à ${turns.last} d'une conversation de ${turns.turnCount} tours (un tour = un message de l'utilisateur et ta réponse).`
+    );
+  }
+  if (missing) {
+    const [from, to] = missing;
+    const span = from === to ? `Le tour ${from} n'est pas fourni` : `Les tours ${from} à ${to} ne sont pas fournis`;
+    sentences.push(
+      turns.partialTurn !== null
+        ? `${span}, sauf ta réponse au tour ${turns.partialTurn}, placée en tête du contexte.`
+        : `${span}.`
+    );
+  }
 
   return [
     '### Historique visible',
-    `Ce contexte contient les messages ${first} à ${last} d'une conversation de ${total} messages. Les messages 1 à ${dropped} ne sont pas fournis.`,
+    sentences.join(' '),
     "Un événement situé hors de cette plage ne doit pas être présenté comme un souvenir certain.",
   ].join('\n');
 }
@@ -75,7 +94,7 @@ export function buildChatContext(
   // un contexte, elle n'en cree jamais. Le contrat "sans voix ni fragment,
   // aucun system" (etape 27) reste donc intact.
   if (parts.length > 0 && messages.length > maxContextMessages) {
-    parts.push(visibleWindowStatement(messages.length, maxContextMessages));
+    parts.push(visibleWindowStatement(messages, maxContextMessages));
   }
 
   // Garde de rappel (etape 34) : la contrainte est posee AU POINT DE

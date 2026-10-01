@@ -50,24 +50,47 @@ test('sans troncature : aucune borne n est annoncee', () => {
   assert.equal(content.includes('ne sont pas fournis'), false);
 });
 
-test('avec troncature : les bornes reelles sont annoncees', () => {
+test('avec troncature : les bornes reelles sont annoncees en tours', () => {
+  // 25 messages, fenetre 6-25 : message 6 = reponse du tour 3, 7 = tour 4.
   const content = systemContent(history(25), { systemPrompt: VOICE });
 
   assert.ok(content.includes(HEADER), 'section absente');
-  assert.ok(
-    content.includes('les messages 6 à 25'),
-    `bornes incorrectes : ${content}`
-  );
-  assert.ok(content.includes('de 25 messages'), 'total absent');
-  assert.ok(content.includes('Les messages 1 à 5 ne sont pas fournis'), 'eviction non nommee');
+  assert.ok(content.includes('les tours 4 à 13'), `bornes incorrectes : ${content}`);
+  assert.ok(content.includes("d'une conversation de 13 tours"), 'total absent');
+  assert.ok(content.includes('Les tours 1 à 3 ne sont pas fournis'), 'eviction non nommee');
+  assert.ok(content.includes('sauf ta réponse au tour 3'), 'reponse orpheline non signalee');
+});
+
+test('etape 37 : aucune plage en positions de message', () => {
+  const content = systemContent(history(27), { systemPrompt: VOICE });
+
+  assert.ok(content.includes('les tours 5 à 14'), `recu : ${content}`);
+  assert.equal(/messages? \d/.test(content), false, `position de message annoncee : ${content}`);
+  assert.equal(content.includes('8 à 27'), false, 'ancienne plage e33');
+});
+
+test('fenetre qui commence par une question : pas de reponse orpheline', () => {
+  // 26 messages, fenetre 7-26 : message 7 = tour 4, rien d'autre en tete.
+  const content = systemContent(history(26), { systemPrompt: VOICE });
+
+  assert.ok(content.includes('les tours 4 à 13'), `recu : ${content}`);
+  assert.ok(content.includes('Les tours 1 à 3 ne sont pas fournis.'));
+  assert.equal(content.includes('sauf ta réponse'), false);
+});
+
+test('un seul tour evince : singulier', () => {
+  // 22 messages, fenetre 3-22 : message 3 = tour 2.
+  const content = systemContent(history(22), { systemPrompt: VOICE });
+
+  assert.ok(content.includes("Le tour 1 n'est pas fourni."), `recu : ${content}`);
 });
 
 test('les bornes derivent de la fenetre, pas d une constante', () => {
   const small = systemContent(history(31), { systemPrompt: VOICE });
   const large = systemContent(history(64), { systemPrompt: VOICE });
 
-  assert.ok(small.includes('les messages 12 à 31'), `petite fenetre : ${small}`);
-  assert.ok(large.includes('les messages 45 à 64'), `grande fenetre : ${large}`);
+  assert.ok(small.includes('les tours 7 à 16'), `petite fenetre : ${small}`);
+  assert.ok(large.includes('les tours 23 à 32'), `grande fenetre : ${large}`);
   assert.notEqual(small, large, 'ecrit en dur dans les deux cas');
 });
 
@@ -115,6 +138,6 @@ test('la borne est generee au fil de la conversation', async () => {
   const call = provider.calls.find((entry) => entry.kind === 'generate');
   const system = call.request.messages.find((message) => message.role === 'system');
 
-  assert.ok(system.content.includes('les messages 11 à 30'), `recu : ${system.content}`);
+  assert.ok(system.content.includes('les tours 6 à 15'), `recu : ${system.content}`);
   assert.equal(call.request.messages.length, 21, 'system + 20 messages');
 });

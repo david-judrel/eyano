@@ -10,6 +10,7 @@ const {
   resolveRecallTurn,
   buildRecallLookup,
   formatRecallLookup,
+  describeVisibleTurns,
   RECALL_GUARD_HEAD,
   RECALL_LOOKUP_HEAD,
 } = require('../dist/index.js');
@@ -129,9 +130,11 @@ test('le bloc NOT_AVAILABLE donne les deux systemes de coordonnees', () => {
 
   assert.ok(block.includes('Status: NOT_AVAILABLE'), 'statut absent');
   assert.ok(block.includes('Conversation user turns: 14'));
-  assert.ok(block.includes('Visible message range: 8-27'), 'position physique absente');
   assert.ok(block.includes('Visible user turns: 5-14'), 'plage de tours absente');
+  assert.ok(block.includes('Unavailable user turns: 1-4'), 'tours evinces absents');
   assert.equal(block.includes('Visible range:'), false, 'libelle ambigu retire');
+  assert.equal(block.includes('message range'), false, 'etape 37 : aucune plage de messages');
+  assert.equal(block.includes('8-27'), false, 'etape 37 : aucune plage de messages');
   assert.equal(block.includes('"msg'), false, 'aucun contenu retourne');
 });
 
@@ -156,6 +159,7 @@ test('une fenetre sans aucun tour utilisateur est annoncee telle quelle', () => 
   assert.equal(result.visibleFirst, 4);
   assert.equal(result.visibleTurnFirst, null);
   assert.equal(formatRecallLookup(result).includes('Visible user turns: none'), true);
+  assert.equal(formatRecallLookup(result).includes('Unavailable user turns: 1'), true);
 });
 
 test('aucun tour demande : aucun bloc', () => {
@@ -289,7 +293,7 @@ test('cas limite 1 : tour sans reponse -> no_reply, rien de fabrique', () => {
   const block = buildRecallLookup(messages, messages, 20);
   assert.ok(block.includes('Assistant reply: ASSISTANT_NO_REPLY'));
   assert.equal(block.includes('Assistant reply content'), false, 'aucun contenu invente');
-  assert.equal(block.includes('Visible message range'), false, 'rien n est evince');
+  assert.equal(block.includes('Visible user turns'), false, 'rien n est evince');
 });
 
 test('le tour en cours n a pas encore de reponse', () => {
@@ -321,8 +325,8 @@ test('reponse evincee : ASSISTANT_NOT_AVAILABLE avec les deux coordonnees', () =
 
   assert.ok(block.includes('Requested content: the assistant reply of that turn'));
   assert.ok(block.includes('Assistant reply: ASSISTANT_NOT_AVAILABLE'));
-  assert.ok(block.includes('Visible message range: 8-27'));
   assert.ok(block.includes('Visible user turns: 5-14'));
+  assert.ok(block.includes('Unavailable user turns: 1-4'));
   assert.equal(block.includes('"msg'), false, 'aucun contenu retourne');
   assert.equal(block.includes('User message'), false, 'la question n est pas demandee');
 });
@@ -382,4 +386,26 @@ test('resolver OFF : garde e34 seule, aucun bloc', () => {
   assert.equal(lastOff.includes(RECALL_LOOKUP_HEAD), false, 'aucun lookup');
   assert.ok(on[on.length - 1].content.includes(RECALL_LOOKUP_HEAD), 'ON par defaut');
   assert.equal(off[0].content, on[0].content, 'system identique : seule variable, le resolver');
+});
+
+// ------------------------------------------- e37 : fenetre en tours
+
+test('describeVisibleTurns : bornes en tours et reponse orpheline', () => {
+  assert.deepEqual(describeVisibleTurns(alternating(27), 20), {
+    turnCount: 14,
+    first: 5,
+    last: 14,
+    partialTurn: 4,
+  });
+  assert.deepEqual(describeVisibleTurns(alternating(9), 20), {
+    turnCount: 5,
+    first: 1,
+    last: 5,
+    partialTurn: null,
+  });
+});
+
+test('le bloc FOUND d e36 reste identique (temoin a2, etape 37)', () => {
+  const recent = alternating(27, "Bon. Qu'est-ce que je t'ai demandé au huitième tour ?");
+  assert.ok(buildRecallLookup(recent, recent, 20).includes('Message position: 15'));
 });

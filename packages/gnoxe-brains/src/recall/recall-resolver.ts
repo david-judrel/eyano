@@ -1,4 +1,5 @@
 import { ChatMessage } from '@eyano/types';
+import { formatTurnSpan, missingTurns } from './visible-turns';
 
 /**
  * Recall Resolver (etapes 35-36).
@@ -344,18 +345,28 @@ function pushPart(lines: string[], prefix: string, label: string, part: RecallPa
 }
 
 /**
- * Deux coordonnees, jamais melangees : position physique dans le contexte,
- * et numero du tour utilisateur.
+ * Une seule coordonnee : le numero de tour (etape 37).
+ *
+ * e36 donnait aussi la plage en positions de message ("8-27") ; le modele
+ * l'a relue comme une plage de tours. Les positions restent dans le bloc
+ * FOUND, attachees a un message precis, jamais sous forme de plage.
  */
 function pushRanges(lines: string[], result: RecallLookup): void {
+  const missing = missingTurns({
+    turnCount: result.turnCount,
+    first: result.visibleTurnFirst,
+    last: result.visibleTurnLast,
+    partialTurn: null,
+  });
+
   lines.push(`Conversation user turns: ${result.turnCount}`);
-  lines.push(`Visible message range: ${result.visibleFirst}-${result.visibleLast}`);
   lines.push(`Visible user turns: ${formatTurnRange(result)}`);
+  lines.push(`Unavailable user turns: ${missing ? formatTurnSpan(missing[0], missing[1]) : 'none'}`);
 }
 
 function formatTurnRange(result: RecallLookup): string {
-  if (result.visibleTurnFirst === null) return 'none';
-  return `${result.visibleTurnFirst}-${result.visibleTurnLast}`;
+  if (result.visibleTurnFirst === null || result.visibleTurnLast === null) return 'none';
+  return formatTurnSpan(result.visibleTurnFirst, result.visibleTurnLast);
 }
 
 /**
