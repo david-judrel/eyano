@@ -8,16 +8,19 @@
     "start": "node dist/main",
     "start:prod": "node dist/main",
     "typecheck": "tsc --noEmit",
+    "test": "npm run build && node --test \"test/*.test.js\"",
     "lint": "eslint src --ext .ts",
     "db:generate": "cd ../../packages/database && npx prisma generate",
     "db:push": "cd ../../packages/database && npx prisma db push",
     "db:migrate": "cd ../../packages/database && npx prisma migrate dev",
-    "admin:create": "node scripts/create-admin.js"
+    "admin:create": "node scripts/create-admin.js",
+    "smoke": "node scripts/smoke.js"
   },
   "dependencies": {
-    "@eyano/ai": "*",
     "@eyano/auth": "*",
     "@eyano/database": "*",
+    "@eyano/eyano-identity": "*",
+    "@eyano/gnoxe-brains": "*",
     "@eyano/types": "*",
     "@hapi/boom": "^10.0.1",
     "@nestjs/common": "^10.3.0",

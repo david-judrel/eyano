@@ -1,4 +1,8 @@
 import { create } from 'zustand';
+import { EYANO_MODELS } from '@eyano/types';
+
+/** Modele selectionne a l'ouverture, lu dans le catalogue commun. */
+const DEFAULT_MODEL = (EYANO_MODELS.find((entry) => entry.default) ?? EYANO_MODELS[0]).id;
 
 export interface User {
   id: string;
@@ -148,7 +152,7 @@ export const useAppStore = create<AppState>((set) => ({
   appendStreamingContent: (chunk) =>
     set((state) => ({ streamingContent: state.streamingContent + chunk })),
 
-  selectedModel: 'gnoxe-brains-1',
+  selectedModel: DEFAULT_MODEL,
   setSelectedModel: (model) => set({ selectedModel: model }),
 
   sidebarOpen: false,

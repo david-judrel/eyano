@@ -46,7 +46,6 @@ services:
       STORAGE_ENDPOINT: ${STORAGE_ENDPOINT:-}
       STORAGE_ACCESS_KEY: ${STORAGE_ACCESS_KEY:-}
       STORAGE_SECRET_KEY: ${STORAGE_SECRET_KEY:-}
-      GENKIT_ENV: production
     ports:
       - "127.0.0.1:3001:3001"
     networks:

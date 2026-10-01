@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import { Menu, LogIn, ChevronDown, Check } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { Logo } from './ui/logo';
-import { EYANO_MODELS } from '@/lib/models';
+import { EYANO_MODELS } from '@eyano/types';
 import { cn } from '@/lib/utils';
 
 interface TopBarProps {

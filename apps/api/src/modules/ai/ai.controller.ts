@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, UseGuards, Req, Res, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Req, Res, NotFoundException, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { AiService } from './ai.service';
@@ -6,7 +6,7 @@ import { AuthGuard } from '../../guards/auth.guard';
 import { AdminGuard } from '../../guards/admin.guard';
 import { RateLimitGuard } from '../../guards/rate-limit.guard';
 import { AuditService } from '../audit/audit.service';
-import { getKeyManager } from '@eyano/ai';
+import { getProviderKeyMetrics, resetProviderKeys, isRegisteredModel } from '@eyano/gnoxe-brains';
 
 class ImageDto {
   mimeType!: string;
@@ -37,39 +37,48 @@ export class AiController {
 
   @Get('keys/status')
   @UseGuards(AdminGuard)
-  @ApiOperation({ summary: 'Metriques et etat des cles Gemini (admin)' })
+  @ApiOperation({ summary: 'Metriques et etat des cles du fournisseur (admin)' })
   async getKeysStatus(@Req() req: any) {
     await this.auditService.log({
       userId: req.user.userId,
-      action: 'VIEW_GEMINI_KEYS_STATUS',
-      target: 'gemini-key-pool',
+      action: 'VIEW_PROVIDER_KEY_STATUS',
+      target: 'provider-key-pool',
       ip: req.ip,
     });
 
-    const keyManager = getKeyManager();
-    return keyManager.getMetrics();
+    return getProviderKeyMetrics();
   }
 
   @Post('keys/reset')
   @UseGuards(AdminGuard)
-  @ApiOperation({ summary: 'Reinitialiser toutes les cles Gemini (admin)' })
+  @ApiOperation({ summary: 'Reinitialiser toutes les cles du fournisseur (admin)' })
   async resetKeys(@Req() req: any) {
     await this.auditService.log({
       userId: req.user.userId,
-      action: 'RESET_GEMINI_KEYS',
-      target: 'gemini-key-pool',
+      action: 'RESET_PROVIDER_KEYS',
+      target: 'provider-key-pool',
       ip: req.ip,
     });
 
-    const keyManager = getKeyManager();
-    keyManager.resetAllKeys();
+    resetProviderKeys();
     return { message: 'Toutes les cles ont ete reinitialisees' };
+  }
+
+  /**
+   * Refuse explicitement un modele inconnu plutot que de laisser la couche
+   * d'intelligence servir silencieusement un autre modele (telemetrie fausse).
+   */
+  private assertKnownModel(model?: string): void {
+    if (model && !isRegisteredModel(model)) {
+      throw new BadRequestException(`Modele IA inconnu : ${model}`);
+    }
   }
 
   @Post('chat')
   @UseGuards(RateLimitGuard)
   @ApiOperation({ summary: 'Envoyer un message et recevoir une reponse' })
   async chat(@Req() req: any, @Body() body: ChatDto) {
+    this.assertKnownModel(body.model);
     return this.aiService.chat(req.user.userId, body.conversationId, body.message, body.model, body.images);
   }
 
@@ -77,6 +86,8 @@ export class AiController {
   @UseGuards(RateLimitGuard)
   @ApiOperation({ summary: 'Envoyer un message avec streaming' })
   async chatStream(@Req() req: any, @Body() body: ChatDto, @Res() res: Response) {
+    this.assertKnownModel(body.model);
+
     res.setHeader('Content-Type', 'text/event-stream');
     res.setHeader('Cache-Control', 'no-cache');
     res.setHeader('Connection', 'keep-alive');
@@ -106,6 +117,8 @@ export class AiController {
   @Post('regenerate')
   @ApiOperation({ summary: 'Regenerer la derniere reponse' })
   async regenerate(@Req() req: any, @Body() body: RegenerateDto) {
+    this.assertKnownModel(body.model);
+
     const { prisma } = await import('@eyano/database');
 
     const conversation = await prisma.conversation.findUnique({

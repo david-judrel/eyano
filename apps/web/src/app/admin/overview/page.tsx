@@ -106,7 +106,7 @@ export default function AdminOverview() {
         <div className="rounded-2xl border border-[#F2FFF0]/[6%] bg-[#0D0F0E]/60 backdrop-blur-xl overflow-hidden">
           <div className="px-6 py-4 border-b border-[#F2FFF0]/[4%] flex items-center gap-3">
             <Cpu className="h-5 w-5 text-[#39FF14]" />
-            <h2 className="text-sm font-semibold text-[#F2FFF0]/80">Gemini Keys</h2>
+            <h2 className="text-sm font-semibold text-[#F2FFF0]/80">Cles API</h2>
           </div>
           <div className="p-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">

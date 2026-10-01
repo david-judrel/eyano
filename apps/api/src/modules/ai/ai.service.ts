@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { prisma } from '../../lib/prisma';
-import { chatFlow, chatFlowSync, titleFlow } from '@eyano/ai';
+import {
+  chatFlow,
+  chatFlowSync,
+  titleFlow,
+  getActiveProviderName,
+  DEFAULT_MODEL_ID,
+} from '@eyano/gnoxe-brains';
+import { buildEyanoContext } from '@eyano/eyano-identity';
 import { ChatMessage, ImageAttachment } from '@eyano/types';
 import { MessagesService } from '../messages/messages.service';
 import { UsageService } from '../usage/usage.service';
@@ -32,6 +39,8 @@ export class AiService {
     model?: string,
     images?: ImageAttachment[]
   ): Promise<{ response: string; messageId: string; title: string | null }> {
+    const providerName = getActiveProviderName();
+
     // IDOR Protection: Verify conversation belongs to user
     const ownershipCheck = await prisma.conversation.findUnique({
       where: { id: conversationId },
@@ -54,7 +63,7 @@ export class AiService {
 
     const userMessage = await this.messagesService.create(conversationId, 'user', content, {
       model,
-      provider: 'gemini',
+      provider: providerName,
     });
 
     const startTime = Date.now();
@@ -64,18 +73,19 @@ export class AiService {
       messages,
       model,
       userName: user?.name || undefined,
+      systemPrompt: buildEyanoContext(),
     });
 
     const latencyMs = Date.now() - startTime;
 
     const assistantMessage = await this.messagesService.create(conversationId, 'assistant', result.content, {
       model: result.model,
-      provider: 'gemini',
+      provider: providerName,
     });
 
     await this.aiRequestsService.create({
       messageId: assistantMessage.id,
-      provider: 'gemini',
+      provider: providerName,
       model: result.model,
     });
 
@@ -106,6 +116,8 @@ export class AiService {
     model?: string,
     images?: ImageAttachment[]
   ) {
+    const providerName = getActiveProviderName();
+
     // IDOR Protection: Verify conversation belongs to user
     const ownershipCheck = await prisma.conversation.findUnique({
       where: { id: conversationId },
@@ -129,12 +141,12 @@ export class AiService {
 
     const userMessage = await this.messagesService.create(conversationId, 'user', content, {
       model,
-      provider: 'gemini',
+      provider: providerName,
     });
 
     yield { type: 'start' as const, messageId: userMessage.id };
 
-    const assistantMessage = await this.messagesService.createStreaming(conversationId, model, 'gemini');
+    const assistantMessage = await this.messagesService.createStreaming(conversationId, model, providerName);
 
     yield { type: 'message_created' as const, messageId: assistantMessage.id };
 
@@ -152,6 +164,7 @@ export class AiService {
         messages,
         model,
         userName: user?.name || undefined,
+        systemPrompt: buildEyanoContext(),
       });
 
       for await (const chunk of stream) {
@@ -172,8 +185,8 @@ export class AiService {
 
           const aiRequest = await this.aiRequestsService.create({
             messageId: assistantMessage.id,
-            provider: 'gemini',
-            model: chunk.model || model || 'gnoxe-brains-1',
+            provider: providerName,
+            model: chunk.model || model || DEFAULT_MODEL_ID,
           });
           aiRequestId = aiRequest.id;
 
@@ -184,7 +197,7 @@ export class AiService {
             status: 'SUCCESS',
           });
 
-          await this.usageService.track(userId, chunk.model || model || 'gnoxe-brains-1', inputTokens, outputTokens);
+          await this.usageService.track(userId, chunk.model || model || DEFAULT_MODEL_ID, inputTokens, outputTokens);
         }
       }
 

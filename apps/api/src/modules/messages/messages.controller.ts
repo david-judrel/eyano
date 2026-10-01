@@ -1,5 +1,6 @@
-import { Controller, Get, Post, Body, Param, UseGuards, Req, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, Req, ForbiddenException, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { isRegisteredModel } from '@eyano/gnoxe-brains';
 import { MessagesService } from './messages.service';
 import { AuthGuard } from '../../guards/auth.guard';
 import { prisma } from '../../lib/prisma';
@@ -35,6 +36,9 @@ export class MessagesController {
     });
     if (!conversation || conversation.userId !== req.user.userId) {
       throw new ForbiddenException('Acces interdit');
+    }
+    if (body.model && !isRegisteredModel(body.model)) {
+      throw new BadRequestException(`Modele IA inconnu : ${body.model}`);
     }
     return this.messagesService.create(conversationId, 'user', body.content, { model: body.model });
   }

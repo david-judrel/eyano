@@ -31,10 +31,15 @@ interface AuditResponse {
 }
 
 const actionLabels: Record<string, { label: string; icon: any; color: string }> = {
+  'VIEW_PROVIDER_KEY_STATUS': { label: 'Consultation cles', icon: Key, color: 'text-[#39FF14]' },
+  'RESET_PROVIDER_KEYS': { label: 'Reset cles', icon: Key, color: 'text-yellow-400' },
+  // Libelles historiques : conserve pour afficher proprement les enregistrements
+  // d'audit anterieurs au renommage des actions.
   'VIEW_GEMINI_KEYS_STATUS': { label: 'Consultation cles', icon: Key, color: 'text-[#39FF14]' },
   'RESET_GEMINI_KEYS': { label: 'Reset cles', icon: Key, color: 'text-yellow-400' },
   'UPDATE_USER_ROLE': { label: 'Modification role', icon: Shield, color: 'text-purple-400' },
   'UPDATE_USER_STATUS': { label: 'Modification statut', icon: User, color: 'text-orange-400' },
+  'RUN_MISSION': { label: 'Mission IA', icon: Activity, color: 'text-[#39FF14]' },
 };
 
 export default function AdminAudit() {
@@ -79,8 +84,8 @@ export default function AdminAudit() {
           className="h-10 rounded-xl border border-[#F2FFF0]/[8%] bg-[#0D0F0E] px-3 text-sm text-[#F2FFF0] focus:outline-none focus:border-[#39FF14]/40"
         >
           <option value="">Toutes les actions</option>
-          <option value="VIEW_GEMINI_KEYS_STATUS">Consultation cles</option>
-          <option value="RESET_GEMINI_KEYS">Reset cles</option>
+          <option value="VIEW_PROVIDER_KEY_STATUS">Consultation cles</option>
+          <option value="RESET_PROVIDER_KEYS">Reset cles</option>
           <option value="UPDATE_USER_ROLE">Modification role</option>
           <option value="UPDATE_USER_STATUS">Modification statut</option>
         </select>

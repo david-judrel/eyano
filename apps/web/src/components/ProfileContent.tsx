@@ -7,6 +7,7 @@ import {
   ShieldCheck, Key, Palette, Database, Bell, Globe, ChevronRight, Eye, EyeOff 
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
+import { EYANO_MODELS } from '@eyano/types';
 import { api } from '@/lib/api';
 import { Avatar } from '@/components/ui/avatar';
 import { Logo } from '@/components/ui/logo';
@@ -32,7 +33,7 @@ export function ProfileContent() {
     language: 'fr',
     notifications: true,
     dataRetention: '30d',
-    modelDefault: 'gnoxe-brains-1'
+    modelDefault: (EYANO_MODELS.find((entry) => entry.default) ?? EYANO_MODELS[0]).id
   });
 
   useEffect(() => {
