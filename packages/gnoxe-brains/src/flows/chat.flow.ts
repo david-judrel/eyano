@@ -21,6 +21,8 @@ export interface ChatFlowInput {
   systemPrompt?: string;
   /** Voir `ChatContextOptions.recallResolver` : controle experimental. */
   recallResolver?: boolean;
+  /** Voir `ChatContextOptions.provenanceCheck` : controle experimental. */
+  provenanceCheck?: boolean;
 }
 
 export interface ChatFlowOutput {
@@ -100,7 +102,7 @@ async function prepareChat(input: ChatFlowInput): Promise<{
     input.userName,
     input.channel,
     input.systemPrompt,
-    { recallResolver: input.recallResolver }
+    { recallResolver: input.recallResolver, provenanceCheck: input.provenanceCheck }
   );
   const model = input.model || DEFAULT_MODEL;
 

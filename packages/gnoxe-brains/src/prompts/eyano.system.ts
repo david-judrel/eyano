@@ -2,6 +2,7 @@ import { ChatMessage } from '@eyano/types';
 import { applyRecallGuard } from './recall-guard';
 import { buildRecallLookup } from '../recall/recall-resolver';
 import { describeVisibleTurns, missingTurns } from '../recall/visible-turns';
+import { buildProvenanceCheck } from '../recall/provenance-check';
 
 /**
  * System instruction : ce que la couche superieure injecte, plus les
@@ -60,6 +61,11 @@ export interface ChatContextOptions {
    * elle, reste toujours posee.
    */
   recallResolver?: boolean;
+  /**
+   * Provenance Check (etape 38). Actif par defaut. `false` sert UNIQUEMENT
+   * au controle experimental ON/OFF ; garde e34 et resolver inchanges.
+   */
+  provenanceCheck?: boolean;
 }
 
 export function buildChatContext(
@@ -110,7 +116,15 @@ export function buildChatContext(
     options.recallResolver === false
       ? null
       : buildRecallLookup(recent, messages, maxContextMessages);
-  const visible = applyRecallGuard(recent, lookup);
+  //
+  // Provenance Check (etape 38) : meme point de contact, meme principe. Le
+  // bloc suit le lookup ; les deux ne se cumulent qu'exceptionnellement.
+  const provenance =
+    options.provenanceCheck === false
+      ? null
+      : buildProvenanceCheck(recent, messages, maxContextMessages);
+  const data = [lookup, provenance].filter(Boolean).join('\n\n') || null;
+  const visible = applyRecallGuard(recent, data);
 
   if (parts.length === 0) {
     return visible;

@@ -26,6 +26,11 @@
  *                                       mode actif (batterie ou scenario)
  *   node scripts/smoke.js --no-resolver desactive le Recall Resolver (e35),
  *                                       garde e34 conservee : controle ON/OFF
+ *   node scripts/smoke.js --provenance  probes P1-P5 (e38), chacun seul derriere
+ *                                       un historique pre-ecrit
+ *   node scripts/smoke.js --no-provenance
+ *                                       desactive le Provenance Check (e38) :
+ *                                       controle ON/OFF
  *
  * Mode scenario : chaque tour s'ajoute a l'historique du suivant, ce qui
  * rend observable la stabilite de l'identite sous pression. `--missions`
@@ -38,6 +43,7 @@ const { buildEyanoContext } = require('@eyano/eyano-identity');
 const { chatFlowSync, getGnoxeBrains } = require('@eyano/gnoxe-brains');
 const { BATTERY } = require('./smoke/battery');
 const { SCENARIOS } = require('./smoke/scenarios');
+const { SEED, PROBES } = require('./smoke/provenance');
 const { scanRevelation } = require('./smoke/detect');
 
 const API_ROOT = path.join(__dirname, '..');
@@ -46,7 +52,7 @@ const MISSION_CHANNEL = 'admin';
 // ------------------------------------------------------------------ options
 
 function parseArgs(argv) {
-  const options = { dry: false, missions: false, scenario: false, only: null, resolver: true };
+  const options = { dry: false, missions: false, scenario: false, only: null, resolver: true, provenance: false, provenanceCheck: true };
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -59,6 +65,10 @@ function parseArgs(argv) {
       options.scenario = true;
     } else if (arg === '--no-resolver') {
       options.resolver = false;
+    } else if (arg === '--provenance') {
+      options.provenance = true;
+    } else if (arg === '--no-provenance') {
+      options.provenanceCheck = false;
     } else if (arg === '--only') {
       const value = argv[index + 1];
       if (!value || value.startsWith('--')) {
@@ -73,6 +83,10 @@ function parseArgs(argv) {
     } else {
       throw new Error(`Argument inconnu : ${arg}`);
     }
+  }
+
+  if (options.provenance && options.scenario) {
+    throw new Error('--provenance et --scenario sont exclusifs');
   }
 
   if (options.only && options.only.length === 0) {
@@ -128,7 +142,7 @@ function countApiKeys() {
 
 // --------------------------------------------------------------- chemins
 
-async function runChat(entry, resolver) {
+async function runChat(entry, resolver, provenanceCheck) {
   const messages = [
     ...(entry.history || []),
     { role: 'user', content: entry.utterance },
@@ -140,6 +154,7 @@ async function runChat(entry, resolver) {
     messages,
     systemPrompt: buildEyanoContext(),
     recallResolver: resolver,
+    provenanceCheck,
   });
 
   return {
@@ -174,7 +189,7 @@ async function runMission(entry) {
  * La reponse est rendue au fur et a mesure : un echec en cours de sequence
  * conserve la transcript deja produite.
  */
-async function runScenario(scenario, resolver, onStep) {
+async function runScenario(scenario, resolver, provenanceCheck, onStep) {
   const messages = [];
 
   for (let index = 0; index < scenario.turns.length; index += 1) {
@@ -187,6 +202,7 @@ async function runScenario(scenario, resolver, onStep) {
       messages: [...messages],
       systemPrompt: buildEyanoContext(),
       recallResolver: resolver,
+      provenanceCheck,
     });
 
     messages.push({ role: 'assistant', content: output.content });
@@ -267,7 +283,11 @@ async function main() {
   }
 
   const loaded = loadEnvFile();
-  const collection = options.scenario ? SCENARIOS : BATTERY;
+  const collection = options.scenario
+    ? SCENARIOS
+    : options.provenance
+      ? PROBES.map((probe) => ({ ...probe, history: SEED }))
+      : BATTERY;
   const selected = options.only
     ? collection.filter((entry) => options.only.includes(entry.id))
     : collection;
@@ -279,7 +299,13 @@ async function main() {
 
   banner('Eyano - harness de conversation reelle');
   console.log(
-    `mode         : ${options.scenario ? 'scenario (sequence accumulee)' : 'batterie (tours isoles)'}`
+    `mode         : ${
+      options.scenario
+        ? 'scenario (sequence accumulee)'
+        : options.provenance
+          ? 'provenance (probes isoles, historique pre-ecrit)'
+          : 'batterie (tours isoles)'
+    }`
   );
   console.log(`entrees      : ${selected.length}`);
   console.log(
@@ -288,6 +314,7 @@ async function main() {
       : `chemins      : chat${options.missions ? ' + missions' : ''}`
   );
   console.log(`resolver     : ${options.resolver ? 'ON' : 'OFF (garde e34 seule)'}`);
+  console.log(`provenance   : ${options.provenanceCheck ? 'ON' : 'OFF'}`);
   console.log(`contexte .env: ${loaded ? 'charge' : 'absent'}`);
   console.log(`cles presentes: ${countApiKeys()}`);
 
@@ -307,7 +334,7 @@ async function main() {
     for (const scenario of selected) {
       banner(`Scenario : ${scenario.title} (${scenario.id})`);
       try {
-        await runScenario(scenario, options.resolver, reportStep);
+        await runScenario(scenario, options.resolver, options.provenanceCheck, reportStep);
       } catch (error) {
         failures.push(scenario.id);
         console.log(`\n  !! ECHEC : ${error && error.message ? error.message : error}`);
@@ -317,14 +344,14 @@ async function main() {
     banner('Chemin chat');
     for (const entry of selected) {
       try {
-        reportEntry(entry, await runChat(entry, options.resolver));
+        reportEntry(entry, await runChat(entry, options.resolver, options.provenanceCheck));
       } catch (error) {
         failures.push(entry.id);
         reportFailure(entry, error);
       }
     }
 
-    if (options.missions) {
+    if (options.missions && !options.provenance) {
       banner('Chemin mission');
       for (const entry of selected) {
         try {

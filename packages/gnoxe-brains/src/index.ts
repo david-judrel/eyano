@@ -6,6 +6,7 @@ export * from './prompts/eyano.system';
 export * from './prompts/recall-guard';
 export * from './recall/recall-resolver';
 export * from './recall/visible-turns';
+export * from './recall/provenance-check';
 
 // GnoxeBrains : couche d'intelligence et d'orchestration (migration en cours)
 export * from './missions/types';
