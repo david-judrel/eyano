@@ -1,4 +1,4 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { prisma } from '../../lib/prisma';
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;  // 10MB
@@ -21,7 +21,31 @@ const ALLOWED_TYPES = [...IMAGE_TYPES, ...DOCUMENT_TYPES];
 
 @Injectable()
 export class FilesService {
-  async upload(messageId: string, file: Express.Multer.File) {
+  /**
+   * Etape 46 (I4) : un message appartient au proprietaire de SA conversation.
+   * Inexistant ou appartenant a un autre utilisateur : meme reponse
+   * (NotFound), pour ne pas reveler l'existence du message.
+   */
+  private async assertMessageOwner(messageId: string, userId: string): Promise<void> {
+    const message = await prisma.message.findUnique({
+      where: { id: messageId },
+      select: { conversationId: true },
+    });
+    const conversation = message
+      ? await prisma.conversation.findUnique({
+          where: { id: message.conversationId },
+          select: { userId: true },
+        })
+      : null;
+
+    if (!conversation || conversation.userId !== userId) {
+      throw new NotFoundException('Message non trouve');
+    }
+  }
+
+  async upload(messageId: string, file: Express.Multer.File, userId: string) {
+    await this.assertMessageOwner(messageId, userId);
+
     const isImage = IMAGE_TYPES.includes(file.mimetype);
     const maxSize = isImage ? MAX_IMAGE_SIZE : MAX_FILE_SIZE;
 
@@ -58,7 +82,8 @@ export class FilesService {
     });
   }
 
-  async findByMessage(messageId: string) {
+  async findByMessage(messageId: string, userId: string) {
+    await this.assertMessageOwner(messageId, userId);
     return prisma.attachment.findMany({ where: { messageId } });
   }
 }
