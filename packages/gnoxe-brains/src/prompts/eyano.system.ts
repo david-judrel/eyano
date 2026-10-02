@@ -87,6 +87,12 @@ export interface ChatContextOptions {
    * sinon bornes, resolver et check numerotent et cherchent faux.
    */
   historyCoverage?: HistoryCoverage;
+  /**
+   * Etape 42 : le resolver restitue un message stocke hors fenetre (defaut).
+   * `false` retablit le contrat e35-e41 (visible seulement) et sert
+   * UNIQUEMENT au controle experimental.
+   */
+  recallStoredHistory?: boolean;
 }
 
 export function buildChatContext(
@@ -144,7 +150,13 @@ export function buildChatContext(
   const lookup =
     options.recallResolver === false
       ? null
-      : buildRecallLookup(recent, messages, maxContextMessages, coverage);
+      : buildRecallLookup(
+          recent,
+          messages,
+          maxContextMessages,
+          coverage,
+          options.recallStoredHistory !== false
+        );
   //
   // Provenance Check (etape 38) : meme point de contact, meme principe. Le
   // bloc suit le lookup ; les deux ne se cumulent qu'exceptionnellement.

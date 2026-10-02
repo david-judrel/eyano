@@ -37,6 +37,9 @@
  *   node scripts/smoke.js --provenance-e41
  *                                       probes P1-P6 (e41.6), historique et
  *                                       couverture propres a chaque probe
+ *   node scripts/smoke.js --recall-visible-only
+ *                                       retablit le contrat e35-e41 du resolver
+ *                                       (visible seulement) : controle OFF d'e42
  *   node scripts/smoke.js --no-provenance
  *                                       desactive le Provenance Check (e38) :
  *                                       controle ON/OFF
@@ -73,7 +76,7 @@ const MISSION_CHANNEL = 'admin';
 // ------------------------------------------------------------------ options
 
 function parseArgs(argv) {
-  const options = { dry: false, missions: false, scenario: false, only: null, resolver: true, provenance: false, provenanceSet: 'e38', provenanceCheck: true };
+  const options = { dry: false, missions: false, scenario: false, only: null, resolver: true, provenance: false, provenanceSet: 'e38', provenanceCheck: true, storedRecall: true };
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -97,6 +100,8 @@ function parseArgs(argv) {
     } else if (arg === '--provenance-e41') {
       options.provenance = true;
       options.provenanceSet = 'e41';
+    } else if (arg === '--recall-visible-only') {
+      options.storedRecall = false;
     } else if (arg === '--no-provenance') {
       options.provenanceCheck = false;
     } else if (arg === '--only') {
@@ -172,7 +177,7 @@ function countApiKeys() {
 
 // --------------------------------------------------------------- chemins
 
-async function runChat(entry, resolver, provenanceCheck) {
+async function runChat(entry, resolver, provenanceCheck, storedRecall) {
   const messages = [
     ...(entry.history || []),
     { role: 'user', content: entry.utterance },
@@ -188,6 +193,7 @@ async function runChat(entry, resolver, provenanceCheck) {
     recallResolver: resolver,
     provenanceCheck,
     historyCoverage: entry.coverage,
+    recallStoredHistory: storedRecall,
   });
 
   return {
@@ -222,7 +228,7 @@ async function runMission(entry) {
  * La reponse est rendue au fur et a mesure : un echec en cours de sequence
  * conserve la transcript deja produite.
  */
-async function runScenario(scenario, resolver, provenanceCheck, onStep) {
+async function runScenario(scenario, resolver, provenanceCheck, storedRecall, onStep) {
   const messages = [];
 
   for (let index = 0; index < scenario.turns.length; index += 1) {
@@ -236,6 +242,7 @@ async function runScenario(scenario, resolver, provenanceCheck, onStep) {
       systemPrompt: buildEyanoContext(),
       recallResolver: resolver,
       provenanceCheck,
+      recallStoredHistory: storedRecall,
     });
 
     messages.push({ role: 'assistant', content: output.content });
@@ -351,6 +358,7 @@ async function main() {
   );
   console.log(`resolver     : ${options.resolver ? 'ON' : 'OFF (garde e34 seule)'}`);
   console.log(`provenance   : ${options.provenanceCheck ? 'ON' : 'OFF'}`);
+  console.log(`rappel stocke: ${options.storedRecall ? 'ON (e42)' : 'OFF (visible seulement)'}`);
   console.log(`contexte .env: ${loaded ? 'charge' : 'absent'}`);
   console.log(`cles presentes: ${countApiKeys()}`);
 
@@ -370,7 +378,13 @@ async function main() {
     for (const scenario of selected) {
       banner(`Scenario : ${scenario.title} (${scenario.id})`);
       try {
-        await runScenario(scenario, options.resolver, options.provenanceCheck, reportStep);
+        await runScenario(
+          scenario,
+          options.resolver,
+          options.provenanceCheck,
+          options.storedRecall,
+          reportStep
+        );
       } catch (error) {
         failures.push(scenario.id);
         console.log(`\n  !! ECHEC : ${error && error.message ? error.message : error}`);
@@ -380,7 +394,10 @@ async function main() {
     banner('Chemin chat');
     for (const entry of selected) {
       try {
-        reportEntry(entry, await runChat(entry, options.resolver, options.provenanceCheck));
+        reportEntry(
+          entry,
+          await runChat(entry, options.resolver, options.provenanceCheck, options.storedRecall)
+        );
       } catch (error) {
         failures.push(entry.id);
         reportFailure(entry, error);

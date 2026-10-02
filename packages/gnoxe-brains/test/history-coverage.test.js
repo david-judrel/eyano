@@ -211,3 +211,38 @@ test('sans couverture : sortie identique a l historique complet declare', () => 
   assert.ok(implicit[implicit.length - 1].content.includes('Searched: all'));
   assert.ok(implicit[implicit.length - 1].content.includes(RECALL_LOOKUP_HEAD) === false);
 });
+
+// ------------------------------------------------- e42 : rappel stocke
+
+test('e42 : historique partiel, le tour 12 stocke est restitue avec sa source', () => {
+  const question = "Qu'est-ce que je t'ai demandé au tour 12 ?";
+  const block = buildRecallLookup(stored(question), stored(question), 20, PARTIAL);
+
+  assert.ok(block.includes('Status: FOUND'));
+  assert.ok(block.includes('Source: stored history, not in the visible context'));
+  assert.ok(block.includes('"question du tour 12"'));
+});
+
+test('e42 : un tour supprime reste NOT_AVAILABLE (frontiere e41 intacte)', () => {
+  const result = resolveRecallTurn(stored('x'), 3, 20, 'user', PARTIAL);
+  assert.equal(result.status, 'not_available');
+  assert.equal(result.reason, 'deleted');
+  assert.equal(result.message, undefined);
+});
+
+test('e42 : recallStoredHistory false retablit l ancien contrat, borne inchangee', () => {
+  const question = "Qu'est-ce que je t'ai demandé au tour 12 ?";
+  const build = (options) =>
+    buildChatContext(stored(question), 20, undefined, undefined, VOICE, {
+      historyCoverage: PARTIAL,
+      ...options,
+    });
+  const on = build({});
+  const off = build({ recallStoredHistory: false });
+
+  assert.ok(on[on.length - 1].content.includes('"question du tour 12"'));
+  assert.ok(off[off.length - 1].content.includes('Status: NOT_AVAILABLE'));
+  assert.equal(off[off.length - 1].content.includes('"question du tour 12"'), false);
+  assert.equal(on[0].content, off[0].content, 'la fenetre annoncee ne change pas');
+  assert.ok(on[0].content.includes('Les tours 1 à 15 ne sont pas fournis'));
+});

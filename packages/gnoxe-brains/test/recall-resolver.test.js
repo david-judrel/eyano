@@ -66,14 +66,22 @@ test('resolution : un tour dans la fenetre est trouve avec sa position reelle', 
   assert.equal(result.visibleLast, 27);
 });
 
-test('resolution : un tour evince est marque indisponible, pas invente', () => {
+test('e42 : un tour hors fenetre mais stocke est restitue, marque hors fenetre', () => {
   const result = resolveRecallTurn(alternating(27), 3, 20);
+
+  assert.equal(result.status, 'found');
+  assert.equal(result.message, 'msg 5');
+  assert.deepEqual(result.user, { status: 'found', position: 5, content: 'msg 5', outsideWindow: true });
+  assert.equal(result.visibleFirst, 8);
+  assert.equal(result.turnCount, 14);
+});
+
+test('e42 controle : storedRecall false retablit le contrat e35-e41', () => {
+  const result = resolveRecallTurn(alternating(27), 3, 20, 'user', undefined, false);
 
   assert.equal(result.status, 'not_available');
   assert.equal(result.reason, 'out_of_window');
   assert.equal(result.message, undefined, 'aucun contenu retourne');
-  assert.equal(result.visibleFirst, 8);
-  assert.equal(result.turnCount, 14);
 });
 
 test('resolution : un tour qui n existe pas est distingue d un tour evince', () => {
@@ -121,11 +129,38 @@ test('le bloc FOUND donne la position, le contenu et l interdiction de le tronqu
   assert.ok(block.includes('Do not alter the retrieved message when answering.'));
 });
 
-test('le bloc NOT_AVAILABLE donne les deux systemes de coordonnees', () => {
+test('e42 : bloc FOUND hors fenetre, la source remplace la position', () => {
   const block = buildRecallLookup(
     alternating(27, 'demandé au troisième tour ?'),
     alternating(27),
     20
+  );
+
+  assert.equal(
+    block,
+    [
+      RECALL_LOOKUP_HEAD,
+      '',
+      'Requested turn: 3',
+      'Status: FOUND',
+      'Requested content: the user message of that turn',
+      'Source: stored history, not in the visible context',
+      'Message:',
+      '"msg 5"',
+      '',
+      'Do not alter the retrieved message when answering.',
+    ].join('\n')
+  );
+  assert.equal(block.includes('Message position'), false, 'aucune position de stockage');
+});
+
+test('le bloc NOT_AVAILABLE donne les deux systemes de coordonnees', () => {
+  const block = buildRecallLookup(
+    alternating(27, 'demandé au troisième tour ?'),
+    alternating(27),
+    20,
+    undefined,
+    false
   );
 
   assert.ok(block.includes('Status: NOT_AVAILABLE'), 'statut absent');
@@ -154,12 +189,15 @@ test('une fenetre sans aucun tour utilisateur est annoncee telle quelle', () => 
     { role: 'assistant', content: 'r2' },
     { role: 'assistant', content: 'r3' },
   ];
-  const result = resolveRecallTurn(messages, 1, 1);
+  const result = resolveRecallTurn(messages, 1, 1, 'user', undefined, false);
 
   assert.equal(result.visibleFirst, 4);
   assert.equal(result.visibleTurnFirst, null);
   assert.equal(formatRecallLookup(result).includes('Visible user turns: none'), true);
   assert.equal(formatRecallLookup(result).includes('Unavailable user turns: 1'), true);
+
+  // e42 : la question est stockee, elle est restituee hors fenetre.
+  assert.equal(resolveRecallTurn(messages, 1, 1).message, 'question seule');
 });
 
 test('aucun tour demande : aucun bloc', () => {
@@ -314,14 +352,31 @@ test('cas limite 2 reel : question evincee, reponse encore visible', () => {
   // Fenetre 8-27 : tour 4 = user 7 (dehors), assistant 8 (dedans).
   const result = resolveRecallTurn(alternating(27), 4, 20, 'both');
 
-  assert.equal(result.user.status, 'not_available');
+  // e42 : la question, stockee, est restituee hors fenetre ; la reponse,
+  // visible, garde son bloc e36.
+  assert.deepEqual(result.user, { status: 'found', position: 7, content: 'msg 7', outsideWindow: true });
   assert.deepEqual(result.assistant, { status: 'found', position: 8, content: 'msg 8' });
-  assert.equal(result.status, 'not_available', 'contrat e35 : statut du message user');
+  assert.equal(result.status, 'found');
+
+  const old = resolveRecallTurn(alternating(27), 4, 20, 'both', undefined, false);
+  assert.equal(old.user.status, 'not_available', 'contrat e35-e41');
+  assert.equal(old.status, 'not_available');
 });
 
-test('reponse evincee : ASSISTANT_NOT_AVAILABLE avec les deux coordonnees', () => {
+test('e42 : reponse hors fenetre, ASSISTANT_FOUND avec sa source', () => {
   const recent = alternating(27, "tu m'as répondu quoi au tour 2 ?");
   const block = buildRecallLookup(recent, recent, 20);
+
+  assert.ok(block.includes('Assistant reply: ASSISTANT_FOUND'));
+  assert.ok(block.includes('Assistant reply source: stored history, not in the visible context'));
+  assert.ok(block.includes('"msg 4"'));
+  assert.equal(block.includes('Assistant reply position'), false);
+  assert.equal(block.includes('Unavailable user turns'), false, 'rien d indisponible');
+});
+
+test('reponse evincee (contrat e35-e41) : ASSISTANT_NOT_AVAILABLE avec les deux coordonnees', () => {
+  const recent = alternating(27, "tu m'as répondu quoi au tour 2 ?");
+  const block = buildRecallLookup(recent, recent, 20, undefined, false);
 
   assert.ok(block.includes('Requested content: the assistant reply of that turn'));
   assert.ok(block.includes('Assistant reply: ASSISTANT_NOT_AVAILABLE'));
@@ -342,9 +397,20 @@ test('bloc assistant FOUND : la reponse, pas la question', () => {
   assert.ok(block.includes('Do not alter the retrieved message when answering.'));
 });
 
-test('bloc both : chaque partie avec son propre statut', () => {
+test('e42 : bloc both, chaque partie avec sa source', () => {
   const recent = alternating(27, "qu'est-ce qu'on disait au tour 4 ?");
   const block = buildRecallLookup(recent, recent, 20);
+
+  assert.ok(block.includes('User message: USER_FOUND'));
+  assert.ok(block.includes('User message source: stored history, not in the visible context'));
+  assert.ok(block.includes('"msg 7"'));
+  assert.ok(block.includes('Assistant reply: ASSISTANT_FOUND'));
+  assert.ok(block.includes('Assistant reply position: 8'), 'visible : bloc e36 inchange');
+});
+
+test('bloc both (contrat e35-e41) : chaque partie avec son propre statut', () => {
+  const recent = alternating(27, "qu'est-ce qu'on disait au tour 4 ?");
+  const block = buildRecallLookup(recent, recent, 20, undefined, false);
 
   assert.ok(block.includes('User message: USER_NOT_AVAILABLE'));
   assert.ok(block.includes('Assistant reply: ASSISTANT_FOUND'));

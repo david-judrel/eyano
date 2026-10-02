@@ -22,6 +22,12 @@ régression : les résultats de l'expérience ne sont simplement plus
 reproductibles avec le nouveau code. Ils restent consultables au commit de
 chaque expérience.
 
+Assertions désactivées (`skip`) après un changement de contrat voulu :
+
+- `provenance-e41.test.js`, P6 : É42 restitue un message stocké hors
+  fenêtre au lieu de `ASSISTANT_NOT_AVAILABLE`. Le résultat d'É41.6 reste
+  reproductible à `e709ba9`.
+
 Ils ne tournent pas avec `npm test`. Pour les lancer :
 
 ```bash
