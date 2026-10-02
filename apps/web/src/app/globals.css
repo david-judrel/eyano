@@ -1,65 +1,18 @@
+@import '../styles/tokens.css';
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+/*
+ * EYANO — styles globaux. Uniquement ce qui ne peut pas vivre dans un
+ * composant : base du document, focus clavier, barre de defilement, rendu
+ * Markdown. Aucune valeur en dur : tout passe par les jetons (tokens.css).
+ */
 
-/* =========================================
-   VARIABLES DE THÈME (Dynamiques)
-   ========================================= */
-:root {
-  /* Thème CLAIR par défaut */
-  --ey-background: #ffffff;
-  --ey-surface: #f4f4f5;
-  --ey-surface-2: #e4e4e7;
-  --ey-surface-3: #d4d4d8;
-  --ey-foreground: #0a0a0a;
-  --ey-muted-foreground: #52525b;
-  --ey-border: rgba(0, 0, 0, 10%);
-  --ey-border-strong: rgba(0, 0, 0, 15%);
-  --ey-ring: rgba(57, 255, 20, 40%);
-  
-  /* Couleurs principales (restent identiques) */
-  --ey-brand: #39FF14;
-  --ey-brand-dim: rgba(57, 255, 20, 15%);
-  --ey-brand-foreground: #050505;
-  --ey-primary: #39FF14;
-  --ey-primary-foreground: #050505;
-  --ey-accent: #7CFF00;
-  --ey-accent-dim: rgba(124, 255, 0, 20%);
-  --ey-depth: #0B5E20;
-  --ey-secondary: #16A34A;
-  --ey-destructive: #ef4444;
-  --ey-destructive-foreground: #ffffff;
-  --ey-overlay: rgba(255, 255, 255, 80%);
-  --ey-glass: rgba(244, 244, 245, 85%);
-  
-  --ey-radius: 0.75rem;
-  --ey-radius-lg: 1rem;
-}
-
-.dark {
-  /* Thème SOMBRE (Ton design original) */
-  color-scheme: dark;
-  --ey-background: #050505;
-  --ey-surface: #0D0F0E;
-  --ey-surface-2: #16191c;
-  --ey-surface-3: #1c2025;
-  --ey-foreground: #F2FFF0;
-  --ey-muted-foreground: #8a9a8e;
-  --ey-border: rgba(242, 255, 240, 6%);
-  --ey-border-strong: rgba(242, 255, 240, 12%);
-  --ey-ring: rgba(57, 255, 20, 30%);
-  --ey-overlay: rgba(5, 5, 5, 70%);
-  --ey-glass: rgba(13, 15, 14, 85%);
-}
-
-/* =========================================
-   BASE STYLES
-   ========================================= */
 @layer base {
   * {
-    border-color: var(--ey-border);
+    border-color: rgb(var(--ey-border));
   }
 
   html {
@@ -67,19 +20,27 @@
   }
 
   body {
-    background-color: var(--ey-background);
-    color: var(--ey-foreground);
-    font-family: 'Inter', sans-serif;
+    background-color: rgb(var(--ey-background));
+    color: rgb(var(--ey-foreground));
+    font-family: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
     font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    /* Transition fluide lors du changement de thème */
-    transition: background-color 0.3s ease, color 0.3s ease; 
   }
 
   ::selection {
-    background-color: rgba(57, 255, 20, 30%);
-    color: #050505;
+    background-color: rgb(var(--ey-brand-subtle));
+    color: rgb(var(--ey-foreground));
+  }
+
+  /* Focus clavier unique pour tout l'element interactif. La souris ne
+     l'affiche pas (focus-visible) ; aucun composant ne le supprime. */
+  :focus-visible {
+    outline: 2px solid rgb(var(--ey-focus));
+    outline-offset: 2px;
+  }
+  :focus:not(:focus-visible) {
+    outline: none;
   }
 
   @media (prefers-reduced-motion: reduce) {
@@ -90,102 +51,63 @@
       scroll-behavior: auto !important;
     }
   }
+
+  /* Barre de defilement discrete, neutre. */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: rgb(var(--ey-border));
+    border-radius: 9999px;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgb(var(--ey-border-strong));
+  }
 }
 
-/* =========================================
-   UTILITIES & EFFECTS
-   ========================================= */
 @layer utilities {
-  .glass {
-    background-color: var(--ey-glass);
-    backdrop-filter: blur(24px) saturate(1.2);
-    -webkit-backdrop-filter: blur(24px) saturate(1.2);
-    border: 1px solid var(--ey-border);
-    transition: background-color 0.3s ease, border-color 0.3s ease;
+  .scrollbar-hide,
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
   }
-
-  .glow-brand {
-    box-shadow: 
-      0 0 20px rgba(57, 255, 20, 12%), 
-      0 0 40px rgba(57, 255, 20, 6%),
-      0 0 60px rgba(124, 255, 0, 3%);
+  .scrollbar-hide::-webkit-scrollbar,
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
   }
-
-  .glow-neon {
-    box-shadow: 
-      0 0 15px rgba(124, 255, 0, 20%), 
-      0 0 30px rgba(124, 255, 0, 10%);
-  }
-
-  .no-scrollbar::-webkit-scrollbar { display: none; }
-  .no-scrollbar { scrollbar-width: none; -ms-overflow-style: none; }
 
   .safe-top { padding-top: env(safe-area-inset-top); }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
   .text-balance { text-wrap: balance; }
 }
 
-/* =========================================
-   PROSE / MARKDOWN STYLES
-   ========================================= */
+/* ---------------------------------------------------------------------------
+   Rendu Markdown des reponses (contenu genere : pas de classes possibles).
+   --------------------------------------------------------------------------- */
 .prose pre {
-  background: var(--ey-surface) !important;
-  border: 1px solid var(--ey-border-strong) !important;
-  border-radius: var(--ey-radius);
+  background: rgb(var(--ey-surface));
+  border: 1px solid rgb(var(--ey-border));
+  border-radius: 10px;
   padding: 16px;
   overflow-x: auto;
-  transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 .prose code {
-  background: var(--ey-brand-dim);
-  color: var(--ey-brand);
-  padding: 2px 6px;
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-size: 0.8125rem;
+  background: rgb(var(--ey-surface));
+  border: 1px solid rgb(var(--ey-border-subtle));
+  color: rgb(var(--ey-foreground));
+  padding: 1px 6px;
   border-radius: 6px;
-  font-size: 0.875em;
 }
 
 .prose pre code {
   background: none;
+  border: 0;
   padding: 0;
-}
-
-/* =========================================
-   FORMS & INTERACTIONS
-   ========================================= */
-textarea:focus, input:focus, select:focus {
-  outline: none;
-  box-shadow: 0 0 0 2px var(--ey-ring);
-  border-color: var(--ey-brand) !important;
-}
-
-button, a, input, textarea, select {
-  transition-property: color, background-color, border-color, box-shadow, opacity, transform;
-  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
-  transition-duration: 150ms;
-}
-
-button:hover, a:hover {
-  box-shadow: 0 0 15px rgba(57, 255, 20, 10%);
-}
-
-/* =========================================
-   CUSTOM SCROLLBAR (Electric Lime)
-   ========================================= */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-::-webkit-scrollbar-thumb {
-  background: rgba(57, 255, 20, 20%);
-  border-radius: 3px;
-}
-
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(57, 255, 20, 35%);
 }

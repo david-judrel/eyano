@@ -1,9 +1,13 @@
 import './globals.css';
+import { Inter, JetBrains_Mono } from 'next/font/google';
 import Script from 'next/script';
 import { PWAProvider } from '@/components/PWAProvider';
 import { SWRegister } from '@/components/SWRegister';
 import { ThemeProvider } from '@/lib/theme-provider';
 import { getDefaultMetadata } from '@/lib/metadata';
+
+const fontSans = Inter({ subsets: ['latin'], variable: '--font-sans', display: 'swap' });
+const fontMono = JetBrains_Mono({ subsets: ['latin'], variable: '--font-mono', display: 'swap' });
 
 export const metadata = getDefaultMetadata();
 
@@ -13,12 +17,15 @@ export const viewport = {
   maximumScale: 1,
   userScalable: false,
   viewportFit: 'cover',
-  themeColor: '#050505',
+  themeColor: [
+    { media: '(prefers-color-scheme: dark)', color: '#050505' },
+    { media: '(prefers-color-scheme: light)', color: '#ffffff' },
+  ],
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="fr" className="dark" suppressHydrationWarning>
+    <html lang="fr" className={`dark ${fontSans.variable} ${fontMono.variable}`} suppressHydrationWarning>
       <head>
         <link rel="icon" href="/icon-192.png" sizes="192x192" />
         <link rel="apple-touch-icon" href="/icon-512.png" sizes="512x512" />

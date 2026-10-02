@@ -1,0 +1,140 @@
+/*
+ * EYANO — jetons du Design System.
+ *
+ * SEULE source des valeurs visuelles de l'application. Les composants ne
+ * connaissent que les noms semantiques (via Tailwind : bg-surface,
+ * text-foreground-secondary, rounded-md...), jamais une valeur.
+ *
+ * Les deux themes fournissent les MEMES jetons ; seules les valeurs changent.
+ * Les couleurs sont stockees en canaux RGB (« 5 5 5 ») pour que Tailwind
+ * puisse appliquer ses modificateurs d'opacite quand un jeton le prevoit.
+ *
+ * Contraste : chaque paire texte/fond est verifiee par
+ * `npm run test -w apps/web` (scripts/contrast-check.mjs).
+ */
+
+:root {
+  /* ---------------------------------------------------------- surfaces */
+  --ey-background: 255 255 255;
+  --ey-background-subtle: 247 248 247;
+  --ey-surface: 243 245 243;
+  --ey-surface-raised: 255 255 255;
+  --ey-surface-overlay: 255 255 255;
+  --ey-surface-inverse: 11 13 12;
+
+  /* Calques d'interaction (posés sur n'importe quelle surface). */
+  --ey-hover: 11 13 12 / 0.05;
+  --ey-pressed: 11 13 12 / 0.09;
+  --ey-selected: 11 13 12 / 0.07;
+
+  /* ------------------------------------------------------------- texte */
+  --ey-foreground: 11 13 12;
+  --ey-foreground-secondary: 63 70 66;
+  --ey-foreground-muted: 92 101 95;
+  --ey-foreground-disabled: 154 161 156;
+  --ey-foreground-inverse: 242 255 240;
+
+  /* ----------------------------------------------------------- bordures */
+  --ey-border-subtle: 11 13 12 / 0.07;
+  --ey-border: 11 13 12 / 0.11;
+  --ey-border-strong: 11 13 12 / 0.2;
+
+  /* ------------------------------------------------------------- marque */
+  /* Remplissage : le vert EYANO, identique dans les deux themes. */
+  --ey-brand: 57 255 20;
+  --ey-brand-hover: 76 255 44;
+  --ey-brand-active: 45 230 12;
+  --ey-brand-foreground: 5 5 5;
+  /* Vert lisible pour du texte ou une icone sur le fond du theme. */
+  --ey-brand-text: 21 122 39;
+  /* Fond teinte (badge, etat actif discret). */
+  --ey-brand-subtle: 57 255 20 / 0.16;
+
+  /* -------------------------------------------------------------- etats */
+  --ey-success: 21 122 39;
+  --ey-success-subtle: 21 122 39 / 0.1;
+  --ey-warning: 166 82 0;
+  --ey-warning-subtle: 217 119 6 / 0.12;
+  --ey-error: 196 32 32;
+  --ey-error-subtle: 220 38 38 / 0.1;
+  --ey-info: 29 78 216;
+  --ey-info-subtle: 37 99 235 / 0.1;
+
+  /* -------------------------------------------------------------- focus */
+  --ey-focus: 21 122 39;
+
+  /* ------------------------------------------------------------ ombres */
+  --ey-shadow-subtle: 0 1px 2px rgb(11 13 12 / 0.06);
+  --ey-shadow-raised: 0 1px 2px rgb(11 13 12 / 0.05), 0 4px 12px -2px rgb(11 13 12 / 0.08);
+  --ey-shadow-overlay: 0 4px 12px rgb(11 13 12 / 0.06), 0 16px 48px -12px rgb(11 13 12 / 0.22);
+
+  --ey-scrim: 11 13 12 / 0.4;
+
+  color-scheme: light;
+}
+
+.dark {
+  --ey-background: 5 5 5;
+  --ey-background-subtle: 9 10 10;
+  --ey-surface: 14 16 16;
+  --ey-surface-raised: 21 24 24;
+  --ey-surface-overlay: 26 29 29;
+  --ey-surface-inverse: 242 255 240;
+
+  --ey-hover: 242 255 240 / 0.05;
+  --ey-pressed: 242 255 240 / 0.09;
+  --ey-selected: 242 255 240 / 0.07;
+
+  --ey-foreground: 242 255 240;
+  --ey-foreground-secondary: 180 191 182;
+  --ey-foreground-muted: 132 143 135;
+  --ey-foreground-disabled: 84 91 86;
+  --ey-foreground-inverse: 11 13 12;
+
+  --ey-border-subtle: 242 255 240 / 0.06;
+  --ey-border: 242 255 240 / 0.1;
+  --ey-border-strong: 242 255 240 / 0.18;
+
+  --ey-brand: 57 255 20;
+  --ey-brand-hover: 92 255 61;
+  --ey-brand-active: 43 224 10;
+  --ey-brand-foreground: 5 5 5;
+  --ey-brand-text: 57 255 20;
+  --ey-brand-subtle: 57 255 20 / 0.12;
+
+  --ey-success: 57 255 20;
+  --ey-success-subtle: 57 255 20 / 0.1;
+  --ey-warning: 251 191 36;
+  --ey-warning-subtle: 251 191 36 / 0.12;
+  --ey-error: 248 113 113;
+  --ey-error-subtle: 248 113 113 / 0.12;
+  --ey-info: 96 165 250;
+  --ey-info-subtle: 96 165 250 / 0.12;
+
+  --ey-focus: 57 255 20;
+
+  --ey-shadow-subtle: 0 1px 2px rgb(0 0 0 / 0.4);
+  --ey-shadow-raised: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px -6px rgb(0 0 0 / 0.5);
+  --ey-shadow-overlay: 0 8px 24px rgb(0 0 0 / 0.4), 0 24px 64px -16px rgb(0 0 0 / 0.7);
+
+  --ey-scrim: 0 0 0 / 0.6;
+
+  color-scheme: dark;
+}
+
+:root {
+  /* ------------------------------------------------------------ motion */
+  --ey-duration-fast: 120ms;
+  --ey-duration-normal: 200ms;
+  --ey-duration-slow: 320ms;
+  --ey-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --ey-ease-emphasized: cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* ------------------------------------------------------- dimensions */
+  --ey-topbar-height: 56px;
+  --ey-sidebar-width: 272px;
+  --ey-content-width: 800px;
+  --ey-control-sm: 32px;
+  --ey-control-md: 40px;
+  --ey-control-lg: 48px;
+}
