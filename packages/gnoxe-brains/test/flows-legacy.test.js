@@ -65,7 +65,7 @@ test('summaryFlow : signature conservee et delegation vers GnoxeBrains', async (
   const prompt = call.request.messages[0].content;
   assert.ok(prompt.includes('2-3 phrases maximum'));
   assert.ok(prompt.includes('Utilisateur: Salut Eyano'));
-  assert.ok(prompt.includes('EYANO: Bonjour !'));
+  assert.ok(prompt.includes('Assistant: Bonjour !'));
 });
 
 test('summaryFlow : la panne du modele est propagée, jamais masquee', async () => {

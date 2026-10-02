@@ -333,3 +333,44 @@ test("aucune reference active a l ancien nom de package", () => {
 
   assert.deepEqual(offenders, [], 'le nom et le chemin ancien doivent avoir disparu du code');
 });
+
+// ------------------------------------------- nettoyage identite (A)
+
+test('nettoyage A.1 : aucune etiquette de marque dans les prompts du cerveau', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  for (const file of ['src/agents/agent.ts', 'src/flows/summary.flow.ts']) {
+    const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+    assert.equal(/'EYANO'/.test(source), false, `${file} : etiquette EYANO`);
+  }
+});
+
+test('nettoyage A.3 : le writer ne connait aucun canal', async () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  const { WriterAgent } = require('../dist/index.js');
+
+  const source = fs.readFileSync(path.join(__dirname, '..', 'src/agents/writer.agent.ts'), 'utf8');
+  assert.equal(/['"]whatsapp['"]/.test(source), false, 'aucune branche de canal');
+
+  // Meme prompt utilisateur quel que soit le canal : le writer est generique.
+  const prompts = [];
+  const provider = {
+    capabilities: () => ({}),
+    async generate(request) {
+      prompts.push(request.messages[1].content);
+      return { content: 'ok', model: 'm', inputTokens: 1, outputTokens: 1 };
+    },
+  };
+  const writer = new WriterAgent({ modelProvider: provider, toolRegistry: { get: () => undefined, list: () => [] } });
+  for (const channel of ['whatsapp', 'admin', undefined]) {
+    await writer.execute({ objective: 'Objectif.', context: { channel, data: {} }, previousResults: [] });
+  }
+  assert.equal(prompts.length, 3);
+  // Le canal reste une DONNEE generique du message utilisateur (section
+  // « Contexte : canal: … » de BaseAgent) ; seule la consigne du writer doit
+  // etre identique d'un canal a l'autre.
+  const strip = (prompt) => prompt.replace(/\n\nContexte : [^\n]*/g, '');
+  assert.equal(strip(prompts[0]), strip(prompts[1]));
+  assert.ok(prompts[0].startsWith('Format attendu : reponse directe'));
+});

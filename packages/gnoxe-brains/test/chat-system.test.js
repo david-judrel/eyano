@@ -105,7 +105,9 @@ test('les fragments de session ne contiennent aucune identite', () => {
   );
 
   assert.equal(context[0].role, 'system');
-  assert.ok(context[0].content.includes('CONTEXTE WHATSAPP'));
+  assert.ok(context[0].content.includes("L'utilisateur s'appelle David"), 'fragment de session');
+  // Nettoyage A.2 : le style de canal vit dans eyano-identity, plus ici.
+  assert.equal(/whatsapp/i.test(context[0].content), false, 'aucun fragment de canal');
   assert.equal(context[0].content.includes('Eyano'), false, 'aucun nom d agent');
   assert.equal(context[0].content.includes('Gnoxe'), false, 'aucune marque');
 });

@@ -171,17 +171,18 @@ test('contexte utilisateur : le prenom est injecte dans la system instruction', 
   assert.ok(messages[0].content.includes("L'utilisateur s'appelle David."));
 });
 
-test('contexte WhatsApp : le canal est transmis dans la system instruction', async () => {
+test('nettoyage A.2 : le canal ne change pas le prompt du cerveau', async () => {
   const provider = install(createFakeModelProvider());
 
   await chatFlowSync(baseInput({ channel: 'whatsapp' }));
   const withChannel = provider.generateCalls[0].messages[0].content;
-  assert.ok(withChannel.includes('CONTEXTE WHATSAPP'));
-  assert.ok(withChannel.includes('Pas de markdown complexe'));
 
   await chatFlowSync(baseInput());
   const withoutChannel = provider.generateCalls[1].messages[0].content;
-  assert.ok(!withoutChannel.includes('CONTEXTE WHATSAPP'));
+
+  // Le style de canal vient de la voix (eyano-identity), jamais du cerveau.
+  assert.equal(withChannel, withoutChannel);
+  assert.equal(/whatsapp/i.test(withChannel), false);
 });
 
 test('modele demande : transmis au provider et reflete dans la sortie', async () => {
