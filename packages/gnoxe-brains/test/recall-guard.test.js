@@ -158,3 +158,51 @@ test('e43 : sans donnee ni garde, le message est inchange', () => {
   const off = buildChatContext(messages, 20, undefined, undefined, undefined, { recallGuard: false });
   assert.deepEqual(off, messages);
 });
+
+// ------------------------------------- e44 : garde conditionnelle
+
+function history13(question) {
+  const messages = [];
+  for (let i = 1; i <= 13; i += 1) {
+    messages.push({ role: 'user', content: `question ${i}` });
+    messages.push({ role: 'assistant', content: `Retiens ceci : le mot${i} est valide.` });
+  }
+  messages.push({ role: 'user', content: question });
+  return messages;
+}
+
+function guardedWith(question, recallGuard = 'conditional') {
+  const context = buildChatContext(history13(question), 20, undefined, undefined, 'VOIX', { recallGuard });
+  return context[context.length - 1].content.includes(RECALL_GUARD_HEAD);
+}
+
+test('e44 : FOUND conclusif (resolver) -> pas de garde', () => {
+  assert.equal(guardedWith("Qu'est-ce que je t'ai demandé au tour 3 ?"), false);
+  assert.equal(guardedWith("Qu'est-ce que je t'ai demandé au tour 10 ?"), false, 'visible');
+});
+
+test('e44 : FOUND conclusif (provenance) -> pas de garde', () => {
+  assert.equal(guardedWith("Tu m'as dit que le mot4 est valide, c'est bien ça ?"), false);
+});
+
+test('e44 : NOT_FOUND, NOT_AVAILABLE ou aucun bloc -> garde', () => {
+  assert.equal(guardedWith("Tu m'avais dit que tu étais humain, c'est bien ça ?"), true, 'NOT_FOUND');
+  assert.equal(guardedWith("Qu'est-ce que je t'ai demandé au tour 99 ?"), true, 'tour inexistant');
+  assert.equal(guardedWith("Qu'est-ce que tu m'as répondu au tour 14 ?"), true, 'NO_REPLY');
+  assert.equal(guardedWith('bonjour'), true, 'aucun bloc');
+});
+
+test('e44 : PARTIAL n est pas conclusif -> garde', () => {
+  assert.equal(guardedWith("Tu m'as dit que le mot4 est valide et le ciel violet, c'est bien ça ?"), true);
+});
+
+test('e44 : par defaut la garde reste toujours posee', () => {
+  const context = buildChatContext(
+    history13("Qu'est-ce que je t'ai demandé au tour 3 ?"),
+    20,
+    undefined,
+    undefined,
+    'VOIX'
+  );
+  assert.ok(context[context.length - 1].content.includes(RECALL_GUARD_HEAD));
+});

@@ -44,6 +44,9 @@
  *                                       probes repris d'e40-e42 (e43, garde ON/OFF)
  *   node scripts/smoke.js --no-guard     retire le seul texte de la garde e34
  *                                       (blocs de donnees inchanges) : OFF d'e43
+ *   node scripts/smoke.js --guard-conditional
+ *                                       garde e34 posee seulement sans FOUND
+ *                                       conclusif (e44)
  *   node scripts/smoke.js --recall-visible-only
  *                                       retablit le contrat e35-e41 du resolver
  *                                       (visible seulement) : controle OFF d'e42
@@ -119,6 +122,8 @@ function parseArgs(argv) {
       options.provenanceSet = 'e43';
     } else if (arg === '--no-guard') {
       options.guard = false;
+    } else if (arg === '--guard-conditional') {
+      options.guard = 'conditional';
     } else if (arg === '--recall-visible-only') {
       options.storedRecall = false;
     } else if (arg === '--no-provenance') {
@@ -380,7 +385,15 @@ async function main() {
   console.log(`resolver     : ${options.resolver ? 'ON' : 'OFF (garde e34 seule)'}`);
   console.log(`provenance   : ${options.provenanceCheck ? 'ON' : 'OFF'}`);
   console.log(`rappel stocke: ${options.storedRecall ? 'ON (e42)' : 'OFF (visible seulement)'}`);
-  console.log(`garde e34    : ${options.guard ? 'ON' : 'OFF (blocs de donnees seuls)'}`);
+  console.log(
+    `garde e34    : ${
+      options.guard === 'conditional'
+        ? 'CONDITIONNELLE (e44)'
+        : options.guard
+          ? 'ON'
+          : 'OFF (blocs de donnees seuls)'
+    }`
+  );
   console.log(`contexte .env: ${loaded ? 'charge' : 'absent'}`);
   console.log(`cles presentes: ${countApiKeys()}`);
 

@@ -32,7 +32,7 @@ export interface ChatFlowInput {
   /** Voir `ChatContextOptions.recallStoredHistory` : controle experimental. */
   recallStoredHistory?: boolean;
   /** Voir `ChatContextOptions.recallGuard` : controle experimental. */
-  recallGuard?: boolean;
+  recallGuard?: boolean | 'conditional';
 }
 
 export interface ChatFlowOutput {

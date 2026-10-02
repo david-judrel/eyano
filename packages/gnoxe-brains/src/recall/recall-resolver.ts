@@ -456,6 +456,27 @@ export function buildRecallLookup(
   coverage?: HistoryCoverage,
   storedRecall: boolean = true
 ): string | null {
+  const data = resolveRecallData(visible, messages, maxContextMessages, coverage, storedRecall);
+  return data ? data.block : null;
+}
+
+/** Bloc de rappel et conclusion calculee par le code (etape 44). */
+export interface RecallData {
+  block: string;
+  /**
+   * Tout ce que la question demande a ete trouve (cible user, assistant,
+   * ou les deux pour `both`). Un resultat partiel n'est PAS conclusif.
+   */
+  found: boolean;
+}
+
+export function resolveRecallData(
+  visible: ChatMessage[],
+  messages: ChatMessage[],
+  maxContextMessages: number,
+  coverage?: HistoryCoverage,
+  storedRecall: boolean = true
+): RecallData | null {
   const last = visible[visible.length - 1];
   if (!last || last.role !== 'user') return null;
 
@@ -463,5 +484,12 @@ export function buildRecallLookup(
   if (turn === null) return null;
 
   const target = detectRecallTarget(last.content);
-  return formatRecallLookup(resolveRecallTurn(messages, turn, maxContextMessages, target, coverage, storedRecall));
+  const result = resolveRecallTurn(messages, turn, maxContextMessages, target, coverage, storedRecall);
+  const parts =
+    target === 'user' ? [result.user] : target === 'assistant' ? [result.assistant] : [result.user, result.assistant];
+
+  return {
+    block: formatRecallLookup(result),
+    found: parts.every((part) => part.status === 'found'),
+  };
 }

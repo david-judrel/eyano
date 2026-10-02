@@ -1,8 +1,8 @@
 import { ChatMessage } from '@eyano/types';
 import { applyRecallGuard, attachRecallData } from './recall-guard';
-import { buildRecallLookup } from '../recall/recall-resolver';
+import { resolveRecallData } from '../recall/recall-resolver';
 import { describeVisibleTurns, missingTurns } from '../recall/visible-turns';
-import { buildProvenanceCheck } from '../recall/provenance-check';
+import { resolveProvenanceData } from '../recall/provenance-check';
 import { HistoryCoverage, isPartialHistory, normalizeCoverage } from '../recall/history-coverage';
 
 /**
@@ -97,8 +97,12 @@ export interface ChatContextOptions {
    * Etape 43 : garde de rappel e34 (defaut : posee). `false` retire le SEUL
    * texte de la garde ; les blocs resolver et provenance restent au meme
    * point de contact. Controle experimental uniquement.
+   *
+   * Etape 44 : `'conditional'` retire la garde SEULEMENT si tous les blocs
+   * joints sont des FOUND conclusifs, calcules par le code. NOT_FOUND,
+   * PARTIAL, NOT_AVAILABLE, resultat partiel ou absence de bloc : garde.
    */
-  recallGuard?: boolean;
+  recallGuard?: boolean | 'conditional';
 }
 
 export function buildChatContext(
@@ -156,7 +160,7 @@ export function buildChatContext(
   const lookup =
     options.recallResolver === false
       ? null
-      : buildRecallLookup(
+      : resolveRecallData(
           recent,
           messages,
           maxContextMessages,
@@ -169,10 +173,21 @@ export function buildChatContext(
   const provenance =
     options.provenanceCheck === false
       ? null
-      : buildProvenanceCheck(recent, messages, maxContextMessages, coverage);
-  const data = [lookup, provenance].filter(Boolean).join('\n\n') || null;
-  const visible =
-    options.recallGuard === false ? attachRecallData(recent, data) : applyRecallGuard(recent, data);
+      : resolveProvenanceData(recent, messages, maxContextMessages, coverage);
+  const blocks = [lookup, provenance].filter(
+    (entry): entry is NonNullable<typeof entry> => entry !== null
+  );
+  const data = blocks.map((entry) => entry.block).join('\n\n') || null;
+
+  // Etape 44 : la distinction "rien trouve" / "donnee fournie" est CALCULEE
+  // par le code. La garde e34, utile sur NOT_FOUND et nuisible sur FOUND
+  // (e43), n'est posee que la ou aucune donnee conclusive n'existe.
+  const conclusive = blocks.length > 0 && blocks.every((entry) => entry.found);
+  const guarded = !(
+    options.recallGuard === false ||
+    (options.recallGuard === 'conditional' && conclusive)
+  );
+  const visible = guarded ? applyRecallGuard(recent, data) : attachRecallData(recent, data);
 
   if (parts.length === 0) {
     return visible;
