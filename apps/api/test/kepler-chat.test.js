@@ -22,6 +22,7 @@ const {
   detectImageFollowUp,
   keplerChatNote,
   historyContentForChat,
+  withDefaultRepresentation,
 } = require(path.join(__dirname, '..', 'dist', 'modules', 'image', 'kepler-chat.js'));
 const { ImageGenerationError } = require('@eyano/gnoxe-brains');
 
@@ -271,4 +272,39 @@ test('execution : photo jointe transmise telle quelle', async () => {
   const generate = async (input) => { calls.push(input); return { data: Buffer.from('JPEG').toString('base64'), mimeType: 'image/jpeg' }; };
   await runKeplerInChat({ prompt: 'mets-lui un chapeau', source: { kind: 'upload', image: PHOTO } }, 'm', { generate, db: fakeDb() });
   assert.deepEqual(calls[0], { prompt: 'mets-lui un chapeau', sourceImage: PHOTO });
+});
+
+// ------------------------------------------- representation par defaut
+
+const NOTE = ', à la peau foncée';
+
+test('representation : personnes sans origine precisee -> peau noire', () => {
+  for (const prompt of ["Génère moi une imag relaist d'un mc musclé et humain", 'génère une image d une famille à table', 'un médecin dans un hôpital', 'draw a woman reading']) {
+    assert.ok(withDefaultRepresentation(prompt).endsWith(NOTE), prompt);
+  }
+});
+
+test('representation : origine precisee respectee, aucun ajout', () => {
+  for (const prompt of ['une femme asiatique qui sourit', 'un homme blanc en costume', 'portrait d un enfant à la peau claire', 'a European family']) {
+    assert.equal(withDefaultRepresentation(prompt), prompt, prompt);
+  }
+});
+
+test('representation : sans personne, aucun ajout', () => {
+  for (const prompt of ['génère une image de chien', 'une affiche musicale', 'un coucher de soleil sur la mer']) {
+    assert.equal(withDefaultRepresentation(prompt), prompt, prompt);
+  }
+});
+
+test('representation : creation seulement, jamais une retouche', () => {
+  const created = planKepler('génère une image d un footballeur', [], undefined, ON);
+  assert.ok(created.prompt.endsWith(NOTE));
+
+  const photo = planKepler('mets-lui un chapeau', [], undefined, ON, [PHOTO]);
+  assert.equal(photo.prompt, 'mets-lui un chapeau');
+
+  const history = [user('génère une image d un homme'), imageWithId('att-3')];
+  const edit = planKepler('ajoute une barbe à cet homme', history, undefined, ON);
+  assert.equal(edit.prompt, 'ajoute une barbe à cet homme');
+  assert.ok(edit.fallbackPrompt.endsWith(NOTE), 'le repli est une creation');
 });

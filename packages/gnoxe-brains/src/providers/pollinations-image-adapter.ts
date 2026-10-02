@@ -80,6 +80,11 @@ export class PollinationsImageAdapter {
       throw new ImageGenerationError(codeForStatus(response.status), `Generation refusee (HTTP ${response.status}).`);
     }
 
+    // Refus du filtre de contenu : une image « bloquee » est servie en 200.
+    if (/blocked/i.test(response.headers.get('content-disposition') ?? '')) {
+      throw new ImageGenerationError('NO_IMAGE', 'Demande bloquee par le filtre de contenu.');
+    }
+
     const mimeType = (response.headers.get('content-type') ?? '').split(';')[0].trim();
     if (!mimeType.startsWith('image/')) {
       throw new ImageGenerationError('NO_IMAGE', 'Aucune image produite.');

@@ -340,3 +340,12 @@ test('facade : image de depart transmise ; type ou taille invalide refuses sans 
   }
   assert.equal(provider.calls.length, 1);
 });
+
+test('pollinations : image « bloquee par le filtre » -> NO_IMAGE, jamais affichee', async () => {
+  const impl = async () => new Response(Buffer.from('JPEG'), {
+    status: 200,
+    headers: { 'content-type': 'image/jpeg', 'content-disposition': 'inline; filename="request-blocked-by-safety-filter.jpeg"' },
+  });
+  const adapter = new PollinationsImageAdapter(impl, () => 'k');
+  await assert.rejects(adapter.generateImage({ prompt: 'x' }), { code: 'NO_IMAGE' });
+});
