@@ -1,7 +1,10 @@
 'use client';
 
 import type { ReactNode } from 'react';
-import { Copy, Plus, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { Copy, Globe, Plus, RefreshCw, Search, Sparkles, Trash2, Wrench } from 'lucide-react';
+import { ActivityStep } from '@/components/ai/ActivityStep';
+import { ImageGenerationActivity } from '@/components/ai/ImageGenerationActivity';
+import { SourceList } from '@/components/ai/SourceList';
 import { Button, IconButton } from '@/components/ui/button';
 import { Field } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
@@ -171,6 +174,22 @@ export function Showcase() {
           <Card padding="none">
             <EmptyState icon={Search} title="Aucun résultat" description="Essayez une autre recherche." />
           </Card>
+        </Section>
+
+        <Section title="Activité de l'IA">
+          <div className="flex flex-col gap-4">
+            <ActivityStep icon={Globe} label="Recherche sur le web" status="running" detail="Wikipédia, actualités" />
+            <ActivityStep icon={Globe} label="Recherche sur le web" status="success" detail="3 sources" />
+            <ActivityStep icon={Wrench} label="Outil : calculatrice" status="idle" />
+            <ActivityStep icon={Sparkles} label="Création de l'image" status="error" detail="La génération n'est pas disponible pour le moment." />
+          </div>
+          <SourceList
+            sources={[
+              { title: 'Fally Ipupa', url: 'https://fr.wikipedia.org/wiki/Fally_Ipupa', site: 'Wikipédia' },
+              { title: 'XX Delirium', url: 'https://www.rfi.fr', site: 'rfi.fr', date: '23 sept.' },
+            ]}
+          />
+          <ImageGenerationActivity />
         </Section>
 
         <Section title="Overlays et navigation">

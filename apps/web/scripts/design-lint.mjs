@@ -30,7 +30,6 @@ const PENDING = new Set([
   'app/error.tsx',
   'app/global-error.tsx',
   'app/not-found.tsx',
-  'components/ImageGenerating.tsx',
   'components/LoginContent.tsx',
   'components/MobileInstallGate.tsx',
   'components/ProfileContent.tsx',

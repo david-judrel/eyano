@@ -1,6 +1,8 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { Sparkles } from 'lucide-react';
+import { ActivityStep } from './ActivityStep';
 
 /** Ecart entre deux points de la grille (px CSS). */
 const SPACING = 11;
@@ -8,11 +10,12 @@ const SPACING = 11;
 const EXPECTED_MS = 7000;
 
 /**
- * Attente de Kepler Image : grille de points dont des nappes lumineuses
- * derivent lentement, et une progression estimee (le backend n'en donne
- * aucune). Elle plafonne a 95 % : seule l'image reelle la termine.
+ * Kepler cree une image : ligne d'activite + apercu anime (grille de points
+ * dont des nappes derivent). La progression est une estimation (le moteur
+ * n'en donne pas) qui plafonne a 95 % : seule l'image reelle la termine.
+ * Les points prennent la couleur `brand-text` (lisible dans les deux themes).
  */
-export function ImageGenerating() {
+export function ImageGenerationActivity() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [progress, setProgress] = useState(0);
 
@@ -22,7 +25,7 @@ export function ImageGenerating() {
     if (!canvas || !ctx) return;
 
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const color = getComputedStyle(canvas).color || 'rgb(59, 130, 246)';
+    const color = getComputedStyle(canvas).color;
     const start = performance.now();
     let frame = 0;
     let lastProgress = -1;
@@ -58,17 +61,16 @@ export function ImageGenerating() {
         for (let j = 0; j < count; j++) {
           const nx = i / count;
           const ny = j / count;
-          let glow = 0;
+          let intensity = 0;
           for (const b of blobs) {
             const dx = nx - b.x;
             const dy = ny - b.y;
-            glow += Math.exp(-(dx * dx + dy * dy) / (b.r * b.r));
+            intensity += Math.exp(-(dx * dx + dy * dy) / (b.r * b.r));
           }
           const twinkle = 0.5 + 0.5 * Math.sin(t * 2.2 + i * 1.7 + j * 2.3);
-          const alpha = Math.min(0.85, 0.06 + glow * 0.55 * (0.6 + 0.4 * twinkle));
-          ctx.globalAlpha = alpha;
+          ctx.globalAlpha = Math.min(0.85, 0.08 + intensity * 0.55 * (0.6 + 0.4 * twinkle));
           ctx.beginPath();
-          ctx.arc(offset + i * SPACING, offset + j * SPACING, 0.8 + glow * 0.7, 0, Math.PI * 2);
+          ctx.arc(offset + i * SPACING, offset + j * SPACING, 0.8 + intensity * 0.7, 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -90,18 +92,10 @@ export function ImageGenerating() {
   }, []);
 
   return (
-    <div
-      className="w-full max-w-[420px] rounded-2xl border border-border bg-surface-2 p-4"
-      role="status"
-      aria-label="Création de l'image en cours"
-    >
-      <div className="text-sm font-medium text-foreground/70 mb-3">Création de l&apos;image</div>
-      <div className="relative">
-        <canvas ref={canvasRef} className="block w-full aspect-square text-brand" />
-        <span className="absolute bottom-2 right-2 rounded-full border border-border bg-surface-3 px-2.5 py-1 text-xs font-medium text-brand tabular-nums">
-          {progress} %
-        </span>
+    <ActivityStep icon={Sparkles} label="Création de l'image" status="running" detail={`Environ ${progress} %`}>
+      <div className="relative mt-1 w-full max-w-md overflow-hidden rounded-lg border border-border-subtle bg-surface">
+        <canvas ref={canvasRef} aria-hidden className="block aspect-square w-full text-brand-text" />
       </div>
-    </div>
+    </ActivityStep>
   );
 }

@@ -6,7 +6,7 @@ import type { Message } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { Button, IconButton } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
-import { ImageGenerating } from '../ImageGenerating';
+import { ImageGenerationActivity } from '@/components/ai/ImageGenerationActivity';
 import { Attachments } from './Attachments';
 import { Markdown } from './Markdown';
 
@@ -133,7 +133,7 @@ export function AssistantMessage({ message, isStreaming = false, onRetry }: Chat
         </div>
       )}
 
-      {message.imagePending && <ImageGenerating />}
+      {message.imagePending && <ImageGenerationActivity />}
       {hasAttachments && <Attachments attachments={message.attachments!} />}
 
       {!isStreaming && message.content && (
