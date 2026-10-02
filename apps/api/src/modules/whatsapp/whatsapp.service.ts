@@ -13,6 +13,14 @@ import { chatFlowSync } from '@eyano/gnoxe-brains';
 import { buildEyanoContext } from '@eyano/eyano-identity';
 import { ChatMessage, ImageAttachment } from '@eyano/types';
 import {
+  planKepler,
+  generateKeplerImage,
+  keplerChatNote,
+  keplerHistoryFromText,
+  KeplerPlan,
+  KEPLER_IMAGE_MARKER,
+} from '../image/kepler-chat';
+import {
   BoundedHistory,
   FileWhatsAppHistoryStore,
   WhatsAppHistoryStore,
@@ -237,6 +245,20 @@ export class WhatsAppService implements OnModuleInit, OnModuleDestroy {
 
     const history = await this.getHistory(jid);
 
+    // Kepler Image (experimental) : une demande d'image ne passe pas par le
+    // modele de conversation. Drapeau coupe : chemin inchange.
+    const keplerPlan = planKepler(
+      userText,
+      keplerHistoryFromText(history.messages.slice(0, -1)),
+      undefined,
+      process.env,
+      images.length > 0 ? images : undefined
+    );
+    if (keplerPlan) {
+      await this.answerWithKepler(jid, keplerPlan);
+      return;
+    }
+
     const fakeUserId = `whatsapp_${jid.replace(/[^0-9]/g, '')}`;
     const fakeConvId = `wa_conv_${jid.replace(/[^0-9]/g, '')}`;
     const userName = pushName && pushName !== 'Unknown' ? pushName : undefined;
@@ -253,7 +275,7 @@ export class WhatsAppService implements OnModuleInit, OnModuleDestroy {
         historyCoverage: { firstTurn: history.firstTurn },
         channel: 'whatsapp',
         userName,
-        systemPrompt: buildEyanoContext({ channel: 'whatsapp' }),
+        systemPrompt: buildEyanoContext({ channel: 'whatsapp' }) + keplerChatNote(process.env, 'whatsapp'),
       });
       responseText = result.content;
     } catch (error: any) {
@@ -267,6 +289,33 @@ export class WhatsAppService implements OnModuleInit, OnModuleDestroy {
     await sleep(typingDelay);
 
     await this.sendMessage(jid, responseText);
+  }
+
+  /**
+   * Reponse Kepler : l'image avec sa legende, ou le texte d'Eyano (refus,
+   * echec). L'historique garde une marque, jamais les octets.
+   */
+  private async answerWithKepler(jid: string, plan: KeplerPlan) {
+    const outcome = await generateKeplerImage(plan);
+    if (outcome.image) {
+      await this.addToHistory(jid, { role: 'assistant', content: `${outcome.text} ${KEPLER_IMAGE_MARKER}` });
+      await this.sendImage(jid, outcome.image.bytes, outcome.image.mimeType, outcome.text);
+      return;
+    }
+    await this.addToHistory(jid, { role: 'assistant', content: outcome.text });
+    await sleep(computeTypingDelay(responseLength(outcome.text)));
+    await this.sendMessage(jid, outcome.text);
+  }
+
+  private async sendImage(jid: string, image: Buffer, mimetype: string, caption: string) {
+    if (!this.sock) return;
+    try {
+      await this.sock.sendMessage(jid, { image, mimetype, caption });
+      this.logger.log(`Image envoyee a ${jid}`);
+    } catch (error: any) {
+      this.logger.error("Erreur envoi image:", error?.message || error);
+      await this.sendMessage(jid, "J'ai créé l'image mais je n'ai pas réussi à te l'envoyer. Réessaye 🙏");
+    }
   }
 
   private async sendMessage(jid: string, text: string) {

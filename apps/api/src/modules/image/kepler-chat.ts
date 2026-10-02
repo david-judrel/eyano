@@ -171,6 +171,45 @@ export async function runKeplerInChat(
   messageId: string,
   deps: { generate: typeof imageFlow; db: typeof prisma } = { generate: imageFlow, db: prisma }
 ): Promise<KeplerChatOutcome> {
+  const outcome = await generateKeplerImage(plan, deps);
+  if (!outcome.image) return { text: outcome.text, code: outcome.code };
+
+  const { bytes, mimeType } = outcome.image;
+  const extension = EXTENSIONS[mimeType] ?? 'png';
+  const attachment = await deps.db.attachment.create({
+    data: {
+      messageId,
+      fileName: `kepler-image.${extension}`,
+      mimeType,
+      size: bytes.length,
+      storageKey: 'db:kepler',
+      data: bytes,
+    },
+    select: { id: true, fileName: true, mimeType: true, size: true },
+  });
+
+  return { text: KEPLER_SUCCESS_TEXT, attachment };
+}
+
+/** Image produite par Kepler, avant tout enregistrement. */
+export interface KeplerImageOutcome {
+  /** Texte de la reponse d'Eyano, toujours present. */
+  text: string;
+  /** Octets de l'image, en cas de succes uniquement. */
+  image?: { bytes: Buffer; mimeType: string };
+  /** Code d'echec stable, en cas d'echec uniquement. */
+  code?: string;
+}
+
+/**
+ * Execute un plan Kepler SANS rien enregistrer : refus, echec ou image.
+ * Commun a tous les canaux (web : enregistre ensuite en base ; WhatsApp :
+ * envoie l'image). Ne leve jamais.
+ */
+export async function generateKeplerImage(
+  plan: KeplerPlan | string,
+  deps: { generate: typeof imageFlow; db: typeof prisma } = { generate: imageFlow, db: prisma }
+): Promise<KeplerImageOutcome> {
   if (typeof plan !== 'string' && plan.refusal) {
     return { text: plan.refusal, code: 'UNSUPPORTED' };
   }
@@ -192,21 +231,25 @@ export async function runKeplerInChat(
   if (bytes.length > MAX_KEPLER_IMAGE_BYTES) {
     return { text: keplerFailureText('TOO_LARGE'), code: 'TOO_LARGE' };
   }
+  return { text: KEPLER_SUCCESS_TEXT, image: { bytes, mimeType: result.mimeType } };
+}
 
-  const extension = EXTENSIONS[result.mimeType] ?? 'png';
-  const attachment = await deps.db.attachment.create({
-    data: {
-      messageId,
-      fileName: `kepler-image.${extension}`,
-      mimeType: result.mimeType,
-      size: bytes.length,
-      storageKey: 'db:kepler',
-      data: bytes,
-    },
-    select: { id: true, fileName: true, mimeType: true, size: true },
-  });
+// ------------------------------------------------------------ WhatsApp
 
-  return { text: KEPLER_SUCCESS_TEXT, attachment };
+/** Marque d'une image Kepler dans un historique texte (WhatsApp). */
+export const KEPLER_IMAGE_MARKER = '[Image créée par Kepler]';
+
+/**
+ * Historique texte (WhatsApp) -> historique Kepler : une reponse d'Eyano
+ * marquee est une image (sans piece jointe en base : une retouche retombe
+ * sur le prompt de repli, ou sur le refus si la retouche est coupee).
+ */
+export function keplerHistoryFromText(messages: { role: string; content: string }[]): KeplerHistoryMessage[] {
+  return messages.map((m) => ({
+    role: m.role,
+    content: m.content,
+    attachments: m.role === 'assistant' && m.content.includes(KEPLER_IMAGE_MARKER) ? [{ storageKey: 'db:kepler' }] : [],
+  }));
 }
 
 // ------------------------------------------------- suite d'une image (contexte)
@@ -348,14 +391,18 @@ export function planKepler(
  * Consigne ajoutee au chat quand Kepler est actif : Eyano sait creer des
  * images ; le chat ne doit jamais pretendre le contraire.
  */
-export function keplerChatNote(env: NodeJS.ProcessEnv = process.env): string {
+export function keplerChatNote(env: NodeJS.ProcessEnv = process.env, channel: 'web' | 'whatsapp' = 'web'): string {
   if (!isKeplerImageEnabled(env)) return '';
+  const howTo =
+    channel === 'whatsapp'
+      ? 'invite-le à la décrire en commençant par « génère une image de… »'
+      : 'invite-le à la décrire avec « génère une image de… » ou à choisir « Créer une image » dans le menu du trombone';
   return [
     '',
     '',
     "Création d'images : tu SAIS créer des images grâce à Kepler, ton module d'images.",
-    "Les messages marqués « [Image créée par Kepler] » dans l'historique sont des images que tu as réellement créées.",
-    "Ne dis jamais que tu ne peux pas créer d'images. Si l'utilisateur en veut une, invite-le à la décrire avec « génère une image de… » ou à choisir « Créer une image » dans le menu du trombone.",
+    `Les messages marqués « ${KEPLER_IMAGE_MARKER} » dans l'historique sont des images que tu as réellement créées.`,
+    `Ne dis jamais que tu ne peux pas créer d'images. Si l'utilisateur en veut une, ${howTo}.`,
     "Kepler est une extension d'Eyano. Ne nomme jamais un modèle, un fournisseur ou un service externe derrière Kepler, même si on te le demande : réponds que les images sont créées par Kepler, l'extension d'images d'Eyano.",
     ...(isKeplerImageEditEnabled(env)
       ? []
@@ -367,7 +414,7 @@ export function keplerChatNote(env: NodeJS.ProcessEnv = process.env): string {
 
 /** Contenu d'un message d'historique tel que le chat doit le voir. */
 export function historyContentForChat(message: KeplerHistoryMessage): string {
-  return isKeplerImageMessage(message) ? `${message.content} [Image créée par Kepler]` : message.content;
+  return isKeplerImageMessage(message) ? `${message.content} ${KEPLER_IMAGE_MARKER}` : message.content;
 }
 
 /**
