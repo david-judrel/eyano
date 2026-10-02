@@ -9,6 +9,7 @@
     "start:prod": "node dist/main",
     "typecheck": "tsc --noEmit",
     "test": "npm run build && node --test \"test/*.test.js\"",
+    "test:experiments": "npm run build && node --test \"test/experiments/*.test.js\"",
     "lint": "eslint src --ext .ts",
     "db:generate": "cd ../../packages/database && npx prisma generate",
     "db:push": "cd ../../packages/database && npx prisma db push",

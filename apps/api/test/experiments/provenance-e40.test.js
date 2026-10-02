@@ -26,10 +26,10 @@ const {
   PROBES_E40,
   COVERAGE_LIMITS,
   TARGET_WORDS,
-} = require('../scripts/smoke/provenance-e40');
+} = require('../../scripts/smoke/provenance-e40');
 
 const WINDOW = 20;
-const HARNESS = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'smoke.js'), 'utf8');
+const HARNESS = fs.readFileSync(path.join(__dirname, '..', '..', 'scripts', 'smoke.js'), 'utf8');
 
 function withProbe(entry) {
   return [...SEED_E40, { role: 'user', content: entry.utterance }];

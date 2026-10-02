@@ -20,11 +20,11 @@ const {
   PROVENANCE_FOUND_COVERAGE,
   PROVENANCE_PARTIAL_COVERAGE,
 } = require('@eyano/gnoxe-brains');
-const { SEED: SEED_E38 } = require('../scripts/smoke/provenance');
-const { SEED, PROBES_E39 } = require('../scripts/smoke/provenance-e39');
+const { SEED: SEED_E38 } = require('../../scripts/smoke/provenance');
+const { SEED, PROBES_E39 } = require('../../scripts/smoke/provenance-e39');
 
 const WINDOW = 20;
-const HARNESS = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'smoke.js'), 'utf8');
+const HARNESS = fs.readFileSync(path.join(__dirname, '..', '..', 'scripts', 'smoke.js'), 'utf8');
 
 function withProbe(probe) {
   return [...SEED, { role: 'user', content: probe.utterance }];
