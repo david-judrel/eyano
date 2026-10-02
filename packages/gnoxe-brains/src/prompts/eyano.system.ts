@@ -1,5 +1,5 @@
 import { ChatMessage } from '@eyano/types';
-import { applyRecallGuard } from './recall-guard';
+import { applyRecallGuard, attachRecallData } from './recall-guard';
 import { buildRecallLookup } from '../recall/recall-resolver';
 import { describeVisibleTurns, missingTurns } from '../recall/visible-turns';
 import { buildProvenanceCheck } from '../recall/provenance-check';
@@ -93,6 +93,12 @@ export interface ChatContextOptions {
    * UNIQUEMENT au controle experimental.
    */
   recallStoredHistory?: boolean;
+  /**
+   * Etape 43 : garde de rappel e34 (defaut : posee). `false` retire le SEUL
+   * texte de la garde ; les blocs resolver et provenance restent au meme
+   * point de contact. Controle experimental uniquement.
+   */
+  recallGuard?: boolean;
 }
 
 export function buildChatContext(
@@ -165,7 +171,8 @@ export function buildChatContext(
       ? null
       : buildProvenanceCheck(recent, messages, maxContextMessages, coverage);
   const data = [lookup, provenance].filter(Boolean).join('\n\n') || null;
-  const visible = applyRecallGuard(recent, data);
+  const visible =
+    options.recallGuard === false ? attachRecallData(recent, data) : applyRecallGuard(recent, data);
 
   if (parts.length === 0) {
     return visible;

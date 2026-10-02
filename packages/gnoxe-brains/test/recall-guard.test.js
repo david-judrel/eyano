@@ -130,3 +130,31 @@ test('la garde atteint le modele au point de contact', async () => {
   assert.ok(last.content.includes(RECALL_GUARD_HEAD), 'garde non transmise');
   assert.equal(call.request.messages[0].content, VOICE, 'system intact');
 });
+
+// ---------------------------------------------- e43 : garde ON / OFF
+
+test('e43 : recallGuard false retire la garde, et seulement elle', () => {
+  const history = [];
+  for (let i = 1; i <= 13; i += 1) {
+    history.push({ role: 'user', content: `question ${i}` });
+    history.push({ role: 'assistant', content: `reponse ${i}` });
+  }
+  history.push({ role: 'user', content: "Qu'est-ce que je t'ai demandé au tour 3 ?" });
+
+  const on = buildChatContext(history, 20, undefined, undefined, 'VOIX');
+  const off = buildChatContext(history, 20, undefined, undefined, 'VOIX', { recallGuard: false });
+  const lastOn = on[on.length - 1].content;
+  const lastOff = off[off.length - 1].content;
+
+  assert.ok(lastOn.includes(RECALL_GUARD_HEAD));
+  assert.equal(lastOff.includes(RECALL_GUARD_HEAD), false);
+  assert.equal(lastOff, lastOn.replace(`${RECALL_GUARD}\n\n`, ''), 'meme donnee, meme place');
+  assert.ok(lastOff.includes('"question 3"'), 'le bloc du resolver reste');
+  assert.equal(off[0].content, on[0].content, 'system identique');
+});
+
+test('e43 : sans donnee ni garde, le message est inchange', () => {
+  const messages = [{ role: 'user', content: 'bonjour' }];
+  const off = buildChatContext(messages, 20, undefined, undefined, undefined, { recallGuard: false });
+  assert.deepEqual(off, messages);
+});
