@@ -66,7 +66,7 @@ export class AiService {
       prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
     ]);
 
-    const keplerPlan = planKepler(content, history, mode);
+    const keplerPlan = planKepler(content, history, mode, process.env, images);
 
     const messages: ChatMessage[] = [
       ...history.map((m) => ({ role: m.role as 'user' | 'assistant', content: historyContentForChat(m) })),
@@ -83,7 +83,7 @@ export class AiService {
     if (keplerPlan) {
       const startedAt = Date.now();
       const assistant = await this.messagesService.createStreaming(conversationId, DEFAULT_IMAGE_MODEL_ID, providerName);
-      const outcome = await runKeplerInChat(keplerPlan.prompt, assistant.id);
+      const outcome = await runKeplerInChat(keplerPlan, assistant.id);
       await this.messagesService.completeStreaming(assistant.id, outcome.text, { latencyMs: Date.now() - startedAt });
       const keplerTitle = await this.resolveTitle(conversationId, messages);
       return {
@@ -169,7 +169,7 @@ export class AiService {
       prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
     ]);
 
-    const keplerPlan = planKepler(content, history, mode);
+    const keplerPlan = planKepler(content, history, mode, process.env, images);
 
     const messages: ChatMessage[] = [
       ...history.map((m) => ({ role: m.role as 'user' | 'assistant', content: historyContentForChat(m) })),
@@ -193,7 +193,7 @@ export class AiService {
       const startedAt = Date.now();
       try {
         yield { type: 'image_pending' as const };
-        const outcome = await runKeplerInChat(keplerPlan.prompt, assistantMessage.id);
+        const outcome = await runKeplerInChat(keplerPlan, assistantMessage.id);
         yield { type: 'text' as const, content: outcome.text };
         if (outcome.attachment) {
           yield { type: 'image' as const, attachment: outcome.attachment };

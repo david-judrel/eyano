@@ -95,8 +95,19 @@ export interface ProviderCapabilities {
 /** Demande de generation d'image (Kepler Image). */
 export interface ImageRequest {
   prompt: string;
+  /**
+   * Image de depart (retouche) : le prompt decrit alors la MODIFICATION.
+   * Absente : creation a partir du seul prompt.
+   */
+  sourceImage?: SourceImage;
   /** Identifiant logique `kepler-image-*`. Jamais un nom de modele reel. */
   model?: string;
+}
+
+/** Image fournie en entree d'une retouche (base64). */
+export interface SourceImage {
+  data: string;
+  mimeType: string;
 }
 
 /** Image generee, en base64, avec son type MIME. */

@@ -91,8 +91,14 @@ export type GnoxeBrainsErrorCode = 'INVALID_OBJECTIVE';
 /** Kepler Image : longueur maximale d'un prompt. */
 export const MAX_IMAGE_PROMPT_LENGTH = 2000;
 
+/** Taille maximale d'une image de depart (octets decodes). */
+export const MAX_SOURCE_IMAGE_BYTES = 10 * 1024 * 1024;
+const SOURCE_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
+
 export interface GnoxeImageInput {
   prompt: string;
+  /** Image de depart : le prompt decrit la modification a lui appliquer. */
+  sourceImage?: { data: string; mimeType: string };
   /** Identifiant logique `kepler-image-*` ; absent = modele par defaut. */
   model?: string;
 }
@@ -286,7 +292,19 @@ export class GnoxeBrains {
       throw new ImageGenerationError('UNAVAILABLE', "La generation d'images n'est pas disponible.");
     }
 
-    const result = await provider.generateImage({ prompt, model: input.model });
+    const source = input.sourceImage;
+    if (source) {
+      const bytes = typeof source.data === 'string' ? Buffer.byteLength(source.data, 'base64') : 0;
+      if (!SOURCE_IMAGE_TYPES.includes(source.mimeType) || bytes === 0 || bytes > MAX_SOURCE_IMAGE_BYTES) {
+        throw new ImageGenerationError('INVALID_PROMPT', "Image de depart invalide (type ou taille).");
+      }
+    }
+
+    const result = await provider.generateImage({
+      prompt,
+      model: input.model,
+      ...(source ? { sourceImage: { data: source.data, mimeType: source.mimeType } } : {}),
+    });
     return { data: result.data, mimeType: result.mimeType, model: result.model };
   }
 

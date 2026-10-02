@@ -70,6 +70,8 @@ const TYPO_TARGETS = [
   'picture', 'pictures', 'drawing', 'drawings',
   'genere', 'generer', 'dessine', 'dessiner', 'realise', 'realiser', 'illustre', 'illustrer',
   'generate', 'create',
+  'retire', 'retirer', 'enleve', 'enlever', 'ajoute', 'ajouter', 'change', 'changer',
+  'modifie', 'modifier', 'refais', 'refaire', 'realiste',
 ];
 /** Vrais mots proches d'un mot-cle : jamais corriges. */
 const NOT_TYPOS = new Set(['mage', 'mages', 'photon', 'photons', 'produit', 'dessous', 'genie']);
@@ -90,9 +92,13 @@ function editDistance(a: string, b: string): number {
   return d[a.length][b.length];
 }
 
+/** Determinants mal tapes (mots courts : liste fermee, pas de distance). */
+const SHORT_TYPOS: Readonly<Record<string, string>> = { uen: 'une', eun: 'une', dse: 'des', sed: 'des' };
+
 /** « imag » -> « image », « gnere » -> « genere » : mots d'au moins 4 lettres. */
 function correctTypos(text: string): string {
-  return text.replace(/[a-z]{4,}/g, (word) => {
+  const fixed = text.replace(/\b[a-z]{2,3}\b/g, (word) => SHORT_TYPOS[word] ?? word);
+  return fixed.replace(/[a-z]{4,}/g, (word) => {
     if (NOT_TYPOS.has(word) || TYPO_TARGETS.includes(word)) return word;
     const match = TYPO_TARGETS.find(
       (target) => Math.abs(target.length - word.length) <= 1 && editDistance(word, target) === 1
@@ -137,7 +143,7 @@ export function keplerFailureText(code: string): string {
     case 'NO_IMAGE':
       return "Je n'ai pas réussi à produire d'image pour cette demande. Tu peux essayer de la reformuler ?";
     case 'INVALID_PROMPT':
-      return 'Ta description est trop longue pour générer une image. Essaie une version plus courte.';
+      return "Je n'ai pas pu utiliser ta demande : la description est trop longue, ou l'image jointe n'est pas au bon format (PNG, JPEG ou WebP, 10 Mo maximum).";
     case 'TOO_LARGE':
       return "L'image générée est trop volumineuse pour être conservée. Réessaie, éventuellement avec une demande plus simple.";
     case 'UNAVAILABLE':
@@ -161,13 +167,15 @@ const EXTENSIONS: Record<string, string> = {
  * jamais : un echec devient une reponse d'Eyano qui l'explique.
  */
 export async function runKeplerInChat(
-  prompt: string,
+  plan: KeplerPlan | string,
   messageId: string,
   deps: { generate: typeof imageFlow; db: typeof prisma } = { generate: imageFlow, db: prisma }
 ): Promise<KeplerChatOutcome> {
+  const { prompt, sourceImage } = await resolvePlan(typeof plan === 'string' ? { prompt: plan } : plan, deps.db);
+
   let result: { data: string; mimeType: string };
   try {
-    result = await deps.generate({ prompt });
+    result = await deps.generate(sourceImage ? { prompt, sourceImage } : { prompt });
   } catch (error) {
     const code = error instanceof ImageGenerationError ? error.code : 'FAILED';
     return { text: keplerFailureText(code), code };
@@ -203,7 +211,7 @@ export async function runKeplerInChat(
 export interface KeplerHistoryMessage {
   role: string;
   content: string;
-  attachments?: { storageKey?: string | null }[];
+  attachments?: { id?: string; storageKey?: string | null }[];
 }
 
 /** Vrai si ce message d'Eyano porte une image Kepler. */
@@ -234,7 +242,7 @@ export function imageThread(history: KeplerHistoryMessage[]): string[] {
 
 /** Indices d'une retouche de l'image precedente. */
 const FOLLOW_UP =
-  /\b(?:plus|moins|mieux|meilleur|meilleure|refais|refaire|recommence|encore|autre|change|changer|modifie|modifier|ajoute|ajouter|enleve|enlever|retire|retirer|mets|mettre|rends|rendre|version|style|couleur|couleurs|fond|realiste|cartoon|manga|anime|zoom|sourire|lumiere|sombre|clair|jeune|vieux|vieille|sans|avec|more|less|better|again|another|change|add|remove|make it)\b/;
+  /\b(?:plus|moins|mieux|meilleur|meilleure|refais|refaire|recommence|encore|autre|change|changer|modifie|modifier|ajoute|ajouter|enleve|enlever|retire|retirer|mets|mettre|rends|rendre|version|style|couleur|couleurs|fond|realiste|cartoon|manga|anime|zoom|sourire|lumiere|sombre|clair|jeune|vieux|vieille|more|less|better|again|another|change|add|remove|make it)\b/;
 /** Vraies questions ou remerciements : la conversation reprend. */
 const NOT_FOLLOW_UP =
   /\b(?:merci|qui|pourquoi|comment|quel|quelle|quels|quelles|explique|expliquer|raconte|resume|traduis|ecris|redige|thanks|who|why|how|what|explain|write)\b/;
@@ -246,7 +254,7 @@ export function detectImageFollowUp(raw: string): boolean {
   const text = correctTypos(normalize(raw)).trim();
   if (!text || text.split(/\s+/).length > MAX_FOLLOW_UP_WORDS) return false;
   if (NOT_FOLLOW_UP.test(text)) return false;
-  return FOLLOW_UP.test(text);
+  return FOLLOW_UP.test(text) || /^(?:avec|sans|with|without)\b/.test(text);
 }
 
 /** Longueur maximale d'un prompt d'image (limite du moteur). */
@@ -263,25 +271,60 @@ export function buildFollowUpPrompt(thread: string[], content: string): string {
   return prompt.length > MAX_PROMPT ? prompt.slice(prompt.length - MAX_PROMPT) : prompt;
 }
 
+/** Image de depart d'une retouche. */
+export type KeplerSource =
+  | { kind: 'upload'; image: { data: string; mimeType: string } }
+  | { kind: 'previous'; attachmentId: string };
+
+export interface KeplerPlan {
+  /** Ce que Kepler doit produire (ou la modification, avec `source`). */
+  prompt: string;
+  source?: KeplerSource;
+  /** Prompt a utiliser si l'image de depart est introuvable. */
+  fallbackPrompt?: string;
+}
+
+/** Piece jointe Kepler de la derniere reponse d'Eyano, si c'est une image. */
+function lastKeplerAttachmentId(history: KeplerHistoryMessage[]): string | undefined {
+  const last = history[history.length - 1];
+  if (!last || !isKeplerImageMessage(last)) return undefined;
+  return last.attachments?.find((a) => a.storageKey === 'db:kepler')?.id;
+}
+
 /**
- * Decide si Kepler traite ce message, et avec quel prompt.
- *   - nouvelle demande d'image (texte ou mode image) : le message tel quel ;
- *   - retouche juste apres une image : la demande d'origine + la retouche ;
- *   - sinon : `null`, le chat repond.
+ * Decide si Kepler traite ce message, et comment.
+ *   - photo jointe + demande d'image ou de retouche : retouche de la photo ;
+ *   - retouche juste apres une image : retouche de cette image ;
+ *   - nouvelle demande d'image (texte ou mode image) : creation ;
+ *   - sinon : `null`, le chat repond (une photo seule est analysee).
  */
 export function planKepler(
   content: string,
   history: KeplerHistoryMessage[],
   mode?: ChatMode,
-  env: NodeJS.ProcessEnv = process.env
-): { prompt: string } | null {
+  env: NodeJS.ProcessEnv = process.env,
+  images?: { data: string; mimeType: string }[]
+): KeplerPlan | null {
   if (!isKeplerImageEnabled(env)) return null;
 
-  const thread = imageThread(history);
-  if (thread.length > 0 && !detectImageRequest(content) && detectImageFollowUp(content)) {
-    return { prompt: buildFollowUpPrompt(thread, content) };
+  const fresh = detectImageRequest(content);
+  const followUp = detectImageFollowUp(content);
+
+  const uploaded = images?.[0];
+  if (uploaded && (mode === 'image' || fresh || followUp)) {
+    return { prompt: content, source: { kind: 'upload', image: uploaded } };
   }
-  if (mode === 'image' || detectImageRequest(content)) {
+
+  const thread = imageThread(history);
+  if (thread.length > 0 && !fresh && followUp) {
+    const fallbackPrompt = buildFollowUpPrompt(thread, content);
+    const attachmentId = lastKeplerAttachmentId(history);
+    return attachmentId
+      ? { prompt: content, source: { kind: 'previous', attachmentId }, fallbackPrompt }
+      : { prompt: fallbackPrompt };
+  }
+
+  if (mode === 'image' || fresh) {
     return { prompt: content };
   }
   return null;
@@ -305,4 +348,28 @@ export function keplerChatNote(env: NodeJS.ProcessEnv = process.env): string {
 /** Contenu d'un message d'historique tel que le chat doit le voir. */
 export function historyContentForChat(message: KeplerHistoryMessage): string {
   return isKeplerImageMessage(message) ? `${message.content} [Image créée par Kepler]` : message.content;
+}
+
+/**
+ * Image de depart du plan : la photo jointe, ou l'image Kepler precedente lue
+ * en base. Introuvable : creation a partir du prompt de repli.
+ */
+async function resolvePlan(
+  plan: KeplerPlan,
+  db: typeof prisma
+): Promise<{ prompt: string; sourceImage?: { data: string; mimeType: string } }> {
+  const source = plan.source;
+  if (!source) return { prompt: plan.prompt };
+  if (source.kind === 'upload') return { prompt: plan.prompt, sourceImage: source.image };
+
+  const previous = await db.attachment
+    .findUnique({ where: { id: source.attachmentId }, select: { data: true, mimeType: true } })
+    .catch(() => null);
+  if (previous?.data) {
+    return {
+      prompt: plan.prompt,
+      sourceImage: { data: Buffer.from(previous.data).toString('base64'), mimeType: previous.mimeType },
+    };
+  }
+  return { prompt: plan.fallbackPrompt ?? plan.prompt };
 }

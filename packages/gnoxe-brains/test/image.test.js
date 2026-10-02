@@ -288,3 +288,55 @@ test('choix du backend image : KEPLER_IMAGE_BACKEND, defaut inchange', () => {
     else process.env.KEPLER_IMAGE_BACKEND = previous;
   }
 });
+
+// --------------------------------------------------- retouche (image de depart)
+
+const JPEG_SOURCE = Buffer.from([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3]).toString('base64');
+
+test('retouche gemini : l image de depart precede la consigne', async () => {
+  const requests = mockFetch(() => ({
+    json: { candidates: [{ content: { parts: [{ inlineData: { mimeType: 'image/png', data: PNG } }] } }] },
+  }));
+  await new GeminiAdapter().generateImage({ prompt: 'ajoute un chapeau', sourceImage: { data: JPEG_SOURCE, mimeType: 'image/jpeg' } });
+  assert.deepEqual(requests[0].body.contents[0].parts, [
+    { inlineData: { mimeType: 'image/jpeg', data: JPEG_SOURCE } },
+    { text: 'ajoute un chapeau' },
+  ]);
+});
+
+test('retouche pollinations : multipart vers l edition, image en retour', async () => {
+  const calls = [];
+  const impl = async (url, init) => {
+    calls.push({ url, init });
+    return new Response(JSON.stringify({ data: [{ b64_json: JPEG_SOURCE }] }), { status: 200, headers: { 'content-type': 'application/json' } });
+  };
+  const adapter = new PollinationsImageAdapter(impl, () => 'cle-test');
+  const result = await adapter.generateImage({ prompt: 'retire l humain', sourceImage: { data: JPEG_SOURCE, mimeType: 'image/jpeg' } });
+
+  assert.equal(calls[0].url, 'https://gen.pollinations.ai/v1/images/edits');
+  assert.equal(calls[0].init.method, 'POST');
+  const form = calls[0].init.body;
+  assert.equal(form.get('prompt'), 'retire l humain');
+  assert.equal(form.get('model'), 'flux-klein');
+  assert.deepEqual(Buffer.from(await form.get('image').arrayBuffer()), Buffer.from(JPEG_SOURCE, 'base64'));
+  assert.deepEqual(result, { data: JPEG_SOURCE, mimeType: 'image/jpeg', model: DEFAULT_IMAGE_MODEL_ID, provider: 'pollinations' });
+});
+
+test('retouche pollinations : reponse sans image -> NO_IMAGE ; quota -> QUOTA_EXHAUSTED', async () => {
+  const empty = new PollinationsImageAdapter(async () => new Response('{"data":[]}', { status: 200 }), () => 'k');
+  await assert.rejects(empty.generateImage({ prompt: 'x', sourceImage: { data: JPEG_SOURCE, mimeType: 'image/jpeg' } }), { code: 'NO_IMAGE' });
+  const broke = new PollinationsImageAdapter(async () => new Response('{}', { status: 402 }), () => 'k');
+  await assert.rejects(broke.generateImage({ prompt: 'x', sourceImage: { data: JPEG_SOURCE, mimeType: 'image/jpeg' } }), { code: 'QUOTA_EXHAUSTED' });
+});
+
+test('facade : image de depart transmise ; type ou taille invalide refuses sans appel', async () => {
+  const provider = fakeImageProvider();
+  const brains = new GnoxeBrains({ modelProvider: provider });
+  await brains.generateImage({ prompt: 'ajoute un chapeau', sourceImage: { data: JPEG_SOURCE, mimeType: 'image/jpeg' } });
+  assert.deepEqual(provider.calls[0].sourceImage, { data: JPEG_SOURCE, mimeType: 'image/jpeg' });
+
+  for (const sourceImage of [{ data: JPEG_SOURCE, mimeType: 'image/svg+xml' }, { data: '', mimeType: 'image/png' }]) {
+    await assert.rejects(brains.generateImage({ prompt: 'x', sourceImage }), { code: 'INVALID_PROMPT' });
+  }
+  assert.equal(provider.calls.length, 1);
+});

@@ -92,9 +92,12 @@ function buildRequestPayload(request: ModelRequest) {
 }
 
 /** Kepler Image : prompt seul, reponse texte et image. */
-function buildImagePayload(prompt: string) {
+function buildImagePayload(prompt: string, source?: { data: string; mimeType: string }) {
+  const parts: object[] = [];
+  if (source) parts.push({ inlineData: { mimeType: source.mimeType, data: source.data } });
+  parts.push({ text: prompt });
   return {
-    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    contents: [{ role: 'user', parts }],
     generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
   };
 }
@@ -239,7 +242,7 @@ export class GeminiAdapter implements ModelProvider {
 
     let data: any;
     try {
-      data = await this.callGenerateContent(modelName, buildImagePayload(request.prompt), 'model-quota');
+      data = await this.callGenerateContent(modelName, buildImagePayload(request.prompt, request.sourceImage), 'model-quota');
     } catch {
       throw new ImageGenerationError('FAILED', "La generation d'image a echoue.");
     }

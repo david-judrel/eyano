@@ -50,6 +50,7 @@ test('detection : demandes d image reconnues', () => {
     'fais une phot de la tour eiffel',
     'génère un iamge de voiture',
     'dessine un portait de femme',
+    'Genere moi uen affiche musical',
   ]) {
     assert.equal(detectImageRequest(message), true, message);
   }
@@ -208,4 +209,66 @@ test('le chat sait qu il cree des images et voit lesquelles', () => {
   assert.match(keplerChatNote(ON), /Ne dis jamais que tu ne peux pas/);
   assert.equal(historyContentForChat(image()), "Voici l'image générée. [Image créée par Kepler]");
   assert.equal(historyContentForChat(reply('Bonjour')), 'Bonjour');
+});
+
+// ------------------------------------------------- retouche d'une image existante
+
+const imageWithId = (id) => ({ role: 'assistant', content: "Voici l'image générée.", attachments: [{ id, storageKey: 'db:kepler' }] });
+const PHOTO = { data: Buffer.from([0xff, 0xd8, 0xff]).toString('base64'), mimeType: 'image/jpeg' };
+
+test('retouche : modifie l image precedente, la consigne seule', () => {
+  const history = [user('Genere moi une affiche musicale'), imageWithId('att-9')];
+  const plan = planKepler("retir l'humain", history, undefined, ON);
+  assert.equal(plan.prompt, "retir l'humain");
+  assert.deepEqual(plan.source, { kind: 'previous', attachmentId: 'att-9' });
+  assert.match(plan.fallbackPrompt, /affiche musicale/);
+});
+
+test('photo jointe + demande de retouche : la photo est l image de depart', () => {
+  for (const [message, mode] of [['mets-lui un chapeau rouge', undefined], ['en style manga', 'image'], ['génère une image de moi en astronaute', undefined]]) {
+    const plan = planKepler(message, [], mode, ON, [PHOTO]);
+    assert.deepEqual(plan, { prompt: message, source: { kind: 'upload', image: PHOTO } }, message);
+  }
+});
+
+test('photo jointe sans demande d image : analysee par le chat', () => {
+  for (const message of ['que vois-tu sur cette photo ?', 'explique ce schéma', 'c est quoi ce plat']) {
+    assert.equal(planKepler(message, [], undefined, ON, [PHOTO]), null, message);
+  }
+});
+
+test('mode image : une description avec « avec » est une nouvelle image', () => {
+  const history = [user('génère une image de chat'), imageWithId('att-1')];
+  assert.deepEqual(planKepler('un mouton avec un chapeau', history, 'image', ON), { prompt: 'un mouton avec un chapeau' });
+  assert.equal(planKepler('avec un chapeau', history, undefined, ON).source.kind, 'previous');
+});
+
+function editDb(previous) {
+  const db = fakeDb();
+  db.attachment.findUnique = async () => previous;
+  return db;
+}
+
+test('execution : l image precedente est lue en base et transmise au moteur', async () => {
+  const calls = [];
+  const generate = async (input) => { calls.push(input); return { data: Buffer.from('JPEG').toString('base64'), mimeType: 'image/jpeg' }; };
+  const db = editDb({ data: Buffer.from('ANCIENNE'), mimeType: 'image/jpeg' });
+  const outcome = await runKeplerInChat({ prompt: 'retire l humain', source: { kind: 'previous', attachmentId: 'att-9' }, fallbackPrompt: 'origine. retouche' }, 'msg-2', { generate, db });
+
+  assert.equal(outcome.text, KEPLER_SUCCESS_TEXT);
+  assert.deepEqual(calls[0], { prompt: 'retire l humain', sourceImage: { data: Buffer.from('ANCIENNE').toString('base64'), mimeType: 'image/jpeg' } });
+});
+
+test('execution : image precedente introuvable -> creation avec le prompt de repli', async () => {
+  const calls = [];
+  const generate = async (input) => { calls.push(input); return { data: Buffer.from('JPEG').toString('base64'), mimeType: 'image/jpeg' }; };
+  await runKeplerInChat({ prompt: 'retire l humain', source: { kind: 'previous', attachmentId: 'x' }, fallbackPrompt: 'origine. retouche' }, 'm', { generate, db: editDb(null) });
+  assert.deepEqual(calls[0], { prompt: 'origine. retouche' });
+});
+
+test('execution : photo jointe transmise telle quelle', async () => {
+  const calls = [];
+  const generate = async (input) => { calls.push(input); return { data: Buffer.from('JPEG').toString('base64'), mimeType: 'image/jpeg' }; };
+  await runKeplerInChat({ prompt: 'mets-lui un chapeau', source: { kind: 'upload', image: PHOTO } }, 'm', { generate, db: fakeDb() });
+  assert.deepEqual(calls[0], { prompt: 'mets-lui un chapeau', sourceImage: PHOTO });
 });
