@@ -17,14 +17,15 @@ export class FilesController {
   @ApiConsumes('multipart/form-data')
   async upload(
     @Param('messageId') messageId: string,
-    @UploadedFile() file: Express.Multer.File
+    @UploadedFile() file: Express.Multer.File,
+    @Req() req: any
   ) {
-    return this.filesService.upload(messageId, file);
+    return this.filesService.upload(messageId, file, req.user.userId);
   }
 
   @Get('message/:messageId')
   @ApiOperation({ summary: 'Fichiers d\'un message' })
-  async findByMessage(@Param('messageId') messageId: string) {
-    return this.filesService.findByMessage(messageId);
+  async findByMessage(@Param('messageId') messageId: string, @Req() req: any) {
+    return this.filesService.findByMessage(messageId, req.user.userId);
   }
 }
