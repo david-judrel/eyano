@@ -50,15 +50,12 @@ export class WriterAgent extends BaseAgent {
   }
 
   protected buildUserPrompt(input: AgentExecuteInput, task: string): string {
-    const sections: string[] = [];
-
-    if (input.context.channel === 'whatsapp') {
-      sections.push(
-        'Format attendu : reponse courte, naturelle, conversationnelle. Pas de markdown complexe.'
-      );
-    } else {
-      sections.push('Format attendu : reponse directe, structurée si le sujet le merite.');
-    }
+    // Nettoyage A.3 : le writer est generique et ne connait aucun canal. Le
+    // format propre a un canal (WhatsApp...) vient de la voix fournie par
+    // l'application (`context.systemPrompt`, registre de canal).
+    const sections: string[] = [
+      'Format attendu : reponse directe, structurée si le sujet le merite.',
+    ];
 
     sections.push(super.buildUserPrompt(input, task));
     return sections.join('\n\n');
