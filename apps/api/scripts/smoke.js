@@ -28,6 +28,9 @@
  *                                       garde e34 conservee : controle ON/OFF
  *   node scripts/smoke.js --provenance  probes P1-P5 (e38), chacun seul derriere
  *                                       un historique pre-ecrit
+ *   node scripts/smoke.js --provenance-e39
+ *                                       probes R1-R8 (e39), meme historique,
+ *                                       meme mode que --provenance
  *   node scripts/smoke.js --no-provenance
  *                                       desactive le Provenance Check (e38) :
  *                                       controle ON/OFF
@@ -44,6 +47,7 @@ const { chatFlowSync, getGnoxeBrains } = require('@eyano/gnoxe-brains');
 const { BATTERY } = require('./smoke/battery');
 const { SCENARIOS } = require('./smoke/scenarios');
 const { SEED, PROBES } = require('./smoke/provenance');
+const { PROBES_E39 } = require('./smoke/provenance-e39');
 const { scanRevelation } = require('./smoke/detect');
 
 const API_ROOT = path.join(__dirname, '..');
@@ -52,7 +56,7 @@ const MISSION_CHANNEL = 'admin';
 // ------------------------------------------------------------------ options
 
 function parseArgs(argv) {
-  const options = { dry: false, missions: false, scenario: false, only: null, resolver: true, provenance: false, provenanceCheck: true };
+  const options = { dry: false, missions: false, scenario: false, only: null, resolver: true, provenance: false, provenanceSet: 'e38', provenanceCheck: true };
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -67,6 +71,9 @@ function parseArgs(argv) {
       options.resolver = false;
     } else if (arg === '--provenance') {
       options.provenance = true;
+    } else if (arg === '--provenance-e39') {
+      options.provenance = true;
+      options.provenanceSet = 'e39';
     } else if (arg === '--no-provenance') {
       options.provenanceCheck = false;
     } else if (arg === '--only') {
@@ -286,7 +293,10 @@ async function main() {
   const collection = options.scenario
     ? SCENARIOS
     : options.provenance
-      ? PROBES.map((probe) => ({ ...probe, history: SEED }))
+      ? (options.provenanceSet === 'e39' ? PROBES_E39 : PROBES).map((probe) => ({
+          ...probe,
+          history: SEED,
+        }))
       : BATTERY;
   const selected = options.only
     ? collection.filter((entry) => options.only.includes(entry.id))
@@ -303,7 +313,7 @@ async function main() {
       options.scenario
         ? 'scenario (sequence accumulee)'
         : options.provenance
-          ? 'provenance (probes isoles, historique pre-ecrit)'
+          ? `provenance ${options.provenanceSet} (probes isoles, historique pre-ecrit)`
           : 'batterie (tours isoles)'
     }`
   );
