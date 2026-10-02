@@ -9,7 +9,7 @@
   "scripts": {
     "dev": "turbo dev",
     "build": "turbo build",
-    "build:packages": "cd packages/types && npm run build && cd ../database && npm run build && cd ../auth && npm run build && cd ../ai && npm run build",
+    "build:packages": "cd packages/types && npm run build && cd ../database && npm run build && cd ../auth && npm run build && cd ../gnoxe-brains && npm run build && cd ../eyano-identity && npm run build",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
     "test": "turbo test",

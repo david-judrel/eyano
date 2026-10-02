@@ -46,7 +46,7 @@ export default function AdminAI() {
   }, []);
 
   const handleReset = async () => {
-    if (!confirm('Reinitialiser toutes les cles Gemini ?')) return;
+    if (!confirm('Reinitialiser toutes les cles ?')) return;
     setResetting(true);
     try {
       await api.post('/ai/keys/reset', {});
@@ -71,7 +71,7 @@ export default function AdminAI() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[#F2FFF0]">IA & Cles Gemini</h1>
+          <h1 className="text-2xl font-bold text-[#F2FFF0]">IA & Cles API</h1>
           <p className="text-sm text-[#F2FFF0]/30 mt-1">Monitoring de la rotation des cles API</p>
         </div>
         <button

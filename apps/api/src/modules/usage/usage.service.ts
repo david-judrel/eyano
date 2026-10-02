@@ -6,6 +6,23 @@ interface ModelPricing {
   output: number; // cost per 1M tokens
 }
 
+/**
+ * TARIF par identifiant de modele.
+ *
+ * Responsabilite : PRIX uniquement. Ce tableau ne contient ni tokens ni
+ * appels (ceux-ci sont l'usage), ni nom de backend : `calculateCost` est
+ * indexe sur l'identifiant logique du modele, jamais sur `provider`. Un
+ * cout peut donc etre calcule pour n'importe quel identifiant generique.
+ *
+ * Les cles `gemini-*` sont des identifiants HISTORIQUES : les enregistrements
+ * d'usage ancien restent facturables avec le meme tarif. Elles ne sont ni
+ * consommees par le pipeline actuel (`resolveLogicalModel` renvoie toujours
+ * `gnoxe-brains-*`) ni supprimees ici ; leur migration appartient
+ * au catalogue des modeles.
+ *
+ * Un identifiant inconnu retombe sur le tarif par defaut : le cout reste
+ * toujours un nombre, jamais un echec.
+ */
 const MODEL_PRICING: Record<string, ModelPricing> = {
   'gemini-3.5-flash-lite': { input: 0.015, output: 0.06 },
   'gemini-3.6-flash': { input: 0.03, output: 0.12 },

@@ -9,6 +9,7 @@ import { AiModule } from './modules/ai/ai.module';
 import { FilesModule } from './modules/files/files.module';
 import { UsageModule } from './modules/usage/usage.module';
 import { AdminModule } from './modules/admin/admin.module';
+import { MissionsModule } from './modules/missions/missions.module';
 import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
 
 @Module({
@@ -22,6 +23,7 @@ import { WhatsAppModule } from './modules/whatsapp/whatsapp.module';
     FilesModule,
     UsageModule,
     AdminModule,
+    MissionsModule,
     WhatsAppModule,
   ],
   controllers: [HealthController],

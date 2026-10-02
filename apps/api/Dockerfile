@@ -15,7 +15,8 @@ COPY package.json package-lock.json ./
 COPY packages/types/package.json ./packages/types/
 COPY packages/database/package.json ./packages/database/
 COPY packages/auth/package.json ./packages/auth/
-COPY packages/ai/package.json ./packages/ai/
+COPY packages/gnoxe-brains/package.json ./packages/gnoxe-brains/
+COPY packages/eyano-identity/package.json ./packages/eyano-identity/
 COPY apps/api/package.json ./apps/api/
 
 RUN npm ci --workspace=apps/api
@@ -38,14 +39,16 @@ COPY turbo.json ./
 COPY packages/types/package.json ./packages/types/
 COPY packages/database/package.json ./packages/database/
 COPY packages/auth/package.json ./packages/auth/
-COPY packages/ai/package.json ./packages/ai/
+COPY packages/gnoxe-brains/package.json ./packages/gnoxe-brains/
+COPY packages/eyano-identity/package.json ./packages/eyano-identity/
 COPY apps/api/package.json ./apps/api/
 
 # Workspace source code
 COPY packages/types/ ./packages/types/
 COPY packages/database/ ./packages/database/
 COPY packages/auth/ ./packages/auth/
-COPY packages/ai/ ./packages/ai/
+COPY packages/gnoxe-brains/ ./packages/gnoxe-brains/
+COPY packages/eyano-identity/ ./packages/eyano-identity/
 COPY apps/api/ ./apps/api/
 
 # ============================================================
@@ -67,7 +70,9 @@ RUN npm run build --workspace=@eyano/auth
 
 RUN npm run build --workspace=@eyano/database
 
-RUN npm run build --workspace=@eyano/ai
+RUN npm run build --workspace=@eyano/gnoxe-brains
+
+RUN npm run build --workspace=@eyano/eyano-identity
 
 # ============================================================
 # Build API
@@ -137,12 +142,20 @@ COPY --from=builder /app/packages/auth/dist ./packages/auth/dist
 COPY --from=builder /app/packages/auth/package.json ./packages/auth/package.json
 
 # ============================================================
-# AI
+# GnoxeBrains
 # ============================================================
 
-COPY --from=builder /app/packages/ai/dist ./packages/ai/dist
+COPY --from=builder /app/packages/gnoxe-brains/dist ./packages/gnoxe-brains/dist
 
-COPY --from=builder /app/packages/ai/package.json ./packages/ai/package.json
+COPY --from=builder /app/packages/gnoxe-brains/package.json ./packages/gnoxe-brains/package.json
+
+# ============================================================
+# Eyano Identity
+# ============================================================
+
+COPY --from=builder /app/packages/eyano-identity/dist ./packages/eyano-identity/dist
+
+COPY --from=builder /app/packages/eyano-identity/package.json ./packages/eyano-identity/package.json
 
 # ============================================================
 # Permissions

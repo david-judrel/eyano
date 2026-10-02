@@ -9,9 +9,16 @@ import makeWASocket, {
 } from '@whiskeysockets/baileys';
 import { Boom } from '@hapi/boom';
 import qrcode from 'qrcode-terminal';
-import pino from 'pino';
-import { chatFlowSync } from '@eyano/ai';
+import { chatFlowSync } from '@eyano/gnoxe-brains';
+import { buildEyanoContext } from '@eyano/eyano-identity';
 import { ChatMessage, ImageAttachment } from '@eyano/types';
+import {
+  BoundedHistory,
+  FileWhatsAppHistoryStore,
+  WhatsAppHistoryStore,
+  appendBounded,
+  resolveStoredHistory,
+} from './whatsapp.store';
 
 const ANTI_BAN = {
   readDelay: 2000,
@@ -22,6 +29,7 @@ const ANTI_BAN = {
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
 const MAX_DOC_SIZE = 20 * 1024 * 1024;
+const MAX_HISTORY = 30;
 
 function computeTypingDelay(responseLength: number): number {
   const base = responseLength * ANTI_BAN.typingMultiplier;
@@ -38,6 +46,8 @@ export class WhatsAppService implements OnModuleInit, OnModuleDestroy {
   private sock: WASocket | null = null;
   private isReady = false;
   private restartTimeout: NodeJS.Timeout | null = null;
+  private readonly store: WhatsAppHistoryStore = new FileWhatsAppHistoryStore('.whatsapp_history');
+  private readonly conversations = new Map<string, BoundedHistory>();
 
   async onModuleInit() {
     await this.initSocket();
@@ -52,13 +62,31 @@ export class WhatsAppService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /**
+   * Historique durable d'un JID : charge une seule fois, mis en cache en
+   * memoire, avec le tour reel de son premier message (etape 41).
+   */
+  private async getHistory(jid: string): Promise<BoundedHistory> {
+    if (!this.conversations.has(jid)) {
+      const stored = await this.store.loadHistory(jid);
+      this.conversations.set(jid, resolveStoredHistory(stored, MAX_HISTORY));
+    }
+    return this.conversations.get(jid)!;
+  }
+
+  private async addToHistory(jid: string, message: ChatMessage): Promise<void> {
+    const history = await this.getHistory(jid);
+    appendBounded(history, message, MAX_HISTORY);
+    await this.store.save(jid, history.messages, history.firstTurn);
+  }
+
   private async initSocket() {
     const { state, saveCreds } = await useMultiFileAuthState('.whatsapp_auth');
 
     this.sock = makeWASocket({
       auth: state,
       printQRInTerminal: false,
-      logger: pino({ level: 'silent' }),
+      logger: (await import('pino')).default({ level: 'silent' }),
       browser: ['Eyano', 'Chrome', '4.0.0'],
       generateHighQualityLinkPreview: false,
     });
@@ -120,7 +148,6 @@ export class WhatsAppService implements OnModuleInit, OnModuleDestroy {
 
     let userText = '';
     let images: ImageAttachment[] = [];
-    let docInfo: { name: string; mimetype: string; size: number } | null = null;
 
     if (messageContent.conversation) {
       userText = messageContent.conversation;
@@ -206,28 +233,35 @@ export class WhatsAppService implements OnModuleInit, OnModuleDestroy {
       try { await this.sock.sendPresenceUpdate('composing', jid); } catch {}
     }
 
-    const chatMessages: ChatMessage[] = [{
-      role: 'user',
-      content: userText,
-      images: images.length > 0 ? images : undefined,
-    }];
+    await this.addToHistory(jid, { role: 'user', content: userText, images: images.length > 0 ? images : undefined });
+
+    const history = await this.getHistory(jid);
 
     const fakeUserId = `whatsapp_${jid.replace(/[^0-9]/g, '')}`;
     const fakeConvId = `wa_conv_${jid.replace(/[^0-9]/g, '')}`;
+    const userName = pushName && pushName !== 'Unknown' ? pushName : undefined;
 
     let responseText: string;
     try {
       const result = await chatFlowSync({
         userId: fakeUserId,
         conversationId: fakeConvId,
-        messages: chatMessages,
+        messages: [...history.messages],
+        // Etape 41 : l'historique est TRONQUE a MAX_HISTORY ; le cerveau doit
+        // numeroter en tours reels et ne jamais tenir ce stockage pour
+        // toute la conversation.
+        historyCoverage: { firstTurn: history.firstTurn },
         channel: 'whatsapp',
+        userName,
+        systemPrompt: buildEyanoContext({ channel: 'whatsapp' }),
       });
       responseText = result.content;
     } catch (error: any) {
       this.logger.error('Erreur IA:', error?.message || error);
       responseText = "Oups, j'ai eu un petit bug. Reessaye stp 🙏";
     }
+
+    await this.addToHistory(jid, { role: 'assistant', content: responseText });
 
     const typingDelay = computeTypingDelay(responseLength(responseText));
     await sleep(typingDelay);
