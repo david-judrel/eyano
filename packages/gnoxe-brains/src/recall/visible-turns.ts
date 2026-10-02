@@ -27,12 +27,15 @@ export interface VisibleTurns {
 
 export function describeVisibleTurns(
   messages: ChatMessage[],
-  maxContextMessages: number
+  maxContextMessages: number,
+  firstTurn: number = 1
 ): VisibleTurns {
   const total = messages.length;
   const firstVisible = total - Math.min(maxContextMessages, total) + 1;
 
-  let turnCount = 0;
+  // Etape 41 : numerotation REELLE. Les tours supprimes par l'appelant
+  // precedent l'historique fourni ; ils comptent, sans etre visibles.
+  let turnCount = firstTurn - 1;
   let first: number | null = null;
   let last: number | null = null;
   for (let position = 1; position <= total; position += 1) {
@@ -44,10 +47,11 @@ export function describeVisibleTurns(
     }
   }
 
+  // Une reponse en tete de fenetre appartient au dernier tour evince, que
+  // sa question ait quitte la fenetre (e37) ou le stockage (e41).
   const head = messages[firstVisible - 1];
   const evicted = first === null ? turnCount : first - 1;
-  const partialTurn =
-    head && head.role === 'assistant' && firstVisible > 1 && evicted > 0 ? evicted : null;
+  const partialTurn = head && head.role === 'assistant' && evicted > 0 ? evicted : null;
 
   return { turnCount, first, last, partialTurn };
 }

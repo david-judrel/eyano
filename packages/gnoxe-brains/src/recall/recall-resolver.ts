@@ -1,5 +1,6 @@
 import { ChatMessage } from '@eyano/types';
 import { formatTurnSpan, missingTurns } from './visible-turns';
+import { HistoryCoverage, deletedTurns, normalizeCoverage } from './history-coverage';
 
 /**
  * Recall Resolver (etapes 35-36).
@@ -159,8 +160,13 @@ export interface RecallLookup {
   target: RecallTarget;
   /** Statut du message UTILISATEUR du tour (contrat e35). */
   status: 'found' | 'not_available';
-  /** `unknown_turn` : le tour n'existe pas. `out_of_window` : existe, evince. */
-  reason?: 'unknown_turn' | 'out_of_window';
+  /**
+   * `unknown_turn` : le tour n'existe pas. `out_of_window` : existe, evince
+   * de la fenetre. `deleted` : existe, supprime du stockage par l'appelant
+   * (e41). `unknown_numbering` : historique tronque sans trace, aucun numero
+   * de tour n'est fiable (e41).
+   */
+  reason?: 'unknown_turn' | 'out_of_window' | 'deleted' | 'unknown_numbering';
   messagePosition?: number;
   message?: string;
   /** Le tour complet. `assistant` suit la definition structurelle du tour. */
@@ -172,6 +178,8 @@ export interface RecallLookup {
   /** Bornes en NUMERO DE TOUR, distinctes des bornes en position de message. */
   visibleTurnFirst: number | null;
   visibleTurnLast: number | null;
+  /** Tours supprimes du stockage avant l'historique fourni ; `null` : inconnu. */
+  deletedTurns: number | null;
 }
 
 /**
@@ -187,13 +195,20 @@ export interface RecallLookup {
  * Les deux systemes de coordonnees sont rendus separesment. Les confondre
  * (etape 36) a fait dire au modele que l'historique "commencait au huitieme
  * tour" alors qu'il commencait au huitieme MESSAGE, soit au tour 5.
+ *
+ * Etape 41 : les numeros sont des tours REELS. Si l'appelant a supprime
+ * des tours (`coverage`), le k-ieme message utilisateur fourni est le tour
+ * `firstTurn + k - 1`, jamais le tour k. Sans couverture connue, aucun
+ * numero n'est resolu : mieux vaut NOT_AVAILABLE qu'un contenu faux.
  */
 export function resolveRecallTurn(
   messages: ChatMessage[],
   turn: number,
   maxContextMessages: number,
-  target: RecallTarget = 'user'
+  target: RecallTarget = 'user',
+  coverage?: HistoryCoverage
 ): RecallLookup {
+  const deleted = deletedTurns(normalizeCoverage(coverage));
   const total = messages.length;
   const visible = Math.min(maxContextMessages, total);
   const visibleFirst = total - visible + 1;
@@ -207,10 +222,11 @@ export function resolveRecallTurn(
 
   let visibleTurnFirst: number | null = null;
   let visibleTurnLast: number | null = null;
+  const offset = deleted ?? 0;
   for (let index = 0; index < userPositions.length; index += 1) {
     if (isVisible(userPositions[index])) {
-      if (visibleTurnFirst === null) visibleTurnFirst = index + 1;
-      visibleTurnLast = index + 1;
+      if (visibleTurnFirst === null) visibleTurnFirst = offset + index + 1;
+      visibleTurnLast = offset + index + 1;
     }
   }
 
@@ -219,12 +235,23 @@ export function resolveRecallTurn(
     target,
     visibleFirst,
     visibleLast,
-    turnCount: userPositions.length,
+    turnCount: offset + userPositions.length,
     visibleTurnFirst,
     visibleTurnLast,
+    deletedTurns: deleted,
   };
 
-  if (turn < 1 || turn > userPositions.length) {
+  if (deleted === null) {
+    return {
+      ...base,
+      status: 'not_available',
+      reason: 'unknown_numbering',
+      user: { status: 'not_available' },
+      assistant: { status: 'not_available' },
+    };
+  }
+
+  if (turn < 1 || turn > base.turnCount) {
     return {
       ...base,
       status: 'not_available',
@@ -234,12 +261,33 @@ export function resolveRecallTurn(
     };
   }
 
-  const position = userPositions[turn - 1];
+  if (turn <= offset) {
+    // Question supprimee du stockage. Seule la reponse du DERNIER tour
+    // supprime peut subsister, en tete d'historique, avant toute question.
+    const orphan =
+      turn === offset ? findReply(messages, 0, userPositions[0] ?? total + 1) : null;
+    const assistant: RecallPart =
+      orphan === null
+        ? { status: 'not_available' }
+        : isVisible(orphan)
+          ? { status: 'found', position: orphan, content: messages[orphan - 1].content }
+          : { status: 'not_available', position: orphan };
+    return {
+      ...base,
+      status: 'not_available',
+      reason: 'deleted',
+      user: { status: 'not_available' },
+      assistant,
+    };
+  }
+
+  const index = turn - offset - 1;
+  const position = userPositions[index];
   const user: RecallPart = isVisible(position)
     ? { status: 'found', position, content: messages[position - 1].content }
     : { status: 'not_available', position };
 
-  const replyPosition = findReply(messages, position, userPositions[turn] ?? total + 1);
+  const replyPosition = findReply(messages, position, userPositions[index + 1] ?? total + 1);
   let assistant: RecallPart;
   if (replyPosition === null) {
     assistant = { status: 'no_reply' };
@@ -352,6 +400,11 @@ function pushPart(lines: string[], prefix: string, label: string, part: RecallPa
  * FOUND, attachees a un message precis, jamais sous forme de plage.
  */
 function pushRanges(lines: string[], result: RecallLookup): void {
+  if (result.deletedTurns === null) {
+    lines.push('Turn numbering: unknown (earlier messages were deleted from storage)');
+    return;
+  }
+
   const missing = missingTurns({
     turnCount: result.turnCount,
     first: result.visibleTurnFirst,
@@ -362,6 +415,13 @@ function pushRanges(lines: string[], result: RecallLookup): void {
   lines.push(`Conversation user turns: ${result.turnCount}`);
   lines.push(`Visible user turns: ${formatTurnRange(result)}`);
   lines.push(`Unavailable user turns: ${missing ? formatTurnSpan(missing[0], missing[1]) : 'none'}`);
+  // Etape 41 : distinguer "hors fenetre" (existe, non transmis) de
+  // "supprime" (n'existe plus nulle part). Absent si rien n'est supprime.
+  if (result.deletedTurns > 0) {
+    lines.push(
+      `Deleted user turns: ${formatTurnSpan(1, result.deletedTurns)} (removed from storage, cannot be retrieved)`
+    );
+  }
 }
 
 function formatTurnRange(result: RecallLookup): string {
@@ -380,7 +440,8 @@ function formatTurnRange(result: RecallLookup): string {
 export function buildRecallLookup(
   visible: ChatMessage[],
   messages: ChatMessage[],
-  maxContextMessages: number
+  maxContextMessages: number,
+  coverage?: HistoryCoverage
 ): string | null {
   const last = visible[visible.length - 1];
   if (!last || last.role !== 'user') return null;
@@ -389,5 +450,5 @@ export function buildRecallLookup(
   if (turn === null) return null;
 
   const target = detectRecallTarget(last.content);
-  return formatRecallLookup(resolveRecallTurn(messages, turn, maxContextMessages, target));
+  return formatRecallLookup(resolveRecallTurn(messages, turn, maxContextMessages, target, coverage));
 }

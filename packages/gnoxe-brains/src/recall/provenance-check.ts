@@ -1,4 +1,6 @@
 import { ChatMessage } from '@eyano/types';
+import { HistoryCoverage, deletedTurns, isPartialHistory, normalizeCoverage } from './history-coverage';
+import { formatTurnSpan } from './visible-turns';
 
 /**
  * Provenance Check (etape 38).
@@ -72,12 +74,16 @@ function normalize(text: string): string {
 /**
  * Mots porteurs, reduits a un prefixe de 5 lettres : "analyser" et
  * "analyse" se rejoignent sans dictionnaire ni modele.
+ *
+ * Etape 41 : un mot qui contient un chiffre est un IDENTIFIANT, garde
+ * entier. Tronque, "decision2", "decision10" et "decision20" devenaient
+ * tous `decis` et le check les confondait.
  */
 export function provenanceStems(text: string): string[] {
   const stems = new Set<string>();
   for (const word of normalize(text).split(/[^a-z0-9]+/)) {
     if (word.length < 3 || STOPWORDS.has(word)) continue;
-    stems.add(word.slice(0, 5));
+    stems.add(/\d/.test(word) ? word : word.slice(0, 5));
   }
   return [...stems];
 }
@@ -99,9 +105,20 @@ export function detectProvenanceClaim(raw: string): string | null {
 export interface ProvenanceEvidence {
   claim: string;
   status: 'found' | 'partial' | 'not_found';
-  /** Reponses assistant examinees, historique COMPLET, question exclue. */
+  /** Reponses assistant examinees, tout l'historique FOURNI, question exclue. */
   searched: number;
-  /** Meilleur candidat (FOUND ou PARTIAL). */
+  /**
+   * Etape 41 : l'historique fourni est-il toute la conversation ? Partiel,
+   * un NOT_FOUND ne prouve pas que la phrase n'a jamais ete dite.
+   */
+  partial: boolean;
+  /** Tours supprimes avant l'historique fourni ; `null` : inconnu. */
+  deletedTurns: number | null;
+  /**
+   * Meilleur candidat (FOUND ou PARTIAL). `turn` est un tour REEL ; absent
+   * quand il ne peut pas etre etabli (numerotation inconnue, ou reponse
+   * qui precede toute question dans un historique complet).
+   */
   turn?: number;
   position?: number;
   visible?: boolean;
@@ -113,19 +130,24 @@ export interface ProvenanceEvidence {
  *
  * Le meilleur candidat est la reponse assistant qui couvre la plus grande
  * part des mots porteurs de l'affirmation ; a egalite, la plus ancienne.
- * Son tour est celui du dernier message utilisateur qui la precede.
+ * Son tour est celui du dernier message utilisateur qui la precede, en
+ * numerotation REELLE (e41) : une reponse en tete d'un historique tronque
+ * appartient au dernier tour supprime ; jamais au "tour 0".
  */
 export function checkProvenance(
   messages: ChatMessage[],
   claim: string,
-  maxContextMessages: number
+  maxContextMessages: number,
+  coverage?: HistoryCoverage
 ): ProvenanceEvidence {
+  const normalized = normalizeCoverage(coverage);
+  const deleted = deletedTurns(normalized);
   const claimStems = provenanceStems(claim);
   const total = messages.length;
   const firstVisible = total - Math.min(maxContextMessages, total) + 1;
 
   let searched = 0;
-  let turn = 0;
+  let turn = deleted ?? 0;
   let best: { coverage: number; turn: number; position: number } | null = null;
 
   for (let position = 1; position <= total; position += 1) {
@@ -144,15 +166,17 @@ export function checkProvenance(
     if (!best || coverage > best.coverage) best = { coverage, turn, position };
   }
 
+  const scope = { searched, partial: isPartialHistory(normalized), deletedTurns: deleted };
+
   if (!best || best.coverage < PROVENANCE_PARTIAL_COVERAGE) {
-    return { claim, status: 'not_found', searched };
+    return { claim, status: 'not_found', ...scope };
   }
 
   return {
     claim,
     status: best.coverage >= PROVENANCE_FOUND_COVERAGE ? 'found' : 'partial',
-    searched,
-    turn: best.turn,
+    ...scope,
+    turn: deleted !== null && best.turn > 0 ? best.turn : undefined,
     position: best.position,
     visible: best.position >= firstVisible,
     reply: messages[best.position - 1].content,
@@ -164,20 +188,38 @@ export function checkProvenance(
  * pas une regle. Aucun score, aucun verdict de sens.
  */
 export function formatProvenanceCheck(evidence: ProvenanceEvidence): string {
-  const lines = [
-    PROVENANCE_CHECK_HEAD,
-    '',
-    `Claimed assistant statement: "${evidence.claim}"`,
-    `Searched: all ${evidence.searched} previous assistant replies of this conversation, including those not in the visible context`,
-    'Method: word overlap search, not a judgement of meaning',
-  ];
+  const lines = [PROVENANCE_CHECK_HEAD, '', `Claimed assistant statement: "${evidence.claim}"`];
+
+  // Historique complet : texte e38-e40 au caractere pres. Partiel (e41) :
+  // la portee reelle de la recherche, jamais "all".
+  if (evidence.partial) {
+    lines.push(
+      `Searched: the ${evidence.searched} stored assistant replies of this conversation, including those not in the visible context`
+    );
+    lines.push(
+      evidence.deletedTurns
+        ? `History coverage: partial, user turns ${formatTurnSpan(1, evidence.deletedTurns)} were deleted from storage and could not be searched`
+        : 'History coverage: partial, earlier messages were deleted from storage and could not be searched'
+    );
+  } else {
+    lines.push(
+      `Searched: all ${evidence.searched} previous assistant replies of this conversation, including those not in the visible context`
+    );
+  }
+  lines.push('Method: word overlap search, not a judgement of meaning');
 
   if (evidence.status === 'not_found') {
-    lines.push('Conversation evidence: NOT_FOUND');
+    if (evidence.partial) {
+      lines.push('Conversation evidence: NOT_FOUND in stored history');
+      lines.push('NOT_FOUND does not establish that the statement was never made.');
+    } else {
+      lines.push('Conversation evidence: NOT_FOUND');
+    }
     return lines.join('\n');
   }
 
-  const where = `turn ${evidence.turn}${evidence.visible ? '' : ' (not in the visible context)'}`;
+  const label = evidence.turn === undefined ? 'turn unknown' : `turn ${evidence.turn}`;
+  const where = `${label}${evidence.visible ? '' : ' (not in the visible context)'}`;
   if (evidence.status === 'found') {
     lines.push('Conversation evidence: FOUND');
     lines.push(`Matching assistant reply: ${where}`);
@@ -202,7 +244,8 @@ function quote(text: string): string {
 export function buildProvenanceCheck(
   visible: ChatMessage[],
   messages: ChatMessage[],
-  maxContextMessages: number
+  maxContextMessages: number,
+  coverage?: HistoryCoverage
 ): string | null {
   const last = visible[visible.length - 1];
   if (!last || last.role !== 'user') return null;
@@ -210,5 +253,5 @@ export function buildProvenanceCheck(
   const claim = detectProvenanceClaim(last.content);
   if (claim === null) return null;
 
-  return formatProvenanceCheck(checkProvenance(messages, claim, maxContextMessages));
+  return formatProvenanceCheck(checkProvenance(messages, claim, maxContextMessages, coverage));
 }

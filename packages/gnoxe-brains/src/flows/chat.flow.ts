@@ -1,6 +1,7 @@
 import { ChatMessage } from '@eyano/types';
 import { getGnoxeBrains } from '../core/singleton';
 import { buildChatContext } from '../prompts/eyano.system';
+import { HistoryCoverage } from '../recall/history-coverage';
 import { webSearch, buildSearchContext } from '../tools/web-search.tool';
 import { getDefaultModel } from '../models';
 
@@ -23,6 +24,11 @@ export interface ChatFlowInput {
   recallResolver?: boolean;
   /** Voir `ChatContextOptions.provenanceCheck` : controle experimental. */
   provenanceCheck?: boolean;
+  /**
+   * Etape 41 : tours supprimes par l'appelant avant `messages`. Absent :
+   * historique complet. Voir `ChatContextOptions.historyCoverage`.
+   */
+  historyCoverage?: HistoryCoverage;
 }
 
 export interface ChatFlowOutput {
@@ -102,7 +108,11 @@ async function prepareChat(input: ChatFlowInput): Promise<{
     input.userName,
     input.channel,
     input.systemPrompt,
-    { recallResolver: input.recallResolver, provenanceCheck: input.provenanceCheck }
+    {
+      recallResolver: input.recallResolver,
+      provenanceCheck: input.provenanceCheck,
+      historyCoverage: input.historyCoverage,
+    }
   );
   const model = input.model || DEFAULT_MODEL;
 

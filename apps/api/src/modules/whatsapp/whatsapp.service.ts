@@ -12,7 +12,13 @@ import qrcode from 'qrcode-terminal';
 import { chatFlowSync } from '@eyano/gnoxe-brains';
 import { buildEyanoContext } from '@eyano/eyano-identity';
 import { ChatMessage, ImageAttachment } from '@eyano/types';
-import { FileWhatsAppHistoryStore, WhatsAppHistoryStore } from './whatsapp.store';
+import {
+  BoundedHistory,
+  FileWhatsAppHistoryStore,
+  WhatsAppHistoryStore,
+  appendBounded,
+  resolveStoredHistory,
+} from './whatsapp.store';
 
 const ANTI_BAN = {
   readDelay: 2000,
@@ -41,7 +47,7 @@ export class WhatsAppService implements OnModuleInit, OnModuleDestroy {
   private isReady = false;
   private restartTimeout: NodeJS.Timeout | null = null;
   private readonly store: WhatsAppHistoryStore = new FileWhatsAppHistoryStore('.whatsapp_history');
-  private readonly conversations = new Map<string, ChatMessage[]>();
+  private readonly conversations = new Map<string, BoundedHistory>();
 
   async onModuleInit() {
     await this.initSocket();
@@ -56,21 +62,22 @@ export class WhatsAppService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  /** Historique durable d'un JID : charge une seule fois, mis en cache en memoire. */
-  private async getHistory(jid: string): Promise<ChatMessage[]> {
+  /**
+   * Historique durable d'un JID : charge une seule fois, mis en cache en
+   * memoire, avec le tour reel de son premier message (etape 41).
+   */
+  private async getHistory(jid: string): Promise<BoundedHistory> {
     if (!this.conversations.has(jid)) {
-      this.conversations.set(jid, await this.store.load(jid));
+      const stored = await this.store.loadHistory(jid);
+      this.conversations.set(jid, resolveStoredHistory(stored, MAX_HISTORY));
     }
     return this.conversations.get(jid)!;
   }
 
   private async addToHistory(jid: string, message: ChatMessage): Promise<void> {
     const history = await this.getHistory(jid);
-    history.push(message);
-    if (history.length > MAX_HISTORY) {
-      history.splice(0, history.length - MAX_HISTORY);
-    }
-    await this.store.save(jid, history);
+    appendBounded(history, message, MAX_HISTORY);
+    await this.store.save(jid, history.messages, history.firstTurn);
   }
 
   private async initSocket() {
@@ -239,7 +246,11 @@ export class WhatsAppService implements OnModuleInit, OnModuleDestroy {
       const result = await chatFlowSync({
         userId: fakeUserId,
         conversationId: fakeConvId,
-        messages: [...history],
+        messages: [...history.messages],
+        // Etape 41 : l'historique est TRONQUE a MAX_HISTORY ; le cerveau doit
+        // numeroter en tours reels et ne jamais tenir ce stockage pour
+        // toute la conversation.
+        historyCoverage: { firstTurn: history.firstTurn },
         channel: 'whatsapp',
         userName,
         systemPrompt: buildEyanoContext({ channel: 'whatsapp' }),

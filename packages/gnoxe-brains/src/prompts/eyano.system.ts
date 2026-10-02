@@ -3,6 +3,7 @@ import { applyRecallGuard } from './recall-guard';
 import { buildRecallLookup } from '../recall/recall-resolver';
 import { describeVisibleTurns, missingTurns } from '../recall/visible-turns';
 import { buildProvenanceCheck } from '../recall/provenance-check';
+import { HistoryCoverage, isPartialHistory, normalizeCoverage } from '../recall/history-coverage';
 
 /**
  * System instruction : ce que la couche superieure injecte, plus les
@@ -27,8 +28,22 @@ import { buildProvenanceCheck } from '../recall/provenance-check';
  * message. "les messages 8 a 27" etait relu comme "a partir du huitieme
  * tour" (e36, ON-1), alors que les tours 5 a 7 etaient visibles.
  */
-function visibleWindowStatement(messages: ChatMessage[], max: number): string {
-  const turns = describeVisibleTurns(messages, max);
+function visibleWindowStatement(
+  messages: ChatMessage[],
+  max: number,
+  coverage: HistoryCoverage
+): string {
+  // Etape 41 : historique tronque sans trace. Aucun numero n'est fiable,
+  // on n'en annonce aucun.
+  if (coverage.firstTurn === null) {
+    return [
+      '### Historique visible',
+      "Ce contexte ne contient que la fin de la conversation : des échanges plus anciens ont été supprimés et leur nombre n'est pas connu.",
+      "Un événement situé hors de cette plage ne doit pas être présenté comme un souvenir certain.",
+    ].join('\n');
+  }
+
+  const turns = describeVisibleTurns(messages, max, coverage.firstTurn);
   const missing = missingTurns(turns);
 
   const sentences: string[] = [];
@@ -66,6 +81,12 @@ export interface ChatContextOptions {
    * au controle experimental ON/OFF ; garde e34 et resolver inchanges.
    */
   provenanceCheck?: boolean;
+  /**
+   * Etape 41 : ce que l'appelant a supprime avant `messages`. Absent :
+   * historique complet. Un canal qui tronque son stockage DOIT le declarer,
+   * sinon bornes, resolver et check numerotent et cherchent faux.
+   */
+  historyCoverage?: HistoryCoverage;
 }
 
 export function buildChatContext(
@@ -99,8 +120,16 @@ export function buildChatContext(
   // Ajoutee seulement s'il existe deja un system message : la borne ANNOTTE
   // un contexte, elle n'en cree jamais. Le contrat "sans voix ni fragment,
   // aucun system" (etape 27) reste donc intact.
-  if (parts.length > 0 && messages.length > maxContextMessages) {
-    parts.push(visibleWindowStatement(messages, maxContextMessages));
+  //
+  // Etape 41 : un historique partiel est annonce meme s'il tient dans la
+  // fenetre ; des tours manquent, que le modele ne doit pas tenir pour
+  // inexistants.
+  const coverage = normalizeCoverage(options.historyCoverage);
+  if (
+    parts.length > 0 &&
+    (messages.length > maxContextMessages || isPartialHistory(coverage))
+  ) {
+    parts.push(visibleWindowStatement(messages, maxContextMessages, coverage));
   }
 
   // Garde de rappel (etape 34) : la contrainte est posee AU POINT DE
@@ -115,14 +144,14 @@ export function buildChatContext(
   const lookup =
     options.recallResolver === false
       ? null
-      : buildRecallLookup(recent, messages, maxContextMessages);
+      : buildRecallLookup(recent, messages, maxContextMessages, coverage);
   //
   // Provenance Check (etape 38) : meme point de contact, meme principe. Le
   // bloc suit le lookup ; les deux ne se cumulent qu'exceptionnellement.
   const provenance =
     options.provenanceCheck === false
       ? null
-      : buildProvenanceCheck(recent, messages, maxContextMessages);
+      : buildProvenanceCheck(recent, messages, maxContextMessages, coverage);
   const data = [lookup, provenance].filter(Boolean).join('\n\n') || null;
   const visible = applyRecallGuard(recent, data);
 
