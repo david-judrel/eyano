@@ -382,10 +382,11 @@ test('cloudflare : requete authentifiee vers le modele, image brute (SDXL)', asy
 
 test('cloudflare : reponse JSON { result: { image } } (FLUX) et modele reglable', async () => {
   const calls = [];
-  const impl = async (url) => { calls.push(url); return new Response(JSON.stringify({ result: { image: JPEG_SOURCE } }), { status: 200, headers: { 'content-type': 'application/json' } }); };
+  const impl = async (url, init) => { calls.push({ url, init }); return new Response(JSON.stringify({ result: { image: JPEG_SOURCE } }), { status: 200, headers: { 'content-type': 'application/json' } }); };
   const config = () => ({ ...CF(), model: '@cf/black-forest-labs/flux-1-schnell' });
   const result = await new CloudflareImageAdapter(impl, config).generateImage({ prompt: 'x' });
-  assert.match(calls[0], /\/ai\/run\/@cf\/black-forest-labs\/flux-1-schnell$/);
+  assert.match(calls[0].url, /\/ai\/run\/@cf\/black-forest-labs\/flux-1-schnell$/);
+  assert.deepEqual(JSON.parse(calls[0].init.body), { prompt: 'x' }, 'FLUX : aucune taille envoyee');
   assert.equal(result.data, JPEG_SOURCE);
   assert.equal(result.mimeType, 'image/jpeg');
 });

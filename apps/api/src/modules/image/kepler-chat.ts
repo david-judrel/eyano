@@ -403,16 +403,17 @@ async function resolvePlan(
  * precedente) n'est jamais concernee.
  */
 /**
- * Formulation mesuree contre le filtre de contenu du backend (2026-10-02) :
- * « personnes noires », « peau noire », « Black people » y sont bloques a
- * tort ; « à la peau foncée » passe (6/6) sans imposer de decor africain.
+ * Formulation mesuree (2026-10-02) : en ANGLAIS, car les modeles d'images
+ * ignorent « à la peau foncée » ; « Black people » / « personnes noires »
+ * sont bloques a tort par certains filtres de contenu, « dark-skinned »
+ * passe, sans imposer de decor africain.
  */
-const DEFAULT_PEOPLE_NOTE = 'à la peau foncée';
+const DEFAULT_PEOPLE_NOTE = 'dark-skinned person';
 
 const PEOPLE =
   /\b(?:homme|hommes|femme|femmes|enfant|enfants|bebe|bebes|fille|filles|garcon|garcons|gens|personne|personnes|famille|foule|couple|mc|rappeur|rappeuse|chanteur|chanteuse|danseur|danseuse|artiste|medecin|docteur|infirmier|infirmiere|eleve|eleves|etudiant|etudiante|etudiants|professeur|policier|soldat|joueur|joueuse|footballeur|sportif|sportive|boxeur|athlete|mannequin|visage|humain|humaine|humains|personnage|personnages|monsieur|madame|dame|mere|pere|maman|papa|ami|amis|amie|amies|roi|reine|prince|princesse|guerrier|guerriere|astronaute|chef|cuisinier|cuisiniere|ouvrier|agriculteur|vendeur|vendeuse|man|men|woman|women|child|children|kid|kids|boy|girl|people|person|family|crowd|doctor|face|human)\b/;
 const ORIGIN_SPECIFIED =
-  /\b(?:noir|noire|noirs|noires|black|blanc|blanche|blancs|blanches|white|asiatique|asiatiques|asian|africain|africaine|africains|africaines|african|europeen|europeenne|europeens|european|arabe|arabes|maghrebin|maghrebine|metis|metisse|latino|latina|hispanique|indien|indienne|indian|caucasien|caucasienne|chinois|chinoise|japonais|japonaise|coreen|coreenne|peau|foncee|skin|ethnie|ethnique|origine)\b/;
+  /\b(?:noir|noire|noirs|noires|black|blanc|blanche|blancs|blanches|white|asiatique|asiatiques|asian|africain|africaine|africains|africaines|african|europeen|europeenne|europeens|european|arabe|arabes|maghrebin|maghrebine|metis|metisse|latino|latina|hispanique|indien|indienne|indian|caucasien|caucasienne|chinois|chinoise|japonais|japonaise|coreen|coreenne|peau|foncee|skin|skinned|dark|ethnie|ethnique|origine)\b/;
 
 /** Prompt de creation avec la representation par defaut, si elle s'applique. */
 export function withDefaultRepresentation(prompt: string): string {

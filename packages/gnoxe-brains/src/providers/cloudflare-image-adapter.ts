@@ -50,14 +50,19 @@ export class CloudflareImageAdapter {
       throw new ImageGenerationError('UNAVAILABLE', "Aucun identifiant configure pour la generation d'images.");
     }
 
-    const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${model ?? DEFAULT_MODEL}`;
+    const modelId = model ?? DEFAULT_MODEL;
+    const url = `https://api.cloudflare.com/client/v4/accounts/${encodeURIComponent(accountId)}/ai/run/${modelId}`;
+    // FLUX refuse toute propriete inconnue (taille fixe) ; SD accepte la taille.
+    const body = /flux/i.test(modelId)
+      ? { prompt: request.prompt }
+      : { prompt: request.prompt, width: IMAGE_SIZE, height: IMAGE_SIZE };
 
     let response: Response;
     try {
       response = await this.fetchImpl(url, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: request.prompt, width: IMAGE_SIZE, height: IMAGE_SIZE }),
+        body: JSON.stringify(body),
         signal: AbortSignal.timeout(TIMEOUT_MS),
       });
     } catch {

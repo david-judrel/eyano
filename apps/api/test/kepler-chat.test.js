@@ -278,7 +278,7 @@ test('execution : photo jointe transmise telle quelle', async () => {
 
 // ------------------------------------------- representation par defaut
 
-const NOTE = ', à la peau foncée';
+const NOTE = ', dark-skinned person';
 
 test('representation : personnes sans origine precisee -> peau noire', () => {
   for (const prompt of ["Génère moi une imag relaist d'un mc musclé et humain", 'génère une image d une famille à table', 'un médecin dans un hôpital', 'draw a woman reading']) {
