@@ -70,12 +70,32 @@ export function searchKeywords(question: string): string {
 /** Recherche plein texte, puis intro + section la plus pertinente des 2 meilleures pages. */
 async function searchWikipediaFull(keywords: string, fetchImpl: FetchLike): Promise<WebSearchResult[]> {
   const api = 'https://fr.wikipedia.org/w/api.php';
-  const search = await getJson(
-    fetchImpl,
-    `${api}?action=query&list=search&srsearch=${encodeURIComponent(keywords)}&srlimit=2&format=json&origin=*`
-  );
-  const titles: string[] = (search?.query?.search ?? []).map((r: any) => r.title).filter(Boolean);
+  const searchPages = async (q: string): Promise<{ titles: string[]; suggestion?: string }> => {
+    const json = await getJson(
+      fetchImpl,
+      `${api}?action=query&list=search&srsearch=${encodeURIComponent(q)}&srinfo=suggestion&srlimit=2&format=json&origin=*`
+    );
+    return {
+      titles: (json?.query?.search ?? []).map((r: any) => r.title).filter(Boolean),
+      suggestion: json?.query?.searchinfo?.suggestion || undefined,
+    };
+  };
+
+  // Fautes de frappe : tous les mots, puis la suggestion orthographique de
+  // l'encyclopedie, puis n'importe lequel des mots (OR).
+  let found = await searchPages(keywords);
+  let corrected = keywords;
+  if (found.titles.length === 0 && found.suggestion) {
+    corrected = found.suggestion;
+    found = await searchPages(corrected);
+  }
+  if (found.titles.length === 0) {
+    const words = corrected.split(/\s+/).filter((w) => w.length > 2);
+    if (words.length > 1) found = await searchPages(words.join(' OR '));
+  }
+  const titles = found.titles;
   if (titles.length === 0) return [];
+  keywords = corrected;
 
   const pages = await getJson(
     fetchImpl,
@@ -102,9 +122,7 @@ export function relevantExcerpt(text: string, terms: string[], max = 1500): stri
   const intro = (parts[0] ?? '').replace(/\s+/g, ' ').trim().slice(0, 500);
   const asksForWorks = terms.some((t) => /album|chanson|film|titre|sorti|dernier|oeuvre|œuvre/.test(t));
 
-  let best = '';
-  let bestScore = 0;
-  for (const section of parts.slice(1)) {
+  const scored = parts.slice(1).map((section, index) => {
     const lower = section.toLowerCase();
     const heading = lower.split('\n')[0];
     let score = 0;
@@ -113,17 +131,29 @@ export function relevantExcerpt(text: string, terms: string[], max = 1500): stri
       score += Math.min(3, lower.split(t).length - 1);
     }
     if (asksForWorks && /discograph|albums?|filmograph|oeuvres|œuvres/.test(heading)) score += 5;
-    if (score > bestScore) {
-      bestScore = score;
-      best = section;
-    }
-  }
+    return { section, index, score };
+  });
 
+  // Les deux sections les plus pertinentes, dans l'ordre de la page (une
+  // liste datee, comme une discographie, ne doit pas etre evincee par un
+  // recit qui repete les memes mots).
+  const best = scored
+    .filter((s) => s.score > 0)
+    .sort((a, b) => b.score - a.score)
+    .slice(0, 2)
+    .sort((a, b) => a.index - b.index);
+
+  const per = Math.floor((max - intro.length) / Math.max(1, best.length)) - 2;
   const body = best
-    .replace(/=+ ([^=]+) =+/g, '[$1]')
-    .replace(/\n{2,}/g, '\n')
-    .replace(/\n/g, ' ; ')
-    .trim();
+    .map((s) =>
+      s.section
+        .replace(/=+ ([^=]+) =+/g, '[$1]')
+        .replace(/\n{2,}/g, '\n')
+        .replace(/\n/g, ' ; ')
+        .trim()
+        .slice(0, per)
+    )
+    .join(' ');
   return (body ? `${intro} ${body}` : intro).slice(0, max);
 }
 
@@ -230,11 +260,14 @@ async function searchDuckDuckGo(query: string, maxResults: number, fetchImpl: Fe
 export function buildSearchContext(query: string, results: WebSearchResult[]): string {
   if (results.length === 0) return '';
 
-  let context = `\n\n[Resultats de recherche web pour "${query}"]\n`;
+  // La date du jour permet de situer les resultats : un article date d'avant
+  // aujourd'hui parle d'un evenement deja passe (album deja sorti, etc.).
+  const today = new Date().toISOString().slice(0, 10);
+  let context = `\n\n[Resultats de recherche web pour "${query}" — date du jour : ${today}]\n`;
   for (const r of results) {
     context += `- ${r.title}: ${r.snippet}\n`;
   }
-  context += `\nCes resultats sont plus recents que tes connaissances : en cas de contradiction, ils l'emportent (sorties, dates, evenements). Appuie-toi sur eux quand ils sont pertinents et donne les dates ; s'ils ne repondent pas a la question, dis ce que tu sais en precisant que l'information peut avoir change.`;
+  context += `\nCes resultats sont plus recents que tes connaissances : en cas de contradiction, ils l'emportent (sorties, dates, evenements). Situe-les par rapport a la date du jour : ce qui est date d'avant aujourd'hui a deja eu lieu (une oeuvre listee avec une annee passee ou en cours est deja sortie ; le « dernier » est le plus recent de la liste). Appuie-toi sur eux quand ils sont pertinents et donne les dates ; s'ils ne repondent pas a la question, dis ce que tu sais en precisant que l'information peut avoir change.`;
 
   return context;
 }

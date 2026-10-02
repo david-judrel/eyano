@@ -438,3 +438,17 @@ test('declencheur : l actualite declenche la recherche, les questions pratiques 
     assert.equal(searchCalls.length, 0, content);
   }
 });
+
+test('declencheur : tolere les fautes de frappe sur les mots d actualite', async () => {
+  install(createFakeModelProvider());
+  for (const content of ["c'est uoi le dernie albul de fallu ipupa", 'il y a un concer ce soir ?', 'qui a gagné l electon ?']) {
+    searchCalls.length = 0;
+    await chatFlowSync(baseInput({ messages: [{ role: 'user', content }] }));
+    assert.equal(searchCalls.length, 1, content);
+  }
+  for (const content of ['j ai pris mon cafe', 'merci pour ton aide']) {
+    searchCalls.length = 0;
+    await chatFlowSync(baseInput({ messages: [{ role: 'user', content }] }));
+    assert.equal(searchCalls.length, 0, content);
+  }
+});

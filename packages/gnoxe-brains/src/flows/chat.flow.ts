@@ -61,10 +61,50 @@ const SEARCH_TRIGGERS = [
   /202[4-9]/i, /203[0-9]/i,
 ];
 
+/**
+ * Mots-cles d'actualite reconnus malgre une faute de frappe (« dernie »,
+ * « albul », « concer »). Seulement a partir de 5 lettres : en dessous, une
+ * lettre d'ecart touche des mots courants (« prix » / « pris »).
+ */
+const FUZZY_TRIGGER_WORDS = [
+  'album', 'albums', 'chanson', 'artiste', 'musicien', 'chanteur', 'chanteuse', 'concert',
+  'dernier', 'derniere', 'nouveau', 'nouvelle', 'recent', 'recente', 'sortie', 'release',
+  'actualite', 'actualites', 'annee', 'resultat', 'classement', 'election', 'president', 'ministre', 'score', 'match',
+];
+
+function withoutAccents(text: string): string {
+  return text.normalize('NFD').replace(/[̀-ͯ]/g, '');
+}
+
+/** Distance d'edition (une substitution, insertion ou suppression = 1). */
+function editDistance(a: string, b: string): number {
+  const row = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    let previous = row[0];
+    row[0] = i;
+    for (let j = 1; j <= b.length; j++) {
+      const current = row[j];
+      row[j] = Math.min(row[j] + 1, row[j - 1] + 1, previous + (a[i - 1] === b[j - 1] ? 0 : 1));
+      previous = current;
+    }
+  }
+  return row[b.length];
+}
+
+function hasFuzzyTrigger(msg: string): boolean {
+  const words = withoutAccents(msg).match(/[a-z]{4,}/g) ?? [];
+  return words.some((word) =>
+    FUZZY_TRIGGER_WORDS.some(
+      (target) => target.length >= 5 && Math.abs(target.length - word.length) <= 1 && editDistance(word, target) <= 1
+    )
+  );
+}
+
 function needsWebSearch(lastUserMessage: string, conversationHistory: ChatMessage[]): boolean {
   const msg = lastUserMessage.toLowerCase();
   if (msg.length > 500) return false;
   if (SEARCH_TRIGGERS.some(p => p.test(msg))) return true;
+  if (hasFuzzyTrigger(msg)) return true;
 
   const recentTopics = conversationHistory.slice(-6).map(m => m.content.toLowerCase()).join(' ');
   if (recentTopics.includes('album') || recentTopics.includes('artiste') || recentTopics.includes('musique')) {

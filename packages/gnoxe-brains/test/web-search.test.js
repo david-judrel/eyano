@@ -73,3 +73,21 @@ test('recherche : une source en panne est ignoree, jamais d exception', async ()
   const results = await webSearch('dernier album Fally Ipupa', 5, http.impl);
   assert.deepEqual(results, []);
 });
+
+test('Wikipedia : fautes de frappe -> suggestion, puis n importe lequel des mots', async () => {
+  const searches = [];
+  const http = fakeFetch({
+    'list=search': (url) => {
+      const q = decodeURIComponent(new URL(url).searchParams.get('srsearch'));
+      searches.push(q);
+      if (q === 'dernie albul fallu ipupa') return Response.json({ query: { search: [], searchinfo: { suggestion: 'dernie album fally ipupa' } } });
+      if (q.includes(' OR ')) return Response.json({ query: { search: [{ title: 'Fally Ipupa' }] } });
+      return Response.json({ query: { search: [] } });
+    },
+  });
+  const results = await webSearch("c'est uoi le dernie albul de fallu ipupa", 5, http.impl);
+
+  assert.deepEqual(searches, ['uoi dernie albul fallu ipupa', ...searches.slice(1)]);
+  assert.ok(searches.includes('dernie OR album OR fally OR ipupa') || searches.some((q) => q.includes(' OR ')), 'repli OR');
+  assert.ok(results.some((r) => r.title === 'Wikipedia : Fally Ipupa'));
+});
