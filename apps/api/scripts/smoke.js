@@ -34,6 +34,9 @@
  *   node scripts/smoke.js --provenance-e40
  *                                       probes N/S/I/V/A (e40), historique
  *                                       propre de decisions arbitraires
+ *   node scripts/smoke.js --provenance-e41
+ *                                       probes P1-P6 (e41.6), historique et
+ *                                       couverture propres a chaque probe
  *   node scripts/smoke.js --no-provenance
  *                                       desactive le Provenance Check (e38) :
  *                                       controle ON/OFF
@@ -52,6 +55,7 @@ const { SCENARIOS } = require('./smoke/scenarios');
 const { SEED, PROBES } = require('./smoke/provenance');
 const { PROBES_E39 } = require('./smoke/provenance-e39');
 const { SEED_E40, PROBES_E40 } = require('./smoke/provenance-e40');
+const { PROBES_E41 } = require('./smoke/provenance-e41');
 const { scanRevelation } = require('./smoke/detect');
 
 /** Jeux de probes de provenance : chacun avec SON historique pre-ecrit. */
@@ -59,6 +63,8 @@ const PROVENANCE_SETS = {
   e38: { seed: SEED, probes: PROBES },
   e39: { seed: SEED, probes: PROBES_E39 },
   e40: { seed: SEED_E40, probes: PROBES_E40 },
+  // e41.6 : chaque probe porte son historique, sa couverture et son canal.
+  e41: { seed: null, probes: PROBES_E41 },
 };
 
 const API_ROOT = path.join(__dirname, '..');
@@ -88,6 +94,9 @@ function parseArgs(argv) {
     } else if (arg === '--provenance-e40') {
       options.provenance = true;
       options.provenanceSet = 'e40';
+    } else if (arg === '--provenance-e41') {
+      options.provenance = true;
+      options.provenanceSet = 'e41';
     } else if (arg === '--no-provenance') {
       options.provenanceCheck = false;
     } else if (arg === '--only') {
@@ -169,13 +178,16 @@ async function runChat(entry, resolver, provenanceCheck) {
     { role: 'user', content: entry.utterance },
   ];
 
+  // `coverage` et `channel` (e41.6) : absents, comportement anterieur.
   const output = await chatFlowSync({
     userId: 'smoke',
     conversationId: `smoke-${entry.id}`,
     messages,
-    systemPrompt: buildEyanoContext(),
+    channel: entry.channel,
+    systemPrompt: buildEyanoContext(entry.channel ? { channel: entry.channel } : undefined),
     recallResolver: resolver,
     provenanceCheck,
+    historyCoverage: entry.coverage,
   });
 
   return {
@@ -309,7 +321,7 @@ async function main() {
     : options.provenance
       ? PROVENANCE_SETS[options.provenanceSet].probes.map((probe) => ({
           ...probe,
-          history: PROVENANCE_SETS[options.provenanceSet].seed,
+          history: probe.history || PROVENANCE_SETS[options.provenanceSet].seed,
         }))
       : BATTERY;
   const selected = options.only
