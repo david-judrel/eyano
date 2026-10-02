@@ -420,3 +420,71 @@ test('choix du backend image : cloudflare', () => {
     else process.env.KEPLER_IMAGE_BACKEND = previous;
   }
 });
+
+// ------------------------------------------- cloudflare : plusieurs identifiants
+
+const { readCloudflareCredentials } = require('../dist/providers/cloudflare-image-adapter.js');
+const PAIRS = [{ accountId: 'a1', token: 't1' }, { accountId: 'a2', token: 't2' }, { accountId: 'a3', token: 't3' }];
+const exhausted = () => new Response(JSON.stringify({ errors: [{ code: 3036, message: 'daily free allocation' }] }), { status: 429 });
+const okImage = () => new Response(Buffer.from('PNG!'), { status: 200, headers: { 'content-type': 'image/png' } });
+
+test('identifiants : paire sans numero puis _1.._N, incompletes et doublons ignores', () => {
+  const env = {
+    CLOUDFLARE_ACCOUNT_ID: 'a0', CLOUDFLARE_API_TOKEN: '"t0"',
+    CLOUDFLARE_ACCOUNT_ID_1: 'a0', CLOUDFLARE_API_TOKEN_1: 't0',
+    CLOUDFLARE_ACCOUNT_ID_2: 'a2', CLOUDFLARE_API_TOKEN_2: 't2',
+    CLOUDFLARE_ACCOUNT_ID_3: 'a3',
+    CLOUDFLARE_ACCOUNT_ID_7: 'a7', CLOUDFLARE_API_TOKEN_7: 't7',
+  };
+  assert.deepEqual(readCloudflareCredentials(env), [
+    { accountId: 'a0', token: 't0' }, { accountId: 'a2', token: 't2' }, { accountId: 'a7', token: 't7' },
+  ]);
+});
+
+test('bascule : quota du jour epuise -> identifiant suivant, pause jusqu a minuit UTC', async () => {
+  const used = [];
+  const impl = async (url) => { const a = url.match(/accounts\/(\w+)\//)[1]; used.push(a); return a === 'a1' ? exhausted() : okImage(); };
+  let now = Date.UTC(2026, 9, 2, 20, 0);
+  const adapter = new CloudflareImageAdapter(impl, () => ({ credentials: PAIRS }), () => now);
+
+  await adapter.generateImage({ prompt: 'x' });
+  await adapter.generateImage({ prompt: 'y' });
+  assert.deepEqual(used, ['a1', 'a2', 'a2'], 'a1 n est plus essaye pendant sa pause');
+  assert.deepEqual(adapter.status(), { configured: 3, paused: 1 });
+
+  now = Date.UTC(2026, 9, 3, 0, 1);
+  await adapter.generateImage({ prompt: 'z' });
+  assert.deepEqual(used.slice(3), ['a1', 'a2'], 'apres minuit UTC, a1 est de nouveau essaye en premier');
+});
+
+test('bascule : capacite saturee (3040) -> courte pause ; jeton refuse -> suivant', async () => {
+  const used = [];
+  const impl = async (url) => {
+    const a = url.match(/accounts\/(\w+)\//)[1]; used.push(a);
+    if (a === 'a1') return new Response('{"errors":[{"code":3040}]}', { status: 429 });
+    if (a === 'a2') return new Response('{}', { status: 401 });
+    return okImage();
+  };
+  let now = 0;
+  const adapter = new CloudflareImageAdapter(impl, () => ({ credentials: PAIRS }), () => now);
+  const result = await adapter.generateImage({ prompt: 'x' });
+  assert.equal(result.mimeType, 'image/png');
+  assert.deepEqual(used, ['a1', 'a2', 'a3']);
+  now = 61_000;
+  await adapter.generateImage({ prompt: 'x' });
+  assert.equal(used.at(-2), 'a1', 'a1 revient apres une minute');
+});
+
+test('bascule : tous epuises -> QUOTA_EXHAUSTED ; aucun secret dans l erreur', async () => {
+  const adapter = new CloudflareImageAdapter(async () => exhausted(), () => ({ credentials: PAIRS }), () => 0);
+  await assert.rejects(adapter.generateImage({ prompt: 'x' }), (error) => {
+    assert.equal(error.code, 'QUOTA_EXHAUSTED');
+    assert.equal(/t1|t2|t3|a1|a2|a3/.test(error.message), false);
+    return true;
+  });
+  let calls = 0;
+  const again = new CloudflareImageAdapter(async () => { calls++; return exhausted(); }, () => ({ credentials: PAIRS }), () => 0);
+  await assert.rejects(again.generateImage({ prompt: 'x' }), { code: 'QUOTA_EXHAUSTED' });
+  await assert.rejects(again.generateImage({ prompt: 'x' }), { code: 'QUOTA_EXHAUSTED' });
+  assert.equal(calls, 3, 'les identifiants en pause ne sont pas rappeles');
+});
