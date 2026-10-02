@@ -7,7 +7,18 @@ export {
   ModelResponse,
   ModelChunk,
   ProviderCapabilities,
+  ImageRequest,
+  ImageResponse,
+  ImageGenerationError,
+  ImageGenerationErrorCode,
 } from './model-provider';
+// Kepler Image : identifiants LOGIQUES seulement ; le modele reel reste
+// interne a l'adapter (aucun resolveur backend exporte).
+export {
+  DEFAULT_IMAGE_MODEL_ID,
+  listRegisteredImageModels,
+  isRegisteredImageModel,
+} from './model-registry';
 export { ProviderRegistry, providerRegistry } from './registry';
 export {
   ensureProvidersRegistered,

@@ -79,3 +79,41 @@ export function resolveLogicalModel(model?: string): string {
   assertKnown(model);
   return isRegistered(model) ? model : DEFAULT_MODEL_ID;
 }
+
+// ------------------------------------------------ Kepler Image (images)
+
+/**
+ * Registre des modeles de GENERATION D'IMAGES, meme regle que le chat : le
+ * seul endroit qui traduit un identifiant logique `kepler-image-*` en
+ * modele reel. Separe d'`EYANO_MODELS` : un modele image n'est pas un
+ * modele de conversation et ne doit pas apparaitre dans le selecteur.
+ * Changer de variante = changer cette table, rien d'autre.
+ */
+const IMAGE_MODEL_BACKEND: Readonly<Record<string, string>> = Object.freeze({
+  'kepler-image-1': 'gemini-2.5-flash-image',
+});
+
+/** Identifiant logique utilise quand l'appelant n'en choisit pas. */
+export const DEFAULT_IMAGE_MODEL_ID = 'kepler-image-1';
+
+/** Identifiants logiques d'images disponibles. */
+export function listRegisteredImageModels(): string[] {
+  return Object.keys(IMAGE_MODEL_BACKEND);
+}
+
+/** Vrai si l'identifiant logique d'image existe (absent = defaut). */
+export function isRegisteredImageModel(model?: string): boolean {
+  return !model || Object.prototype.hasOwnProperty.call(IMAGE_MODEL_BACKEND, model);
+}
+
+/** Identifiant logique effectif (defaut si absent). Inconnu : `null`. */
+export function resolveLogicalImageModel(model?: string): string | null {
+  if (!model) return DEFAULT_IMAGE_MODEL_ID;
+  return isRegisteredImageModel(model) ? model : null;
+}
+
+/** Modele reel du backend (adapter UNIQUEMENT). Inconnu : `null`. */
+export function resolveBackendImageModel(model?: string): string | null {
+  const logical = resolveLogicalImageModel(model);
+  return logical ? IMAGE_MODEL_BACKEND[logical] : null;
+}

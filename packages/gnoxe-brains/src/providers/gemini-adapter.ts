@@ -5,11 +5,16 @@ import {
   ModelResponse,
   ModelChunk,
   ProviderCapabilities,
+  ImageRequest,
+  ImageResponse,
+  ImageGenerationError,
 } from './model-provider';
 import {
   resolveBackendModel,
   resolveLogicalModel,
   listRegisteredModels,
+  resolveBackendImageModel,
+  resolveLogicalImageModel,
 } from './model-registry';
 import { GeminiKeyManager } from './gemini-key-manager';
 
@@ -86,6 +91,14 @@ function buildRequestPayload(request: ModelRequest) {
   };
 }
 
+/** Kepler Image : prompt seul, reponse texte et image. */
+function buildImagePayload(prompt: string) {
+  return {
+    contents: [{ role: 'user', parts: [{ text: prompt }] }],
+    generationConfig: { responseModalities: ['TEXT', 'IMAGE'] },
+  };
+}
+
 function isRateLimitError(error: unknown): boolean {
   const message = error instanceof Error ? error.message : String(error);
   return (
@@ -125,9 +138,24 @@ function extractJson(text: string): unknown {
 export class GeminiAdapter implements ModelProvider {
   readonly name = 'gemini';
 
-  async generate(request: ModelRequest): Promise<ModelResponse> {
+  /**
+   * Appel `generateContent` avec rotation des cles, partage par `generate`
+   * (texte) et `generateImage` (Kepler Image). Rend la reponse JSON, ou
+   * `null` si toutes les cles ont repondu par un depassement de quota.
+   *
+   * Politique de 429 :
+   *   'cooldown-key' (texte, comportement historique) : la cle est mise en
+   *     pause, la limite etant celle de la cle ;
+   *   'model-quota' (images) : la cle n'est PAS mise en pause. Le quota
+   *     d'un modele image (nul au palier gratuit) ne doit jamais couper le
+   *     chat, qui partage les memes cles.
+   */
+  private async callGenerateContent(
+    modelName: string,
+    payload: unknown,
+    policy: 'cooldown-key' | 'model-quota'
+  ): Promise<any | null> {
     const keyManager = getKeyManager();
-    const modelName = resolveBackendModel(request.model);
     const maxAttempts = keyManager.getAvailableCount();
 
     for (let attempt = 0; attempt < maxAttempts; attempt++) {
@@ -142,7 +170,7 @@ export class GeminiAdapter implements ModelProvider {
         const res = await fetch(`${GEMINI_API_URL}/${modelName}:generateContent?key=${key.key}`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(buildRequestPayload(request)),
+          body: JSON.stringify(payload),
         });
 
         if (!res.ok) {
@@ -151,8 +179,12 @@ export class GeminiAdapter implements ModelProvider {
 
           // Check if it's a rate limit error
           if (res.status === 429 || errorText.includes('quota') || errorText.includes('rate limit')) {
-            console.warn(`[provider] cle ${key.id} limitee (429)`);
-            keyManager.markRateLimited(key.id);
+            if (policy === 'cooldown-key') {
+              console.warn(`[provider] cle ${key.id} limitee (429)`);
+              keyManager.markRateLimited(key.id);
+            } else {
+              console.warn(`[provider] cle ${key.id} : quota du modele atteint (429), cle conservee`);
+            }
             continue; // Try next key
           }
 
@@ -162,22 +194,79 @@ export class GeminiAdapter implements ModelProvider {
 
         const data = await res.json();
         keyManager.markSuccess(key.id);
-        return {
-          content: data.candidates?.[0]?.content?.parts?.[0]?.text ?? '',
-          model: resolveLogicalModel(request.model),
-          provider: this.name,
-        };
+        return data;
       } catch (error) {
         if (isRateLimitError(error)) {
-          console.warn(`[provider] cle ${key.id} limitee`);
-          keyManager.markRateLimited(key.id);
+          if (policy === 'cooldown-key') {
+            console.warn(`[provider] cle ${key.id} limitee`);
+            keyManager.markRateLimited(key.id);
+          }
           continue; // Try next key
         }
         throw error; // Re-throw non-rate-limit errors
       }
     }
 
-    throw new Error('Aucune cle API disponible apres rotation.');
+    return null;
+  }
+
+  async generate(request: ModelRequest): Promise<ModelResponse> {
+    const modelName = resolveBackendModel(request.model);
+    const data = await this.callGenerateContent(modelName, buildRequestPayload(request), 'cooldown-key');
+
+    if (data === null) {
+      throw new Error('Aucune cle API disponible apres rotation.');
+    }
+
+    return {
+      content: data.candidates?.[0]?.content?.parts?.[0]?.text ?? '',
+      model: resolveLogicalModel(request.model),
+      provider: this.name,
+    };
+  }
+
+  /**
+   * Kepler Image : meme transport que `generate`, reponse en image. Les
+   * echecs sont TOUJOURS des `ImageGenerationError` a code stable ; le
+   * detail brut du backend ne remonte jamais.
+   */
+  async generateImage(request: ImageRequest): Promise<ImageResponse> {
+    const logical = resolveLogicalImageModel(request.model);
+    const modelName = resolveBackendImageModel(request.model);
+    if (!logical || !modelName) {
+      throw new ImageGenerationError('UNKNOWN_MODEL', `Modele image inconnu : "${request.model}".`);
+    }
+
+    let data: any;
+    try {
+      data = await this.callGenerateContent(modelName, buildImagePayload(request.prompt), 'model-quota');
+    } catch {
+      throw new ImageGenerationError('FAILED', "La generation d'image a echoue.");
+    }
+
+    if (data === null) {
+      throw new ImageGenerationError(
+        'QUOTA_EXHAUSTED',
+        "Quota de generation d'images atteint ou indisponible pour toutes les cles."
+      );
+    }
+
+    const candidate = data.candidates?.[0];
+    const part = (candidate?.content?.parts ?? []).find(
+      (entry: any) => entry?.inlineData?.data || entry?.inline_data?.data
+    );
+    if (!part) {
+      const reason = candidate?.finishReason ?? data.promptFeedback?.blockReason;
+      throw new ImageGenerationError('NO_IMAGE', `Aucune image produite${reason ? ` (${reason})` : ''}.`);
+    }
+
+    const inline = part.inlineData ?? part.inline_data;
+    return {
+      data: inline.data,
+      mimeType: inline.mimeType ?? inline.mime_type ?? 'image/png',
+      model: logical,
+      provider: this.name,
+    };
   }
 
   async *stream(request: ModelRequest): AsyncIterable<ModelChunk> {
@@ -273,6 +362,7 @@ export class GeminiAdapter implements ModelProvider {
       streaming: true,
       structuredOutput: true,
       images: true,
+      imageGeneration: true,
       models: listRegisteredModels(),
     };
   }

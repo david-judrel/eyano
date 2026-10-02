@@ -23,6 +23,12 @@ export interface ModelProvider {
   structuredOutput(request: ModelRequest): Promise<unknown>;
 
   capabilities(): ProviderCapabilities;
+
+  /**
+   * Generation d'image (Kepler Image). OPTIONNELLE : presente seulement si
+   * `capabilities().imageGeneration` est vrai. Echecs : `ImageGenerationError`.
+   */
+  generateImage?(request: ImageRequest): Promise<ImageResponse>;
 }
 
 export interface ModelRequest {
@@ -73,7 +79,59 @@ export interface ModelChunk {
 export interface ProviderCapabilities {
   streaming: boolean;
   structuredOutput: boolean;
+  /** Images en ENTREE (analyse). Ne dit rien de la generation. */
   images: boolean;
+  /**
+   * Generation d'images en SORTIE (Kepler Image). Optionnelle : un provider
+   * qui ne la declare pas n'implemente pas `generateImage`.
+   */
+  imageGeneration?: boolean;
   /** Identifiants logiques `gnoxe-brains-*` supportes par cet adapter. */
   models: string[];
+}
+
+// ------------------------------------------------- generation d'images
+
+/** Demande de generation d'image (Kepler Image). */
+export interface ImageRequest {
+  prompt: string;
+  /** Identifiant logique `kepler-image-*`. Jamais un nom de modele reel. */
+  model?: string;
+}
+
+/** Image generee, en base64, avec son type MIME. */
+export interface ImageResponse {
+  data: string;
+  mimeType: string;
+  /** Identifiant logique effectivement utilise (`kepler-image-*`). */
+  model: string;
+  /** Nom du backend reellement utilise (interne, jamais expose). */
+  provider: string;
+}
+
+/**
+ * Echecs de generation d'image, codes stables pour les couches superieures :
+ *   INVALID_PROMPT   prompt vide ou trop long ;
+ *   UNKNOWN_MODEL    identifiant logique inconnu ;
+ *   UNAVAILABLE      le provider n'offre pas la capacite ;
+ *   QUOTA_EXHAUSTED  quota du modele atteint ou nul (palier gratuit) ;
+ *   NO_IMAGE         reponse sans image (refus, filtrage...) ;
+ *   FAILED           tout autre echec du backend.
+ */
+export type ImageGenerationErrorCode =
+  | 'INVALID_PROMPT'
+  | 'UNKNOWN_MODEL'
+  | 'UNAVAILABLE'
+  | 'QUOTA_EXHAUSTED'
+  | 'NO_IMAGE'
+  | 'FAILED';
+
+export class ImageGenerationError extends Error {
+  constructor(
+    readonly code: ImageGenerationErrorCode,
+    message: string
+  ) {
+    super(message);
+    this.name = 'ImageGenerationError';
+  }
 }

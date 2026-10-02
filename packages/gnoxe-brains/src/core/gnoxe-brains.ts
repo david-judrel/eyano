@@ -8,7 +8,7 @@ import {
 import { MissionExecutor } from '../missions/mission-executor';
 import { ToolRegistry } from '../tools/registry';
 import { Agent } from '../agents/agent';
-import { ModelProvider, ModelChunk } from '../providers/model-provider';
+import { ModelProvider, ModelChunk, ImageGenerationError } from '../providers/model-provider';
 import { PlanBuilder } from '../orchestrator/planner';
 import { MissionObserver } from '../observability/observer';
 import { GnoxeBrainsConfig, getGnoxeBrainsConfig } from './config';
@@ -87,6 +87,22 @@ export type GnoxeAnswerChunk =
  * l'Orchestrator ; la classe d'exception porte la distinction de couche.
  */
 export type GnoxeBrainsErrorCode = 'INVALID_OBJECTIVE';
+
+/** Kepler Image : longueur maximale d'un prompt. */
+export const MAX_IMAGE_PROMPT_LENGTH = 2000;
+
+export interface GnoxeImageInput {
+  prompt: string;
+  /** Identifiant logique `kepler-image-*` ; absent = modele par defaut. */
+  model?: string;
+}
+
+/** Image generee : base64, type MIME, identifiant logique. Rien d'autre. */
+export interface GnoxeImageResult {
+  data: string;
+  mimeType: string;
+  model: string;
+}
 
 export class GnoxeBrainsError extends Error {
   constructor(
@@ -241,6 +257,36 @@ export class GnoxeBrains {
   }
 
   // ---------------------------------------------------------------- reponse courte
+
+  /**
+   * Kepler Image : generation d'une image a partir d'un prompt.
+   *
+   * Meme principe que `answer()` : les flows passent par la facade, jamais
+   * par le provider directement. Aucun pipeline multi-agents, un seul appel.
+   * La capacite est OPTIONNELLE : un provider qui ne la declare pas donne
+   * `UNAVAILABLE`, jamais un repli silencieux. Le nom du backend ne sort pas
+   * d'ici : le resultat ne porte que l'image et l'identifiant logique.
+   */
+  async generateImage(input: GnoxeImageInput): Promise<GnoxeImageResult> {
+    const prompt = typeof input?.prompt === 'string' ? input.prompt.trim() : '';
+    if (!prompt) {
+      throw new ImageGenerationError('INVALID_PROMPT', 'Un prompt non vide est requis.');
+    }
+    if (prompt.length > MAX_IMAGE_PROMPT_LENGTH) {
+      throw new ImageGenerationError(
+        'INVALID_PROMPT',
+        `Le prompt depasse ${MAX_IMAGE_PROMPT_LENGTH} caracteres.`
+      );
+    }
+
+    const provider = this.resolveProvider();
+    if (!provider.capabilities().imageGeneration || typeof provider.generateImage !== 'function') {
+      throw new ImageGenerationError('UNAVAILABLE', "La generation d'images n'est pas disponible.");
+    }
+
+    const result = await provider.generateImage({ prompt, model: input.model });
+    return { data: result.data, mimeType: result.mimeType, model: result.model };
+  }
 
   /**
    * Reponse courte (un tour de conversation) : un seul appel modele.
