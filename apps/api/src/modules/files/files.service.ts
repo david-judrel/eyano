@@ -1,5 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { prisma } from '../../lib/prisma';
+import { ATTACHMENT_PUBLIC_SELECT } from './attachment-select';
 
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;  // 10MB
 const MAX_FILE_SIZE = 50 * 1024 * 1024;   // 50MB
@@ -84,6 +85,26 @@ export class FilesService {
 
   async findByMessage(messageId: string, userId: string) {
     await this.assertMessageOwner(messageId, userId);
-    return prisma.attachment.findMany({ where: { messageId } });
+    return prisma.attachment.findMany({ where: { messageId }, select: ATTACHMENT_PUBLIC_SELECT });
+  }
+
+  /**
+   * Octets d'une piece jointe conservee en base (images Kepler). Meme
+   * controle que le reste du module : seul le proprietaire de la
+   * conversation y accede, sinon NotFound.
+   */
+  async getContent(id: string, userId: string): Promise<{ data: Buffer; mimeType: string; fileName: string }> {
+    const attachment = await prisma.attachment.findUnique({
+      where: { id },
+      select: { messageId: true, mimeType: true, fileName: true, data: true },
+    });
+    if (!attachment) {
+      throw new NotFoundException('Fichier non trouve');
+    }
+    await this.assertMessageOwner(attachment.messageId, userId);
+    if (!attachment.data) {
+      throw new NotFoundException('Fichier non trouve');
+    }
+    return { data: Buffer.from(attachment.data), mimeType: attachment.mimeType, fileName: attachment.fileName };
   }
 }

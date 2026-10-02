@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { prisma } from '../../lib/prisma';
+import { ATTACHMENT_PUBLIC_SELECT } from '../files/attachment-select';
 
 @Injectable()
 export class ConversationsService {
@@ -40,7 +41,7 @@ export class ConversationsService {
         messages: {
           orderBy: { createdAt: 'asc' },
           include: {
-            attachments: true,
+            attachments: { select: ATTACHMENT_PUBLIC_SELECT },
             aiRequests: true,
           },
         },

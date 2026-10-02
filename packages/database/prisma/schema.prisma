@@ -127,6 +127,9 @@ model Attachment {
   mimeType   String
   size       Int
   storageKey String
+  /// Octets de l'image, pour les images generees par Kepler (experimental).
+  /// Absent pour les autres pieces jointes. Jamais renvoye dans les listes.
+  data       Bytes?
   createdAt  DateTime @default(now())
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)

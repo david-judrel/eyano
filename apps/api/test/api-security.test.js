@@ -125,6 +125,8 @@ const messageA = { id: 'msg-A', conversationId: conversationA.id, role: 'user', 
 prisma.tables.message.push(messageA);
 const attachmentA = { id: 'att-A', messageId: messageA.id, fileName: 'contrat-A.pdf', mimeType: 'application/pdf', size: 10, storageKey: 'uploads/msg-A/contrat-A.pdf' };
 prisma.tables.attachment.push(attachmentA);
+const keplerImageA = { id: 'att-kepler-A', messageId: messageA.id, fileName: 'kepler-image.png', mimeType: 'image/png', size: 4, storageKey: 'db:kepler', data: Buffer.from('PNG!') };
+prisma.tables.attachment.push(keplerImageA);
 
 const req = (user) => ({ user: { userId: user.id, email: user.email, role: user.role } });
 const httpContext = (request) => ({ switchToHttp: () => ({ getRequest: () => request }) });
@@ -209,6 +211,33 @@ test('I4 : B n ajoute pas de piece jointe a un message de A', async () => {
     'B a attache un fichier au message de A'
   );
   assert.equal(prisma.tables.attachment.length, before);
+});
+
+function fakeResponse() {
+  const res = { headers: {}, body: null };
+  res.setHeader = (key, value) => { res.headers[key] = value; };
+  res.end = (body) => { res.body = body; };
+  return res;
+}
+
+test('I4 : A lit le contenu de son image Kepler (temoin)', async () => {
+  const res = fakeResponse();
+  await files.content(keplerImageA.id, req(A), res);
+  assert.equal(res.headers['Content-Type'], 'image/png');
+  assert.equal(res.body.toString(), 'PNG!');
+});
+
+test('I4 : B ne lit pas le contenu d une image Kepler de A', async () => {
+  const res = fakeResponse();
+  await assert.rejects(
+    Promise.resolve().then(() => files.content(keplerImageA.id, req(B), res)),
+    'B a lu l image de A'
+  );
+  assert.equal(res.body, null);
+});
+
+test('I4 : une piece jointe sans octets en base n a pas de contenu', async () => {
+  await assert.rejects(Promise.resolve().then(() => files.content(attachmentA.id, req(A), fakeResponse())));
 });
 
 // --------------------------------------------------------------------- I5

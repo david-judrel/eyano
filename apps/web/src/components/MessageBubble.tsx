@@ -1,7 +1,8 @@
 'use client';
 
 import { Copy, Check, ThumbsUp, ThumbsDown, Volume2, FileText, RefreshCw, AlertCircle, Pencil } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { api } from '@/lib/api';
 import { Message, MessageAttachment } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { MarkdownRenderer } from './MarkdownRenderer';
@@ -14,6 +15,47 @@ interface MessageBubbleProps {
   onEdit?: (content: string) => void;
 }
 
+/** Image generee par Kepler : chargee avec le jeton, puis affichee en entier. */
+function StoredImage({ id, fileName }: { id: string; fileName: string }) {
+  const [src, setSrc] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    let objectUrl: string | null = null;
+    let cancelled = false;
+    api
+      .getFileObjectUrl(id)
+      .then((url) => {
+        if (cancelled) {
+          URL.revokeObjectURL(url);
+          return;
+        }
+        objectUrl = url;
+        setSrc(url);
+      })
+      .catch(() => {
+        if (!cancelled) setFailed(true);
+      });
+    return () => {
+      cancelled = true;
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+    };
+  }, [id]);
+
+  if (src) {
+    return (
+      <div className="rounded-xl overflow-hidden border border-border max-w-[512px]">
+        <img src={src} alt={fileName} className="w-full h-auto" />
+      </div>
+    );
+  }
+  return (
+    <div className="w-64 h-64 max-w-full rounded-xl border border-border bg-surface-2 flex items-center justify-center">
+      <span className="text-xs text-foreground/40">{failed ? "Image indisponible" : "Chargement de l'image…"}</span>
+    </div>
+  );
+}
+
 function Attachments({ attachments }: { attachments: MessageAttachment[] }) {
   const images = attachments.filter((a) => a.mimeType.startsWith('image/'));
   const files = attachments.filter((a) => !a.mimeType.startsWith('image/'));
@@ -22,7 +64,10 @@ function Attachments({ attachments }: { attachments: MessageAttachment[] }) {
     <div className="flex flex-col gap-2 mb-2">
       {images.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {images.map((att, i) => (
+          {images.map((att, i) =>
+            att.storageKey === 'db:kepler' && att.id ? (
+              <StoredImage key={att.id} id={att.id} fileName={att.fileName} />
+            ) : (
             <div key={i} className="relative rounded-xl overflow-hidden border border-border max-w-[240px]">
               {att.url ? (
                 <img src={att.url} alt={att.fileName} className="w-full h-auto max-h-[200px] object-cover" />
@@ -32,7 +77,8 @@ function Attachments({ attachments }: { attachments: MessageAttachment[] }) {
                 </div>
               )}
             </div>
-          ))}
+            )
+          )}
         </div>
       )}
       {files.length > 0 && (
@@ -162,6 +208,12 @@ export function MessageBubble({ message, isStreaming, onRetry, onEdit }: Message
             <MarkdownRenderer content={message.content} />
           )}
         </div>
+
+        {hasAttachments && (
+          <div className="mt-2">
+            <Attachments attachments={message.attachments!} />
+          </div>
+        )}
 
         {!isStreaming && message.content && (
           <div className="flex items-center gap-0.5 mt-1">

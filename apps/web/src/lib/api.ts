@@ -1,7 +1,7 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export interface StreamEvent {
-  type: 'start' | 'message_created' | 'text' | 'done' | 'error';
+  type: 'start' | 'message_created' | 'text' | 'image' | 'done' | 'error';
   content?: string;
   messageId?: string;
   title?: string | null;
@@ -9,6 +9,7 @@ export interface StreamEvent {
   outputTokens?: number;
   code?: string;
   errorMessage?: string;
+  attachment?: { id: string; fileName: string; mimeType: string; size: number };
 }
 
 class ApiClient {
@@ -72,6 +73,7 @@ class ApiClient {
       onStart?: (data: { messageId: string }) => void;
       onMessageCreated?: (data: { messageId: string }) => void;
       onChunk?: (chunk: { content: string }) => void;
+      onImage?: (attachment: { id: string; fileName: string; mimeType: string; size: number }) => void;
       onDone?: (data: {
         messageId: string;
         title?: string | null;
@@ -126,6 +128,9 @@ class ApiClient {
               case 'text':
                 callbacks?.onChunk?.({ content: event.content || '' });
                 break;
+              case 'image':
+                if (event.attachment) callbacks?.onImage?.(event.attachment);
+                break;
               case 'done':
                 callbacks?.onDone?.({
                   messageId: event.messageId || '',
@@ -145,6 +150,16 @@ class ApiClient {
         }
       }
     }
+  }
+
+  /** Image conservee par l'API (Kepler), en URL locale utilisable par <img>. */
+  async getFileObjectUrl(id: string): Promise<string> {
+    const token = this.getToken();
+    const res = await fetch(`${API_URL}/files/${encodeURIComponent(id)}/content`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    return URL.createObjectURL(await res.blob());
   }
 
   register(data: { email: string; password: string; name: string }) {

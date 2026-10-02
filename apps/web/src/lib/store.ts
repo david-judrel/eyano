@@ -26,6 +26,9 @@ export interface Conversation {
 }
 
 export interface MessageAttachment {
+  id?: string;
+  /** `db:kepler` : image generee par Kepler, servie par l'API. */
+  storageKey?: string;
   fileName: string;
   mimeType: string;
   size: number;

@@ -6,7 +6,9 @@ import {
   titleFlow,
   getActiveProviderName,
   DEFAULT_MODEL_ID,
+  DEFAULT_IMAGE_MODEL_ID,
 } from '@eyano/gnoxe-brains';
+import { runKeplerInChat, shouldUseKepler, KeplerChatAttachment } from '../image/kepler-chat';
 import { buildEyanoContext } from '@eyano/eyano-identity';
 import { ChatMessage, ImageAttachment } from '@eyano/types';
 import { MessagesService } from '../messages/messages.service';
@@ -38,7 +40,7 @@ export class AiService {
     content: string,
     model?: string,
     images?: ImageAttachment[]
-  ): Promise<{ response: string; messageId: string; title: string | null }> {
+  ): Promise<{ response: string; messageId: string; title: string | null; attachments?: KeplerChatAttachment[] }> {
     const providerName = getActiveProviderName();
 
     // IDOR Protection: Verify conversation belongs to user
@@ -66,6 +68,22 @@ export class AiService {
       provider: providerName,
     });
 
+    // Kepler Image (experimental) : une demande d'image ne passe pas par le
+    // modele de conversation. Drapeau coupe : chemin inchange.
+    if (shouldUseKepler(content)) {
+      const startedAt = Date.now();
+      const assistant = await this.messagesService.createStreaming(conversationId, DEFAULT_IMAGE_MODEL_ID, providerName);
+      const outcome = await runKeplerInChat(content, assistant.id);
+      await this.messagesService.completeStreaming(assistant.id, outcome.text, { latencyMs: Date.now() - startedAt });
+      const keplerTitle = await this.resolveTitle(conversationId, messages);
+      return {
+        response: outcome.text,
+        messageId: assistant.id,
+        title: keplerTitle,
+        attachments: outcome.attachment ? [outcome.attachment] : [],
+      };
+    }
+
     const startTime = Date.now();
     const result = await chatFlowSync({
       userId,
@@ -92,6 +110,13 @@ export class AiService {
     await this.messagesService.updateTokens(assistantMessage.id, result.inputTokens, result.outputTokens);
     await this.usageService.track(userId, result.model, result.inputTokens, result.outputTokens);
 
+    const title = await this.resolveTitle(conversationId, messages);
+
+    return { response: result.content, messageId: assistantMessage.id, title };
+  }
+
+  /** Titre de la conversation : existant, ou genere a la premiere demande utile. */
+  private async resolveTitle(conversationId: string, messages: ChatMessage[]): Promise<string | null> {
     const conversation = await prisma.conversation.findUnique({ where: { id: conversationId } });
     let title: string | null = null;
     if (conversation && !conversation.title) {
@@ -105,8 +130,7 @@ export class AiService {
     } else if (conversation?.title) {
       title = conversation.title;
     }
-
-    return { response: result.content, messageId: assistantMessage.id, title };
+    return title;
   }
 
   async *chatStream(
@@ -149,6 +173,38 @@ export class AiService {
     const assistantMessage = await this.messagesService.createStreaming(conversationId, model, providerName);
 
     yield { type: 'message_created' as const, messageId: assistantMessage.id };
+
+    // Kepler Image (experimental) : l'image arrive dans le fil, apres le texte
+    // d'Eyano, par l'evenement `image`. Drapeau coupe : chemin inchange.
+    if (shouldUseKepler(content)) {
+      const startedAt = Date.now();
+      try {
+        const outcome = await runKeplerInChat(content, assistantMessage.id);
+        yield { type: 'text' as const, content: outcome.text };
+        if (outcome.attachment) {
+          yield { type: 'image' as const, attachment: outcome.attachment };
+        }
+        await this.messagesService.completeStreaming(assistantMessage.id, outcome.text, {
+          latencyMs: Date.now() - startedAt,
+        });
+        const keplerTitle = await this.resolveTitle(conversationId, messages);
+        yield {
+          type: 'done' as const,
+          messageId: assistantMessage.id,
+          title: keplerTitle,
+          inputTokens: 0,
+          outputTokens: 0,
+        };
+      } catch {
+        await this.messagesService.failStreaming(assistantMessage.id);
+        yield {
+          type: 'error' as const,
+          code: 'IMAGE_GENERATION_ERROR',
+          message: "La génération de l'image a échoué.",
+        };
+      }
+      return;
+    }
 
     let fullResponse = '';
     let inputTokens = 0;
@@ -201,19 +257,7 @@ export class AiService {
         }
       }
 
-      const conversation = await prisma.conversation.findUnique({ where: { id: conversationId } });
-      let title: string | null = null;
-      if (conversation && !conversation.title) {
-        const meaningful = this.findFirstMeaningfulMessage(messages);
-        if (meaningful) {
-          try {
-            title = await titleFlow(meaningful);
-            await prisma.conversation.update({ where: { id: conversationId }, data: { title } });
-          } catch {}
-        }
-      } else if (conversation?.title) {
-        title = conversation.title;
-      }
+      const title = await this.resolveTitle(conversationId, messages);
 
       yield {
         type: 'done' as const,

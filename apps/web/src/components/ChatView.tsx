@@ -163,6 +163,15 @@ export function ChatView({ onRequireLogin }: ChatViewProps) {
             updateConversation(activeConversationId, {});
           }
         },
+        onImage: (attachment) => {
+          const msgId = useAppStore.getState().streamingMessageId;
+          if (!msgId) return;
+          const target = useAppStore.getState().messages.find((m) => m.id === msgId);
+          useAppStore.getState().updateMessage(msgId, {
+            attachments: [...(target?.attachments || []), { ...attachment, storageKey: 'db:kepler' }],
+          });
+        },
+
         onDone: (data) => {
           const msgId = useAppStore.getState().streamingMessageId;
           if (msgId) {
