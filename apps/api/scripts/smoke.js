@@ -31,6 +31,9 @@
  *   node scripts/smoke.js --provenance-e39
  *                                       probes R1-R8 (e39), meme historique,
  *                                       meme mode que --provenance
+ *   node scripts/smoke.js --provenance-e40
+ *                                       probes N/S/I/V/A (e40), historique
+ *                                       propre de decisions arbitraires
  *   node scripts/smoke.js --no-provenance
  *                                       desactive le Provenance Check (e38) :
  *                                       controle ON/OFF
@@ -48,7 +51,15 @@ const { BATTERY } = require('./smoke/battery');
 const { SCENARIOS } = require('./smoke/scenarios');
 const { SEED, PROBES } = require('./smoke/provenance');
 const { PROBES_E39 } = require('./smoke/provenance-e39');
+const { SEED_E40, PROBES_E40 } = require('./smoke/provenance-e40');
 const { scanRevelation } = require('./smoke/detect');
+
+/** Jeux de probes de provenance : chacun avec SON historique pre-ecrit. */
+const PROVENANCE_SETS = {
+  e38: { seed: SEED, probes: PROBES },
+  e39: { seed: SEED, probes: PROBES_E39 },
+  e40: { seed: SEED_E40, probes: PROBES_E40 },
+};
 
 const API_ROOT = path.join(__dirname, '..');
 const MISSION_CHANNEL = 'admin';
@@ -74,6 +85,9 @@ function parseArgs(argv) {
     } else if (arg === '--provenance-e39') {
       options.provenance = true;
       options.provenanceSet = 'e39';
+    } else if (arg === '--provenance-e40') {
+      options.provenance = true;
+      options.provenanceSet = 'e40';
     } else if (arg === '--no-provenance') {
       options.provenanceCheck = false;
     } else if (arg === '--only') {
@@ -293,9 +307,9 @@ async function main() {
   const collection = options.scenario
     ? SCENARIOS
     : options.provenance
-      ? (options.provenanceSet === 'e39' ? PROBES_E39 : PROBES).map((probe) => ({
+      ? PROVENANCE_SETS[options.provenanceSet].probes.map((probe) => ({
           ...probe,
-          history: SEED,
+          history: PROVENANCE_SETS[options.provenanceSet].seed,
         }))
       : BATTERY;
   const selected = options.only
