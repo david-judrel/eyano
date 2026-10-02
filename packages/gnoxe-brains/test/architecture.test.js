@@ -333,3 +333,14 @@ test("aucune reference active a l ancien nom de package", () => {
 
   assert.deepEqual(offenders, [], 'le nom et le chemin ancien doivent avoir disparu du code');
 });
+
+// ------------------------------------------- nettoyage identite (A)
+
+test('nettoyage A.1 : aucune etiquette de marque dans les prompts du cerveau', () => {
+  const fs = require('node:fs');
+  const path = require('node:path');
+  for (const file of ['src/agents/agent.ts', 'src/flows/summary.flow.ts']) {
+    const source = fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+    assert.equal(/'EYANO'/.test(source), false, `${file} : etiquette EYANO`);
+  }
+});

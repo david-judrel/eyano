@@ -11,7 +11,7 @@ import { getDefaultModel } from '../models';
  */
 export async function summaryFlow(messages: ChatMessage[]): Promise<string> {
   const conversationText = messages
-    .map((m) => `${m.role === 'user' ? 'Utilisateur' : 'EYANO'}: ${m.content}`)
+    .map((m) => `${m.role === 'user' ? 'Utilisateur' : 'Assistant'}: ${m.content}`)
     .join('\n\n');
 
   const { content } = await getGnoxeBrains().answer({

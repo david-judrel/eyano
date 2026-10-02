@@ -178,7 +178,7 @@ function renderConversationHistory(messages?: ChatMessage[]): string {
 
   const lines = messages.map((message) => {
     const role =
-      message.role === 'user' ? 'Utilisateur' : message.role === 'assistant' ? 'EYANO' : 'SYSTEME';
+      message.role === 'user' ? 'Utilisateur' : message.role === 'assistant' ? 'Assistant' : 'SYSTEME';
     const content = typeof message.content === 'string' ? message.content : '';
     return `${role}: ${content}`;
   });

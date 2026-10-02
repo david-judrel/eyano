@@ -142,7 +142,7 @@ test('mission avec historique : rendu dans le prompt des quatre agents', async (
   for (const prompt of prompts) {
     assert.ok(prompt.includes(HISTORY_HEADER), 'section historique attendue');
     assert.ok(prompt.includes('Utilisateur: HISTORIQUE_MARQUEUR_ETAPE14_MSG_000'));
-    assert.ok(prompt.includes('EYANO: HISTORIQUE_MARQUEUR_ETAPE14_MSG_001'));
+    assert.ok(prompt.includes('Assistant: HISTORIQUE_MARQUEUR_ETAPE14_MSG_001'));
     assert.ok(prompt.includes('Utilisateur: HISTORIQUE_MARQUEUR_ETAPE14_MSG_002'));
     assert.ok(prompt.includes('Objectif de la mission :'));
     assert.ok(prompt.includes('canal: web'));
