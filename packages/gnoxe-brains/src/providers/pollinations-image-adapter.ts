@@ -21,7 +21,10 @@ const EDIT_ENDPOINT = 'https://gen.pollinations.ai/v1/images/edits';
 /** Modele de retouche : garde le sujet et le decor, applique la consigne. */
 const EDIT_MODEL = 'flux-klein';
 
-/** Identifiant logique -> modele de ce backend. */
+/**
+ * Identifiant logique -> modele de ce backend. `KEPLER_POLLINATIONS_MODEL`
+ * le remplace pour la creation (ex. `sana`, le moins cher ; `flux`).
+ */
 const MODEL_BACKEND: Readonly<Record<string, string>> = Object.freeze({
   'kepler-image-1': 'zimage',
 });
@@ -58,7 +61,7 @@ export class PollinationsImageAdapter {
     }
 
     const params = new URLSearchParams({
-      model: modelName,
+      model: process.env.KEPLER_POLLINATIONS_MODEL?.trim() || modelName,
       width: String(IMAGE_SIZE),
       height: String(IMAGE_SIZE),
       safe: 'true',

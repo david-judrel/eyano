@@ -349,3 +349,16 @@ test('pollinations : image « bloquee par le filtre » -> NO_IMAGE, jamais affic
   const adapter = new PollinationsImageAdapter(impl, () => 'k');
   await assert.rejects(adapter.generateImage({ prompt: 'x' }), { code: 'NO_IMAGE' });
 });
+
+test('pollinations : KEPLER_POLLINATIONS_MODEL choisit le modele de creation', async () => {
+  const previous = process.env.KEPLER_POLLINATIONS_MODEL;
+  try {
+    process.env.KEPLER_POLLINATIONS_MODEL = 'sana';
+    const http = fakeHttp(200, 'image/jpeg');
+    await new PollinationsImageAdapter(http.impl, () => 'k').generateImage({ prompt: 'x' });
+    assert.equal(new URL(http.calls[0].url).searchParams.get('model'), 'sana');
+  } finally {
+    if (previous === undefined) delete process.env.KEPLER_POLLINATIONS_MODEL;
+    else process.env.KEPLER_POLLINATIONS_MODEL = previous;
+  }
+});
