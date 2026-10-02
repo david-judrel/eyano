@@ -32,11 +32,6 @@ const EXEMPTIONS = [
     marker: /\.run\s*\(/,
     why: 'relais HTTP vers MissionsService : la generation a lieu dans missions.service',
   },
-  {
-    file: 'modules/image/image.service.ts',
-    marker: /\bimageFlow\s*\(/,
-    why: "Kepler Image : le prompt decrit une image a produire, ce n'est pas une prise de parole d'Eyano",
-  },
 ];
 
 function walk(dir) {
