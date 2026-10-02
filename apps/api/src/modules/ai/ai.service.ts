@@ -192,7 +192,7 @@ export class AiService {
     if (keplerPlan) {
       const startedAt = Date.now();
       try {
-        yield { type: 'image_pending' as const };
+        if (!keplerPlan.refusal) yield { type: 'image_pending' as const };
         const outcome = await runKeplerInChat(keplerPlan, assistantMessage.id);
         yield { type: 'text' as const, content: outcome.text };
         if (outcome.attachment) {

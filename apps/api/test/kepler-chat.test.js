@@ -23,6 +23,7 @@ const {
   keplerChatNote,
   historyContentForChat,
   withDefaultRepresentation,
+  KEPLER_EDIT_UNSUPPORTED_TEXT,
 } = require(path.join(__dirname, '..', 'dist', 'modules', 'image', 'kepler-chat.js'));
 const { ImageGenerationError } = require('@eyano/gnoxe-brains');
 
@@ -154,13 +155,14 @@ test('image vide ou trop lourde : refusee, rien en base', async () => {
 // ------------------------------------------------- suite d'une image (contexte)
 
 const ON = { KEPLER_IMAGE_ENABLED: 'true' };
+const ON_EDIT = { KEPLER_IMAGE_ENABLED: 'true', KEPLER_IMAGE_EDIT_ENABLED: 'true' };
 const user = (content) => ({ role: 'user', content, attachments: [] });
 const image = () => ({ role: 'assistant', content: "Voici l'image générée.", attachments: [{ storageKey: 'db:kepler' }] });
 const reply = (content) => ({ role: 'assistant', content, attachments: [] });
 
 test('retouche : « fais le plus mieux » apres une image reprend la demande d origine', () => {
   const history = [user("Génère moi une imag relaist d'un mc musclé et humain"), image()];
-  const plan = planKepler('fais le plus mieux', history, undefined, ON);
+  const plan = planKepler('fais le plus mieux', history, undefined, ON_EDIT);
   assert.ok(plan, 'Kepler doit prendre la main');
   assert.match(plan.prompt, /mc musclé et humain/);
   assert.match(plan.prompt, /fais le plus mieux/);
@@ -169,7 +171,7 @@ test('retouche : « fais le plus mieux » apres une image reprend la demande d o
 test('retouches successives : toute la chaine, dans l ordre', () => {
   const history = [user('génère une image de chat'), image(), user('plus réaliste'), image()];
   assert.deepEqual(imageThread(history), ['génère une image de chat', 'plus réaliste']);
-  const plan = planKepler('ajoute un chapeau', history, undefined, ON);
+  const plan = planKepler('ajoute un chapeau', history, undefined, ON_EDIT);
   assert.match(plan.prompt, /^génère une image de chat\. Modifications demandées, dans l'ordre : plus réaliste ; ajoute un chapeau$/);
 });
 
@@ -219,7 +221,7 @@ const PHOTO = { data: Buffer.from([0xff, 0xd8, 0xff]).toString('base64'), mimeTy
 
 test('retouche : modifie l image precedente, la consigne seule', () => {
   const history = [user('Genere moi une affiche musicale'), imageWithId('att-9')];
-  const plan = planKepler("retir l'humain", history, undefined, ON);
+  const plan = planKepler("retir l'humain", history, undefined, ON_EDIT);
   assert.equal(plan.prompt, "retir l'humain");
   assert.deepEqual(plan.source, { kind: 'previous', attachmentId: 'att-9' });
   assert.match(plan.fallbackPrompt, /affiche musicale/);
@@ -227,7 +229,7 @@ test('retouche : modifie l image precedente, la consigne seule', () => {
 
 test('photo jointe + demande de retouche : la photo est l image de depart', () => {
   for (const [message, mode] of [['mets-lui un chapeau rouge', undefined], ['en style manga', 'image'], ['génère une image de moi en astronaute', undefined]]) {
-    const plan = planKepler(message, [], mode, ON, [PHOTO]);
+    const plan = planKepler(message, [], mode, ON_EDIT, [PHOTO]);
     assert.deepEqual(plan, { prompt: message, source: { kind: 'upload', image: PHOTO } }, message);
   }
 });
@@ -240,8 +242,8 @@ test('photo jointe sans demande d image : analysee par le chat', () => {
 
 test('mode image : une description avec « avec » est une nouvelle image', () => {
   const history = [user('génère une image de chat'), imageWithId('att-1')];
-  assert.deepEqual(planKepler('un mouton avec un chapeau', history, 'image', ON), { prompt: 'un mouton avec un chapeau' });
-  assert.equal(planKepler('avec un chapeau', history, undefined, ON).source.kind, 'previous');
+  assert.deepEqual(planKepler('un mouton avec un chapeau', history, 'image', ON_EDIT), { prompt: 'un mouton avec un chapeau' });
+  assert.equal(planKepler('avec un chapeau', history, undefined, ON_EDIT).source.kind, 'previous');
 });
 
 function editDb(previous) {
@@ -297,14 +299,50 @@ test('representation : sans personne, aucun ajout', () => {
 });
 
 test('representation : creation seulement, jamais une retouche', () => {
-  const created = planKepler('génère une image d un footballeur', [], undefined, ON);
+  const created = planKepler('génère une image d un footballeur', [], undefined, ON_EDIT);
   assert.ok(created.prompt.endsWith(NOTE));
 
-  const photo = planKepler('mets-lui un chapeau', [], undefined, ON, [PHOTO]);
+  const photo = planKepler('mets-lui un chapeau', [], undefined, ON_EDIT, [PHOTO]);
   assert.equal(photo.prompt, 'mets-lui un chapeau');
 
   const history = [user('génère une image d un homme'), imageWithId('att-3')];
-  const edit = planKepler('ajoute une barbe à cet homme', history, undefined, ON);
+  const edit = planKepler('ajoute une barbe à cet homme', history, undefined, ON_EDIT);
   assert.equal(edit.prompt, 'ajoute une barbe à cet homme');
   assert.ok(edit.fallbackPrompt.endsWith(NOTE), 'le repli est une creation');
+});
+
+// ------------------------------------------- retouche coupee (par defaut)
+
+test('retouche coupee : image precedente -> refus explique, aucune generation', async () => {
+  const history = [user('Genere moi une affiche musicale'), imageWithId('att-9')];
+  for (const message of ["retir l'humain", 'fais le plus mieux', 'avec un chapeau']) {
+    assert.deepEqual(planKepler(message, history, undefined, ON), { prompt: message, refusal: KEPLER_EDIT_UNSUPPORTED_TEXT }, message);
+  }
+  let calls = 0;
+  const outcome = await runKeplerInChat({ prompt: 'x', refusal: KEPLER_EDIT_UNSUPPORTED_TEXT }, 'm', { generate: async () => { calls++; }, db: fakeDb() });
+  assert.equal(outcome.text, KEPLER_EDIT_UNSUPPORTED_TEXT);
+  assert.equal(calls, 0, 'aucun appel au moteur');
+});
+
+test('retouche coupee : photo envoyee + demande d image -> refus', () => {
+  for (const [message, mode] of [['mets-lui un chapeau rouge', undefined], ['en style manga', 'image'], ['génère une image de moi en astronaute', undefined]]) {
+    assert.equal(planKepler(message, [], mode, ON, [PHOTO]).refusal, KEPLER_EDIT_UNSUPPORTED_TEXT, message);
+  }
+  assert.equal(planKepler('que vois-tu sur cette photo ?', [], undefined, ON, [PHOTO]), null, 'analyse : chat');
+});
+
+test('retouche coupee : les creations marchent toujours', () => {
+  const history = [user('génère une image de chat'), imageWithId('att-1')];
+  assert.equal(planKepler('génère une image de voiture rouge', history, undefined, ON).refusal, undefined);
+  assert.equal(planKepler('un mouton sur la lune', [], 'image', ON).refusal, undefined);
+});
+
+test('consigne du chat : jamais de modele ni de fournisseur ; retouche annoncee', () => {
+  const note = keplerChatNote(ON);
+  assert.match(note, /Ne nomme jamais un modèle, un fournisseur/);
+  assert.match(note, /ne sait pas encore retoucher/);
+  assert.doesNotMatch(keplerChatNote(ON_EDIT), /ne sait pas encore retoucher/);
+  for (const text of [note, KEPLER_EDIT_UNSUPPORTED_TEXT]) {
+    assert.doesNotMatch(text, /pollinations|sana|flux|gemini|google|z-image/i);
+  }
 });

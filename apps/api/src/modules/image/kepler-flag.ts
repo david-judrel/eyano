@@ -7,3 +7,12 @@
 export function isKeplerImageEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
   return env.KEPLER_IMAGE_ENABLED === 'true';
 }
+
+/**
+ * Retouche d'images (image precedente ou photo envoyee) : COUPEE par defaut,
+ * trop couteuse pour cette version. Coupee, une demande de retouche recoit
+ * une reponse d'Eyano qui l'explique, sans aucune generation.
+ */
+export function isKeplerImageEditEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
+  return isKeplerImageEnabled(env) && env.KEPLER_IMAGE_EDIT_ENABLED === 'true';
+}

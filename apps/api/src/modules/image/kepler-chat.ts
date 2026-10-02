@@ -1,6 +1,6 @@
 import { imageFlow, ImageGenerationError } from '@eyano/gnoxe-brains';
 import { prisma } from '../../lib/prisma';
-import { isKeplerImageEnabled } from './kepler-flag';
+import { isKeplerImageEnabled, isKeplerImageEditEnabled } from './kepler-flag';
 
 /**
  * Kepler Image dans le chat (experimental).
@@ -171,6 +171,10 @@ export async function runKeplerInChat(
   messageId: string,
   deps: { generate: typeof imageFlow; db: typeof prisma } = { generate: imageFlow, db: prisma }
 ): Promise<KeplerChatOutcome> {
+  if (typeof plan !== 'string' && plan.refusal) {
+    return { text: plan.refusal, code: 'UNSUPPORTED' };
+  }
+
   const { prompt, sourceImage } = await resolvePlan(typeof plan === 'string' ? { prompt: plan } : plan, deps.db);
 
   let result: { data: string; mimeType: string };
@@ -282,7 +286,13 @@ export interface KeplerPlan {
   source?: KeplerSource;
   /** Prompt a utiliser si l'image de depart est introuvable. */
   fallbackPrompt?: string;
+  /** Demande non prise en charge : reponse d'Eyano, AUCUNE generation. */
+  refusal?: string;
 }
+
+/** Reponse a une demande de retouche quand la retouche est coupee. */
+export const KEPLER_EDIT_UNSUPPORTED_TEXT =
+  "Cette version de Kepler ne prend pas encore en charge la retouche d'images (ni d'une image déjà créée, ni d'une photo envoyée) : nous y travaillons. En attendant, je peux créer une nouvelle image : décris-moi entièrement ce que tu veux voir.";
 
 /** Piece jointe Kepler de la derniere reponse d'Eyano, si c'est une image. */
 function lastKeplerAttachmentId(history: KeplerHistoryMessage[]): string | undefined {
@@ -310,13 +320,17 @@ export function planKepler(
   const fresh = detectImageRequest(content);
   const followUp = detectImageFollowUp(content);
 
+  const editEnabled = isKeplerImageEditEnabled(env);
+
   const uploaded = images?.[0];
   if (uploaded && (mode === 'image' || fresh || followUp)) {
+    if (!editEnabled) return { prompt: content, refusal: KEPLER_EDIT_UNSUPPORTED_TEXT };
     return { prompt: content, source: { kind: 'upload', image: uploaded } };
   }
 
   const thread = imageThread(history);
   if (thread.length > 0 && !fresh && followUp) {
+    if (!editEnabled) return { prompt: content, refusal: KEPLER_EDIT_UNSUPPORTED_TEXT };
     const fallbackPrompt = buildFollowUpPrompt(thread, content);
     const attachmentId = lastKeplerAttachmentId(history);
     return attachmentId
@@ -341,7 +355,13 @@ export function keplerChatNote(env: NodeJS.ProcessEnv = process.env): string {
     '',
     "Création d'images : tu SAIS créer des images grâce à Kepler, ton module d'images.",
     "Les messages marqués « [Image créée par Kepler] » dans l'historique sont des images que tu as réellement créées.",
-    "Ne dis jamais que tu ne peux pas créer d'images. Si l'utilisateur en veut une ou veut retoucher la précédente, invite-le à la décrire avec « génère une image de… » ou à choisir « Créer une image » dans le menu du trombone.",
+    "Ne dis jamais que tu ne peux pas créer d'images. Si l'utilisateur en veut une, invite-le à la décrire avec « génère une image de… » ou à choisir « Créer une image » dans le menu du trombone.",
+    "Kepler est une extension d'Eyano. Ne nomme jamais un modèle, un fournisseur ou un service externe derrière Kepler, même si on te le demande : réponds que les images sont créées par Kepler, l'extension d'images d'Eyano.",
+    ...(isKeplerImageEditEnabled(env)
+      ? []
+      : [
+          "Cette version de Kepler ne sait pas encore retoucher une image (ni une image déjà créée, ni une photo envoyée) : si on te le demande, explique-le simplement, précise que l'équipe y travaille, et propose de créer une nouvelle image décrite entièrement.",
+        ]),
   ].join('\n');
 }
 
