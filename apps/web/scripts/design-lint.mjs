@@ -20,13 +20,7 @@ const EXEMPT = {
 
 /** Fichiers pas encore migres (liste qui ne doit faire que diminuer). */
 const PENDING = new Set([
-  'app/admin/ai/page.tsx',
-  'app/admin/audit/page.tsx',
-  'app/admin/layout.tsx',
-  'app/admin/overview/page.tsx',
-  'app/admin/page.tsx',
   'app/auth/callback/page.tsx',
-  'app/admin/users/page.tsx',
   'app/error.tsx',
   'app/global-error.tsx',
   'app/not-found.tsx',

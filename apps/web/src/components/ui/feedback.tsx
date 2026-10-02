@@ -40,10 +40,14 @@ interface ProgressProps {
   /** 0 a 100 ; absent = progression indeterminee. */
   value?: number;
   label: string;
+  /** brand : activite / quota sain ; error : en defaut ; neutral : information. */
+  tone?: 'brand' | 'error' | 'neutral';
   className?: string;
 }
 
-export function Progress({ value, label, className }: ProgressProps) {
+const progressTones = { brand: 'bg-brand', error: 'bg-error', neutral: 'bg-foreground-muted' } as const;
+
+export function Progress({ value, label, tone = 'brand', className }: ProgressProps) {
   const known = typeof value === 'number';
   return (
     <div
@@ -55,7 +59,7 @@ export function Progress({ value, label, className }: ProgressProps) {
       className={cn('h-1 w-full overflow-hidden rounded-full bg-border-subtle', className)}
     >
       <div
-        className={cn('h-full rounded-full bg-brand transition-[width] duration-slow ease-standard', !known && 'w-1/3 animate-pulse-subtle')}
+        className={cn('h-full rounded-full transition-[width] duration-slow ease-standard', progressTones[tone], !known && 'w-1/3 animate-pulse-subtle')}
         style={known ? { width: `${Math.max(0, Math.min(100, value))}%` } : undefined}
       />
     </div>

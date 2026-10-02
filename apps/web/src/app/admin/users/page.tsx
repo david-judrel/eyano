@@ -1,11 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Search, Shield, UserCheck, UserX, ChevronLeft, ChevronRight, MoreVertical, Crown, Lock } from 'lucide-react';
+import { Crown, Lock, MoreHorizontal, Search, Shield, UserCheck, UserX } from 'lucide-react';
 import { api } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
+import { PageHeader } from '@/components/layout/Page';
 import { Avatar } from '@/components/ui/avatar';
-import { cn } from '@/lib/utils';
+import { IconButton } from '@/components/ui/button';
+import { Field } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Card } from '@/components/ui/feedback';
+import { Table, TBody, TD, TH, THead, TR } from '@/components/ui/table';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/overlay';
+import { LoadingBlock, Pagination, RoleBadge, StatusBadge } from '@/components/admin/AdminKit';
 
 interface User {
   id: string;
@@ -32,6 +40,9 @@ interface UsersResponse {
   };
 }
 
+/** Radix Select n'accepte pas la valeur vide : « ALL » represente « tous ». */
+const ALL = 'ALL';
+
 export default function AdminUsers() {
   const { user: currentUser } = useAppStore();
   const [users, setUsers] = useState<User[]>([]);
@@ -40,7 +51,6 @@ export default function AdminUsers() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<string>('');
-  const [actionMenu, setActionMenu] = useState<string | null>(null);
 
   const fetchUsers = async (page = 1) => {
     setLoading(true);
@@ -62,219 +72,127 @@ export default function AdminUsers() {
   }, [search, roleFilter, statusFilter]);
 
   const handleRoleChange = async (userId: string, newRole: string) => {
-    if (!confirm(`Changer le role de cet utilisateur en ${newRole} ?`)) return;
+    if (!confirm(`Changer le rôle de cet utilisateur en ${newRole} ?`)) return;
     try {
       await api.patch(`/admin/users/${userId}/role`, { role: newRole });
       fetchUsers(pagination.page);
-      setActionMenu(null);
     } catch {}
   };
 
   const handleStatusChange = async (userId: string, newStatus: string) => {
-    const action = newStatus === 'BANNED' ? 'bannir' : newStatus === 'INACTIVE' ? 'desactiver' : 'reactiver';
+    const action = newStatus === 'BANNED' ? 'bannir' : newStatus === 'INACTIVE' ? 'désactiver' : 'réactiver';
     if (!confirm(`${action.charAt(0).toUpperCase() + action.slice(1)} cet utilisateur ?`)) return;
     try {
       await api.patch(`/admin/users/${userId}/status`, { status: newStatus });
       fetchUsers(pagination.page);
-      setActionMenu(null);
     } catch {}
   };
 
   const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-[#F2FFF0]">Utilisateurs</h1>
-        <p className="text-sm text-[#F2FFF0]/30 mt-1">{pagination.total} utilisateurs au total</p>
+    <div className="flex flex-col gap-6">
+      <PageHeader title="Utilisateurs" description={`${pagination.total} utilisateurs au total`} />
+
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Field label="Rechercher un utilisateur" hideLabel className="flex-1">
+          <div className="relative">
+            <Search className="icon-sm pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-foreground-muted" aria-hidden />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher…" className="pl-10" />
+          </div>
+        </Field>
+        <Select
+          aria-label="Filtrer par rôle"
+          value={roleFilter || ALL}
+          onValueChange={(v) => setRoleFilter(v === ALL ? '' : v)}
+          className="sm:w-48"
+          options={[
+            { value: ALL, label: 'Tous les rôles' },
+            { value: 'USER', label: 'Utilisateur' },
+            { value: 'ADMIN', label: 'Admin' },
+            { value: 'SUPER_ADMIN', label: 'Super admin' },
+          ]}
+        />
+        <Select
+          aria-label="Filtrer par statut"
+          value={statusFilter || ALL}
+          onValueChange={(v) => setStatusFilter(v === ALL ? '' : v)}
+          className="sm:w-48"
+          options={[
+            { value: ALL, label: 'Tous les statuts' },
+            { value: 'ACTIVE', label: 'Actif' },
+            { value: 'INACTIVE', label: 'Inactif' },
+            { value: 'BANNED', label: 'Banni' },
+          ]}
+        />
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-3">
-        <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#F2FFF0]/20" />
-          <input
-            type="text"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="Rechercher..."
-            className="h-10 w-full rounded-xl border border-[#F2FFF0]/[8%] bg-[#0D0F0E] pl-10 pr-4 text-sm text-[#F2FFF0] placeholder:text-[#F2FFF0]/20 focus:outline-none focus:border-[#39FF14]/40"
-          />
-        </div>
-        <select
-          value={roleFilter}
-          onChange={(e) => setRoleFilter(e.target.value)}
-          className="h-10 rounded-xl border border-[#F2FFF0]/[8%] bg-[#0D0F0E] px-3 text-sm text-[#F2FFF0] focus:outline-none focus:border-[#39FF14]/40"
-        >
-          <option value="">Tous les roles</option>
-          <option value="USER">USER</option>
-          <option value="ADMIN">ADMIN</option>
-          <option value="SUPER_ADMIN">SUPER_ADMIN</option>
-        </select>
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="h-10 rounded-xl border border-[#F2FFF0]/[8%] bg-[#0D0F0E] px-3 text-sm text-[#F2FFF0] focus:outline-none focus:border-[#39FF14]/40"
-        >
-          <option value="">Tous les statuts</option>
-          <option value="ACTIVE">Actif</option>
-          <option value="INACTIVE">Inactif</option>
-          <option value="BANNED">Banni</option>
-        </select>
-      </div>
-
-      {/* Users Table */}
-      <div className="rounded-2xl border border-[#F2FFF0]/[6%] bg-[#0D0F0E]/60 backdrop-blur-xl overflow-hidden">
+      <Card padding="none" className="overflow-hidden">
         {loading ? (
-          <div className="flex items-center justify-center h-48">
-            <div className="h-6 w-6 animate-spin rounded-full border-2 border-[#39FF14]/20 border-t-[#39FF14]" />
-          </div>
+          <LoadingBlock />
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-[#F2FFF0]/[4%]">
-                  <th className="px-4 py-3 text-left text-[11px] font-medium text-[#F2FFF0]/30 uppercase tracking-wider">Utilisateur</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium text-[#F2FFF0]/30 uppercase tracking-wider">Role</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium text-[#F2FFF0]/30 uppercase tracking-wider">Statut</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium text-[#F2FFF0]/30 uppercase tracking-wider">Conversations</th>
-                  <th className="px-4 py-3 text-left text-[11px] font-medium text-[#F2FFF0]/30 uppercase tracking-wider">Inscription</th>
-                  <th className="px-4 py-3 text-right text-[11px] font-medium text-[#F2FFF0]/30 uppercase tracking-wider">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#F2FFF0]/[4%]">
-                {users.map((user) => (
-                  <tr key={user.id} className="hover:bg-[#F2FFF0]/[2%] transition-colors">
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-3">
-                        <Avatar
-                          src={user.avatarUrl}
-                          fallback={user.name?.[0] || user.email[0]?.toUpperCase()}
-                          size="sm"
-                          className="bg-[#39FF14]/[10%] text-[#39FF14] border border-[#39FF14]/20"
-                        />
-                        <div>
-                          <div className="text-sm font-medium text-[#F2FFF0]/80">{user.name || 'Sans nom'}</div>
-                          <div className="text-xs text-[#F2FFF0]/30">{user.email}</div>
-                        </div>
+          <Table>
+            <THead>
+              <tr>
+                <TH>Utilisateur</TH>
+                <TH>Rôle</TH>
+                <TH>Statut</TH>
+                <TH>Conversations</TH>
+                <TH>Inscription</TH>
+                <TH className="text-right"><span className="sr-only">Actions</span></TH>
+              </tr>
+            </THead>
+            <TBody>
+              {users.map((user) => (
+                <TR key={user.id}>
+                  <TD>
+                    <div className="flex items-center gap-3">
+                      <Avatar src={user.avatarUrl} fallback={(user.name?.[0] || user.email[0] || '?').toUpperCase()} alt={user.name || user.email} size="sm" />
+                      <div className="min-w-0">
+                        <p className="text-label text-foreground">{user.name || 'Sans nom'}</p>
+                        <p className="text-caption text-foreground-muted">{user.email}</p>
                       </div>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={cn(
-                        'px-2 py-1 rounded text-[10px] font-bold',
-                        user.role === 'SUPER_ADMIN' ? 'bg-purple-500/20 text-purple-400' :
-                        user.role === 'ADMIN' ? 'bg-[#39FF14]/10 text-[#39FF14]' :
-                        'bg-[#F2FFF0]/[6%] text-[#F2FFF0]/40'
-                      )}>
-                        {user.role}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className={cn(
-                        'px-2 py-1 rounded text-[10px] font-bold',
-                        user.status === 'ACTIVE' ? 'bg-green-500/20 text-green-400' :
-                        user.status === 'INACTIVE' ? 'bg-yellow-500/20 text-yellow-400' :
-                        'bg-red-500/20 text-red-400'
-                      )}>
-                        {user.status}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3 text-sm text-[#F2FFF0]/40">{user._count.conversations}</td>
-                    <td className="px-4 py-3 text-sm text-[#F2FFF0]/30">
-                      {new Date(user.createdAt).toLocaleDateString('fr-FR')}
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <div className="relative">
-                        <button
-                          onClick={() => setActionMenu(actionMenu === user.id ? null : user.id)}
-                          className="p-1.5 rounded-lg hover:bg-[#F2FFF0]/[4%] text-[#F2FFF0]/30 hover:text-[#F2FFF0]"
-                        >
-                          <MoreVertical className="h-4 w-4" />
-                        </button>
-
-                        {actionMenu === user.id && (
-                          <div className="absolute right-0 top-full mt-1 w-48 rounded-xl border border-[#F2FFF0]/[8%] bg-[#0D0F0E] shadow-xl z-10 py-1">
-                            {user.status === 'ACTIVE' ? (
-                              <>
-                                <button
-                                  onClick={() => handleStatusChange(user.id, 'INACTIVE')}
-                                  className="w-full px-3 py-2 text-left text-sm text-yellow-400 hover:bg-yellow-500/10 flex items-center gap-2"
-                                >
-                                  <Lock className="h-4 w-4" /> Desactiver
-                                </button>
-                                <button
-                                  onClick={() => handleStatusChange(user.id, 'BANNED')}
-                                  className="w-full px-3 py-2 text-left text-sm text-red-400 hover:bg-red-500/10 flex items-center gap-2"
-                                >
-                                  <UserX className="h-4 w-4" /> Bannir
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                onClick={() => handleStatusChange(user.id, 'ACTIVE')}
-                                className="w-full px-3 py-2 text-left text-sm text-green-400 hover:bg-green-500/10 flex items-center gap-2"
-                              >
-                                <UserCheck className="h-4 w-4" /> Reactiver
-                              </button>
-                            )}
-
-                            {isSuperAdmin && user.id !== currentUser?.id && user.role !== 'SUPER_ADMIN' && (
-                              <>
-                                <div className="my-1 border-t border-[#F2FFF0]/[4%]" />
-                                {user.role === 'USER' && (
-                                  <button
-                                    onClick={() => handleRoleChange(user.id, 'ADMIN')}
-                                    className="w-full px-3 py-2 text-left text-sm text-[#39FF14] hover:bg-[#39FF14]/10 flex items-center gap-2"
-                                  >
-                                    <Shield className="h-4 w-4" /> Promouvoir ADMIN
-                                  </button>
-                                )}
-                                {user.role === 'ADMIN' && (
-                                  <button
-                                    onClick={() => handleRoleChange(user.id, 'USER')}
-                                    className="w-full px-3 py-2 text-left text-sm text-yellow-400 hover:bg-yellow-500/10 flex items-center gap-2"
-                                  >
-                                    <Crown className="h-4 w-4" /> Retrograder USER
-                                  </button>
-                                )}
-                              </>
-                            )}
-                          </div>
+                    </div>
+                  </TD>
+                  <TD><RoleBadge role={user.role} /></TD>
+                  <TD><StatusBadge status={user.status} /></TD>
+                  <TD className="tabular-nums">{user._count.conversations}</TD>
+                  <TD>{new Date(user.createdAt).toLocaleDateString('fr-FR')}</TD>
+                  <TD className="text-right">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <IconButton label={`Actions pour ${user.email}`} icon={MoreHorizontal} size="sm" tooltip={false} />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {user.status === 'ACTIVE' ? (
+                          <>
+                            <DropdownMenuItem icon={Lock} onSelect={() => handleStatusChange(user.id, 'INACTIVE')}>Désactiver</DropdownMenuItem>
+                            <DropdownMenuItem icon={UserX} destructive onSelect={() => handleStatusChange(user.id, 'BANNED')}>Bannir</DropdownMenuItem>
+                          </>
+                        ) : (
+                          <DropdownMenuItem icon={UserCheck} onSelect={() => handleStatusChange(user.id, 'ACTIVE')}>Réactiver</DropdownMenuItem>
                         )}
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        {isSuperAdmin && user.id !== currentUser?.id && user.role !== 'SUPER_ADMIN' && (
+                          <>
+                            <DropdownMenuSeparator />
+                            {user.role === 'USER' && (
+                              <DropdownMenuItem icon={Shield} onSelect={() => handleRoleChange(user.id, 'ADMIN')}>Promouvoir admin</DropdownMenuItem>
+                            )}
+                            {user.role === 'ADMIN' && (
+                              <DropdownMenuItem icon={Crown} onSelect={() => handleRoleChange(user.id, 'USER')}>Rétrograder en utilisateur</DropdownMenuItem>
+                            )}
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TD>
+                </TR>
+              ))}
+            </TBody>
+          </Table>
         )}
-
-        {/* Pagination */}
-        {pagination.pages > 1 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-[#F2FFF0]/[4%]">
-            <span className="text-xs text-[#F2FFF0]/30">
-              Page {pagination.page} / {pagination.pages}
-            </span>
-            <div className="flex gap-2">
-              <button
-                onClick={() => fetchUsers(pagination.page - 1)}
-                disabled={pagination.page <= 1}
-                className="p-1.5 rounded-lg border border-[#F2FFF0]/[8%] text-[#F2FFF0]/30 hover:text-[#F2FFF0] disabled:opacity-30"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-              <button
-                onClick={() => fetchUsers(pagination.page + 1)}
-                disabled={pagination.page >= pagination.pages}
-                className="p-1.5 rounded-lg border border-[#F2FFF0]/[8%] text-[#F2FFF0]/30 hover:text-[#F2FFF0] disabled:opacity-30"
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
+        <Pagination page={pagination.page} pages={pagination.pages} onChange={fetchUsers} />
+      </Card>
     </div>
   );
 }
