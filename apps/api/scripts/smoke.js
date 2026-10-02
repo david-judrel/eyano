@@ -46,7 +46,9 @@
  *                                       (blocs de donnees inchanges) : OFF d'e43
  *   node scripts/smoke.js --guard-conditional
  *                                       garde e34 posee seulement sans FOUND
- *                                       conclusif (e44)
+ *                                       conclusif (e44 ; defaut depuis Recall V1)
+ *   node scripts/smoke.js --guard-always garde toujours posee : condition ON d'e43
+ *                                       (comportement par defaut avant Recall V1)
  *   node scripts/smoke.js --recall-visible-only
  *                                       retablit le contrat e35-e41 du resolver
  *                                       (visible seulement) : controle OFF d'e42
@@ -90,7 +92,7 @@ const MISSION_CHANNEL = 'admin';
 // ------------------------------------------------------------------ options
 
 function parseArgs(argv) {
-  const options = { dry: false, missions: false, scenario: false, only: null, resolver: true, provenance: false, provenanceSet: 'e38', provenanceCheck: true, storedRecall: true, guard: true };
+  const options = { dry: false, missions: false, scenario: false, only: null, resolver: true, provenance: false, provenanceSet: 'e38', provenanceCheck: true, storedRecall: true, guard: undefined };
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -124,6 +126,8 @@ function parseArgs(argv) {
       options.guard = false;
     } else if (arg === '--guard-conditional') {
       options.guard = 'conditional';
+    } else if (arg === '--guard-always') {
+      options.guard = true;
     } else if (arg === '--recall-visible-only') {
       options.storedRecall = false;
     } else if (arg === '--no-provenance') {
@@ -387,10 +391,10 @@ async function main() {
   console.log(`rappel stocke: ${options.storedRecall ? 'ON (e42)' : 'OFF (visible seulement)'}`);
   console.log(
     `garde e34    : ${
-      options.guard === 'conditional'
-        ? 'CONDITIONNELLE (e44)'
+      options.guard === undefined || options.guard === 'conditional'
+        ? 'CONDITIONNELLE (defaut Recall V1)'
         : options.guard
-          ? 'ON'
+          ? 'TOUJOURS (condition ON d e43)'
           : 'OFF (blocs de donnees seuls)'
     }`
   );

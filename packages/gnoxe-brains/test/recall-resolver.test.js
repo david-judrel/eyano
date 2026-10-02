@@ -226,7 +226,7 @@ test('la resolution est deterministe', () => {
 
 test('le bloc arrive APRES la garde, au point de contact', () => {
   const full = alternating(27, "Qu'est-ce que je t'ai demandé au huitième tour ?");
-  const context = buildChatContext(full, 20, undefined, undefined, VOICE);
+  const context = buildChatContext(full, 20, undefined, undefined, VOICE, { recallGuard: true });
   const last = context[context.length - 1];
 
   assert.ok(last.role === 'user');

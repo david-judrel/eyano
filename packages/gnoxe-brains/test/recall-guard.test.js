@@ -121,6 +121,7 @@ test('la garde atteint le modele au point de contact', async () => {
     conversationId: 'c',
     messages: [{ role: 'user', content: 'Que t ai-je demande au premier tour ?' }],
     systemPrompt: VOICE,
+    recallGuard: true,
   });
 
   const call = provider.calls.find((entry) => entry.kind === 'generate');
@@ -129,6 +130,21 @@ test('la garde atteint le modele au point de contact', async () => {
 
   assert.ok(last.content.includes(RECALL_GUARD_HEAD), 'garde non transmise');
   assert.equal(call.request.messages[0].content, VOICE, 'system intact');
+});
+
+test('par defaut (conditionnel), la garde atteint le modele sans donnee conclusive', async () => {
+  const provider = install(createFakeModelProvider({ content: 'OK.' }));
+
+  await chatFlowSync({
+    userId: 'u',
+    conversationId: 'c',
+    messages: [{ role: 'user', content: 'Que t ai-je demande au tour 5 ?' }],
+    systemPrompt: VOICE,
+  });
+
+  const call = provider.calls.find((entry) => entry.kind === 'generate');
+  const last = call.request.messages[call.request.messages.length - 1];
+  assert.ok(last.content.includes(RECALL_GUARD_HEAD), 'tour inexistant : garde posee');
 });
 
 // ---------------------------------------------- e43 : garde ON / OFF
@@ -141,7 +157,7 @@ test('e43 : recallGuard false retire la garde, et seulement elle', () => {
   }
   history.push({ role: 'user', content: "Qu'est-ce que je t'ai demandé au tour 3 ?" });
 
-  const on = buildChatContext(history, 20, undefined, undefined, 'VOIX');
+  const on = buildChatContext(history, 20, undefined, undefined, 'VOIX', { recallGuard: true });
   const off = buildChatContext(history, 20, undefined, undefined, 'VOIX', { recallGuard: false });
   const lastOn = on[on.length - 1].content;
   const lastOff = off[off.length - 1].content;
@@ -196,13 +212,27 @@ test('e44 : PARTIAL n est pas conclusif -> garde', () => {
   assert.equal(guardedWith("Tu m'as dit que le mot4 est valide et le ciel violet, c'est bien ça ?"), true);
 });
 
-test('e44 : par defaut la garde reste toujours posee', () => {
-  const context = buildChatContext(
-    history13("Qu'est-ce que je t'ai demandé au tour 3 ?"),
-    20,
-    undefined,
-    undefined,
-    'VOIX'
-  );
-  assert.ok(context[context.length - 1].content.includes(RECALL_GUARD_HEAD));
+test('integration : par defaut la garde est conditionnelle', () => {
+  const byDefault = (question) => {
+    const context = buildChatContext(history13(question), 20, undefined, undefined, 'VOIX');
+    return context[context.length - 1].content.includes(RECALL_GUARD_HEAD);
+  };
+  assert.equal(byDefault("Qu'est-ce que je t'ai demandé au tour 3 ?"), false, 'FOUND');
+  assert.equal(byDefault("Tu m'avais dit que tu étais humain, c'est bien ça ?"), true, 'NOT_FOUND');
+  assert.equal(guardedWith("Qu'est-ce que je t'ai demandé au tour 3 ?", true), true, 'true force');
+});
+
+test('integration : NOT_FOUND et NOT_AVAILABLE identiques a la garde toujours posee', () => {
+  for (const question of [
+    "Tu m'avais dit que tu étais humain, c'est bien ça ?",
+    "Qu'est-ce que je t'ai demandé au tour 99 ?",
+    "Qu'est-ce que tu m'as répondu au tour 14 ?",
+    'bonjour',
+  ]) {
+    const byDefault = buildChatContext(history13(question), 20, undefined, undefined, 'VOIX');
+    const always = buildChatContext(history13(question), 20, undefined, undefined, 'VOIX', {
+      recallGuard: true,
+    });
+    assert.deepEqual(byDefault, always, question);
+  }
 });

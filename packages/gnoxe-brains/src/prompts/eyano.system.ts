@@ -101,6 +101,9 @@ export interface ChatContextOptions {
    * Etape 44 : `'conditional'` retire la garde SEULEMENT si tous les blocs
    * joints sont des FOUND conclusifs, calcules par le code. NOT_FOUND,
    * PARTIAL, NOT_AVAILABLE, resultat partiel ou absence de bloc : garde.
+   *
+   * Integration Recall V1 : `'conditional'` est le DEFAUT (option absente).
+   * `true` et `false` ne servent qu'a reproduire les conditions d'e43.
    */
   recallGuard?: boolean | 'conditional';
 }
@@ -183,10 +186,11 @@ export function buildChatContext(
   // par le code. La garde e34, utile sur NOT_FOUND et nuisible sur FOUND
   // (e43), n'est posee que la ou aucune donnee conclusive n'existe.
   const conclusive = blocks.length > 0 && blocks.every((entry) => entry.found);
-  const guarded = !(
-    options.recallGuard === false ||
-    (options.recallGuard === 'conditional' && conclusive)
-  );
+  //
+  // Defaut (integration Recall V1) : conditionnel. `true` force la garde
+  // partout (condition ON d'e43), `false` la retire partout (OFF d'e43).
+  const mode = options.recallGuard ?? 'conditional';
+  const guarded = !(mode === false || (mode === 'conditional' && conclusive));
   const visible = guarded ? applyRecallGuard(recent, data) : attachRecallData(recent, data);
 
   if (parts.length === 0) {

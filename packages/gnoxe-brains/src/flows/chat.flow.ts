@@ -31,7 +31,7 @@ export interface ChatFlowInput {
   historyCoverage?: HistoryCoverage;
   /** Voir `ChatContextOptions.recallStoredHistory` : controle experimental. */
   recallStoredHistory?: boolean;
-  /** Voir `ChatContextOptions.recallGuard` : controle experimental. */
+  /** Voir `ChatContextOptions.recallGuard` : defaut conditionnel (Recall V1). */
   recallGuard?: boolean | 'conditional';
 }
 
