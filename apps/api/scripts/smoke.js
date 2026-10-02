@@ -37,6 +37,9 @@
  *   node scripts/smoke.js --provenance-e41
  *                                       probes P1-P6 (e41.6), historique et
  *                                       couverture propres a chaque probe
+ *   node scripts/smoke.js --provenance-e42
+ *                                       probes Q1-Q6 (e42), rappel d'un tour
+ *                                       stocke hors fenetre
  *   node scripts/smoke.js --recall-visible-only
  *                                       retablit le contrat e35-e41 du resolver
  *                                       (visible seulement) : controle OFF d'e42
@@ -59,6 +62,7 @@ const { SEED, PROBES } = require('./smoke/provenance');
 const { PROBES_E39 } = require('./smoke/provenance-e39');
 const { SEED_E40, PROBES_E40 } = require('./smoke/provenance-e40');
 const { PROBES_E41 } = require('./smoke/provenance-e41');
+const { PROBES_E42 } = require('./smoke/provenance-e42');
 const { scanRevelation } = require('./smoke/detect');
 
 /** Jeux de probes de provenance : chacun avec SON historique pre-ecrit. */
@@ -68,6 +72,7 @@ const PROVENANCE_SETS = {
   e40: { seed: SEED_E40, probes: PROBES_E40 },
   // e41.6 : chaque probe porte son historique, sa couverture et son canal.
   e41: { seed: null, probes: PROBES_E41 },
+  e42: { seed: null, probes: PROBES_E42 },
 };
 
 const API_ROOT = path.join(__dirname, '..');
@@ -100,6 +105,9 @@ function parseArgs(argv) {
     } else if (arg === '--provenance-e41') {
       options.provenance = true;
       options.provenanceSet = 'e41';
+    } else if (arg === '--provenance-e42') {
+      options.provenance = true;
+      options.provenanceSet = 'e42';
     } else if (arg === '--recall-visible-only') {
       options.storedRecall = false;
     } else if (arg === '--no-provenance') {
