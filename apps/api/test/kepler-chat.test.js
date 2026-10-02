@@ -40,6 +40,11 @@ test('detection : demandes d image reconnues', () => {
     "Genere moi l'image d'un mouton",
     'Génère-moi la photo d un coucher de soleil',
     'crée le logo de mon entreprise',
+    "Génère moi une imag relaist d'un mc musclé et humain",
+    'gnere une image de lion',
+    'fais une phot de la tour eiffel',
+    'génère un iamge de voiture',
+    'dessine un portait de femme',
   ]) {
     assert.equal(detectImageRequest(message), true, message);
   }
@@ -53,6 +58,8 @@ test('detection : conversations ordinaires ignorees', () => {
     'Tu peux me donner un exemple ?',
     "Décris-moi l'image que tu imagines",
     'Fais le résumé de ce texte',
+    'Crée un mage pour ma campagne de jeu de rôle',
+    'mais une image vaut mille mots',
     'Explique-moi ce qu est une image Docker',
     'Peux-tu résumer ce document ?',
     'How do I create an image in Docker?',
@@ -62,6 +69,13 @@ test('detection : conversations ordinaires ignorees', () => {
     assert.equal(detectImageRequest(message), false, message);
   }
   assert.equal(detectImageRequest(undefined), false);
+});
+
+test('mode image choisi dans l interface : Kepler, sans detection', () => {
+  const on = { KEPLER_IMAGE_ENABLED: 'true' };
+  assert.equal(shouldUseKepler('un mouton sur la lune', on, 'image'), true);
+  assert.equal(shouldUseKepler('un mouton sur la lune', on), false);
+  assert.equal(shouldUseKepler('un mouton sur la lune', {}, 'image'), false, 'drapeau coupe : jamais');
 });
 
 test('drapeau : coupe, Kepler ne prend jamais la main', () => {

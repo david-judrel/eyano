@@ -61,6 +61,46 @@ const FR_DRAW = /\bdessine-(?:moi|nous)\b/;
  */
 const META_QUESTION = /^\s*(?:comment|pourquoi|how|why)\b/;
 
+// ----------------------------------------------------- fautes de frappe
+
+/** Mots-cles corriges s'ils sont mal tapes (une lettre de difference). */
+const TYPO_TARGETS = [
+  'image', 'images', 'photo', 'photos', 'dessin', 'dessins', 'illustration', 'illustrations',
+  'affiche', 'affiches', 'portrait', 'portraits', 'visuel', 'visuels',
+  'picture', 'pictures', 'drawing', 'drawings',
+  'genere', 'generer', 'dessine', 'dessiner', 'realise', 'realiser', 'illustre', 'illustrer',
+  'generate', 'create',
+];
+/** Vrais mots proches d'un mot-cle : jamais corriges. */
+const NOT_TYPOS = new Set(['mage', 'mages', 'photon', 'photons', 'produit', 'dessous', 'genie']);
+
+/** Distance d'edition avec transposition (une inversion de lettres = 1). */
+function editDistance(a: string, b: string): number {
+  const d: number[][] = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)]);
+  for (let j = 1; j <= b.length; j++) d[0][j] = j;
+  for (let i = 1; i <= a.length; i++) {
+    for (let j = 1; j <= b.length; j++) {
+      const cost = a[i - 1] === b[j - 1] ? 0 : 1;
+      d[i][j] = Math.min(d[i - 1][j] + 1, d[i][j - 1] + 1, d[i - 1][j - 1] + cost);
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) {
+        d[i][j] = Math.min(d[i][j], d[i - 2][j - 2] + 1);
+      }
+    }
+  }
+  return d[a.length][b.length];
+}
+
+/** « imag » -> « image », « gnere » -> « genere » : mots d'au moins 4 lettres. */
+function correctTypos(text: string): string {
+  return text.replace(/[a-z]{4,}/g, (word) => {
+    if (NOT_TYPOS.has(word) || TYPO_TARGETS.includes(word)) return word;
+    const match = TYPO_TARGETS.find(
+      (target) => Math.abs(target.length - word.length) <= 1 && editDistance(word, target) === 1
+    );
+    return match ?? word;
+  });
+}
+
 /**
  * Vrai si le message demande la GENERATION d'une image. Deterministe et
  * volontairement restrictif : un faux negatif laisse le chat repondre
@@ -68,14 +108,25 @@ const META_QUESTION = /^\s*(?:comment|pourquoi|how|why)\b/;
  */
 export function detectImageRequest(raw: string): boolean {
   if (typeof raw !== 'string') return false;
-  const text = normalize(raw);
+  const text = correctTypos(normalize(raw));
   if (META_QUESTION.test(text)) return false;
   return FR_REQUEST.test(text) || EN_REQUEST.test(text) || FR_DRAW.test(text);
 }
 
-/** Kepler doit-il traiter ce message ? (drapeau ET demande d'image) */
-export function shouldUseKepler(content: string, env: NodeJS.ProcessEnv = process.env): boolean {
-  return isKeplerImageEnabled(env) && detectImageRequest(content);
+/** Mode choisi explicitement dans l'interface (« Créer une image »). */
+export type ChatMode = 'image';
+
+/**
+ * Kepler doit-il traiter ce message ? Drapeau actif ET (mode image choisi
+ * par l'utilisateur OU demande d'image detectee dans le texte).
+ */
+export function shouldUseKepler(
+  content: string,
+  env: NodeJS.ProcessEnv = process.env,
+  mode?: ChatMode
+): boolean {
+  if (!isKeplerImageEnabled(env)) return false;
+  return mode === 'image' || detectImageRequest(content);
 }
 
 /** Reponse d'Eyano pour chaque echec stable du moteur image. */

@@ -8,7 +8,7 @@ import {
   DEFAULT_MODEL_ID,
   DEFAULT_IMAGE_MODEL_ID,
 } from '@eyano/gnoxe-brains';
-import { runKeplerInChat, shouldUseKepler, KeplerChatAttachment } from '../image/kepler-chat';
+import { runKeplerInChat, shouldUseKepler, KeplerChatAttachment, ChatMode } from '../image/kepler-chat';
 import { buildEyanoContext } from '@eyano/eyano-identity';
 import { ChatMessage, ImageAttachment } from '@eyano/types';
 import { MessagesService } from '../messages/messages.service';
@@ -39,7 +39,8 @@ export class AiService {
     conversationId: string,
     content: string,
     model?: string,
-    images?: ImageAttachment[]
+    images?: ImageAttachment[],
+    mode?: ChatMode
   ): Promise<{ response: string; messageId: string; title: string | null; attachments?: KeplerChatAttachment[] }> {
     const providerName = getActiveProviderName();
 
@@ -70,7 +71,7 @@ export class AiService {
 
     // Kepler Image (experimental) : une demande d'image ne passe pas par le
     // modele de conversation. Drapeau coupe : chemin inchange.
-    if (shouldUseKepler(content)) {
+    if (shouldUseKepler(content, process.env, mode)) {
       const startedAt = Date.now();
       const assistant = await this.messagesService.createStreaming(conversationId, DEFAULT_IMAGE_MODEL_ID, providerName);
       const outcome = await runKeplerInChat(content, assistant.id);
@@ -138,7 +139,8 @@ export class AiService {
     conversationId: string,
     content: string,
     model?: string,
-    images?: ImageAttachment[]
+    images?: ImageAttachment[],
+    mode?: ChatMode
   ) {
     const providerName = getActiveProviderName();
 
@@ -176,7 +178,7 @@ export class AiService {
 
     // Kepler Image (experimental) : l'image arrive dans le fil, apres le texte
     // d'Eyano, par l'evenement `image`. Drapeau coupe : chemin inchange.
-    if (shouldUseKepler(content)) {
+    if (shouldUseKepler(content, process.env, mode)) {
       const startedAt = Date.now();
       try {
         yield { type: 'image_pending' as const };

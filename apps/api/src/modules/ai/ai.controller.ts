@@ -2,6 +2,7 @@ import { Controller, Get, Post, Body, UseGuards, Req, Res, NotFoundException, Ba
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { Response } from 'express';
 import { AiService } from './ai.service';
+import { isKeplerImageEnabled } from '../image/kepler-flag';
 import { AuthGuard } from '../../guards/auth.guard';
 import { AdminGuard } from '../../guards/admin.guard';
 import { RateLimitGuard } from '../../guards/rate-limit.guard';
@@ -18,6 +19,8 @@ class ChatDto {
   message!: string;
   model?: string;
   images?: ImageDto[];
+  /** `image` : « Créer une image » choisi dans l'interface (Kepler). */
+  mode?: 'image';
 }
 
 class RegenerateDto {
@@ -74,12 +77,24 @@ export class AiController {
     }
   }
 
+  /** Seule valeur reconnue : `image`. Toute autre valeur est ignoree. */
+  private modeOf(body: ChatDto): 'image' | undefined {
+    return body.mode === 'image' ? 'image' : undefined;
+  }
+
+  /** Ce que l'interface peut proposer (bouton « Créer une image »). */
+  @Get('capabilities')
+  @ApiOperation({ summary: "Capacites disponibles pour l'interface" })
+  getCapabilities() {
+    return { imageGeneration: isKeplerImageEnabled() };
+  }
+
   @Post('chat')
   @UseGuards(RateLimitGuard)
   @ApiOperation({ summary: 'Envoyer un message et recevoir une reponse' })
   async chat(@Req() req: any, @Body() body: ChatDto) {
     this.assertKnownModel(body.model);
-    return this.aiService.chat(req.user.userId, body.conversationId, body.message, body.model, body.images);
+    return this.aiService.chat(req.user.userId, body.conversationId, body.message, body.model, body.images, this.modeOf(body));
   }
 
   @Post('chat/stream')
@@ -98,7 +113,8 @@ export class AiController {
         body.conversationId,
         body.message,
         body.model,
-        body.images
+        body.images,
+        this.modeOf(body)
       );
 
       for await (const chunk of stream) {

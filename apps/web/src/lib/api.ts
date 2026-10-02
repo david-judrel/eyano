@@ -82,7 +82,9 @@ class ApiClient {
         outputTokens?: number;
       }) => void;
       onError?: (error: { code?: string; message: string }) => void;
-    }
+    },
+    /** `image` : « Créer une image » choisi dans le menu (Kepler). */
+    mode?: 'image'
   ): Promise<void> {
     const token = this.getToken();
     const headers: Record<string, string> = { 'Content-Type': 'application/json' };
@@ -91,7 +93,7 @@ class ApiClient {
     const res = await fetch(`${API_URL}/ai/chat/stream`, {
       method: 'POST',
       headers,
-      body: JSON.stringify({ conversationId, message, model, images }),
+      body: JSON.stringify({ conversationId, message, model, images, mode }),
     });
 
     if (!res.ok) {
@@ -154,6 +156,11 @@ class ApiClient {
         }
       }
     }
+  }
+
+  /** Capacites proposees par l'API (bouton « Créer une image »). */
+  getCapabilities() {
+    return this.get<{ imageGeneration: boolean }>('/ai/capabilities');
   }
 
   /** Image conservee par l'API (Kepler), en URL locale utilisable par <img>. */

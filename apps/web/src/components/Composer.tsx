@@ -11,6 +11,7 @@ import {
   StopCircle,
   Loader2,
   Camera,
+  Sparkles,
 } from 'lucide-react';
 
 import { useRouter } from 'next/navigation';
@@ -134,6 +135,23 @@ export function Composer({ onRequireLogin }: ComposerProps) {
 
   const [attachedFiles, setAttachedFiles] = useState<AttachedFile[]>([]);
   const [dropdownOpen, setDropdownOpen] = useState(false);
+  /** « Créer une image » : proposé seulement si l'API l'annonce. */
+  const [canCreateImages, setCanCreateImages] = useState(false);
+  /** Mode image choisi : le message part à Kepler jusqu'à ce qu'on le retire. */
+  const [imageMode, setImageMode] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .getCapabilities()
+      .then((capabilities) => {
+        if (!cancelled) setCanCreateImages(Boolean(capabilities?.imageGeneration));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
   const [isDragging, setIsDragging] = useState(false);
 
   const { addToast } = useToast();
@@ -591,7 +609,8 @@ export function Composer({ onRequireLogin }: ComposerProps) {
               createdAt: new Date().toISOString(),
             });
           },
-        }
+        },
+        imageMode ? 'image' : undefined
       );
 
       /**
@@ -729,6 +748,21 @@ export function Composer({ onRequireLogin }: ComposerProps) {
             </div>
           )}
 
+          {imageMode && (
+            <div className="px-4 pt-3">
+              <button
+                type="button"
+                onClick={() => setImageMode(false)}
+                className="group inline-flex items-center gap-1.5 rounded-full border border-brand/25 bg-brand/[8%] px-3 py-1 text-xs font-medium text-brand hover:bg-brand/[14%] transition-colors"
+                title="Retirer le mode image"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Image
+                <X className="h-3 w-3 opacity-60 group-hover:opacity-100" />
+              </button>
+            </div>
+          )}
+
           <div className="flex items-end gap-2 px-3 py-3">
             <div className="shrink-0 mb-1">
               <button
@@ -754,9 +788,11 @@ export function Composer({ onRequireLogin }: ComposerProps) {
                 onKeyDown={handleKeyDown}
                 onPaste={handlePaste}
                 placeholder={
-                  attachedFiles.length > 0
-                    ? 'Ajouter un message...'
-                    : 'Posez votre question à Eyano...'
+                  imageMode
+                    ? "Décrivez l'image à créer..."
+                    : attachedFiles.length > 0
+                      ? 'Ajouter un message...'
+                      : 'Posez votre question à Eyano...'
                 }
                 maxLength={MAX_CHARS}
                 rows={1}
@@ -807,6 +843,28 @@ export function Composer({ onRequireLogin }: ComposerProps) {
 
         {dropdownOpen && (
           <div className="absolute bottom-full left-0 mb-3 w-56 rounded-2xl bg-surface/95 backdrop-blur-xl border border-border shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 overflow-hidden p-1.5">
+            {canCreateImages && (
+              <button
+                type="button"
+                onClick={() => {
+                  setImageMode(true);
+                  setDropdownOpen(false);
+                  textareaRef.current?.focus();
+                }}
+                className="group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-foreground/60 hover:bg-brand/[8%] hover:text-foreground active:scale-[0.98] transition-all duration-150 cursor-pointer"
+              >
+                <Sparkles className="h-4 w-4 text-foreground/30 group-hover:text-brand transition-colors" />
+
+                <span className="text-[13px] font-medium">
+                  Créer une image
+                </span>
+
+                <span className="ml-auto text-[11px] text-foreground/15 group-hover:text-foreground/25 transition-colors">
+                  Kepler
+                </span>
+              </button>
+            )}
+
             <button
               type="button"
               onClick={() => {
