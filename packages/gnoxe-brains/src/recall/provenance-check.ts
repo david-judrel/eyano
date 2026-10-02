@@ -247,11 +247,29 @@ export function buildProvenanceCheck(
   maxContextMessages: number,
   coverage?: HistoryCoverage
 ): string | null {
+  const data = resolveProvenanceData(visible, messages, maxContextMessages, coverage);
+  return data ? data.block : null;
+}
+
+/** Bloc de provenance et conclusion calculee par le code (etape 44). */
+export interface ProvenanceData {
+  block: string;
+  /** FOUND seulement : un PARTIAL n'est pas une preuve conclusive. */
+  found: boolean;
+}
+
+export function resolveProvenanceData(
+  visible: ChatMessage[],
+  messages: ChatMessage[],
+  maxContextMessages: number,
+  coverage?: HistoryCoverage
+): ProvenanceData | null {
   const last = visible[visible.length - 1];
   if (!last || last.role !== 'user') return null;
 
   const claim = detectProvenanceClaim(last.content);
   if (claim === null) return null;
 
-  return formatProvenanceCheck(checkProvenance(messages, claim, maxContextMessages, coverage));
+  const evidence = checkProvenance(messages, claim, maxContextMessages, coverage);
+  return { block: formatProvenanceCheck(evidence), found: evidence.status === 'found' };
 }

@@ -26,6 +26,9 @@ import { HistoryCoverage, deletedTurns, normalizeCoverage } from './history-cove
 
 export const RECALL_LOOKUP_HEAD = 'RECENT CONTEXT LOOKUP';
 
+/** Provenance d'un message restitue hors fenetre (etape 42). */
+export const STORED_SOURCE = 'stored history, not in the visible context';
+
 /** Ordinals francais, accents retires avant comparaison. */
 const ORDINALS = [
   'premier|premiere',
@@ -153,6 +156,11 @@ export interface RecallPart {
   status: 'found' | 'not_available' | 'no_reply';
   position?: number;
   content?: string;
+  /**
+   * Etape 42 : trouve dans l'historique STOCKE mais hors de la fenetre
+   * transmise au modele. Absent pour un message visible (bloc e35 intact).
+   */
+  outsideWindow?: true;
 }
 
 export interface RecallLookup {
@@ -200,13 +208,20 @@ export interface RecallLookup {
  * des tours (`coverage`), le k-ieme message utilisateur fourni est le tour
  * `firstTurn + k - 1`, jamais le tour k. Sans couverture connue, aucun
  * numero n'est resolu : mieux vaut NOT_AVAILABLE qu'un contenu faux.
+ *
+ * Etape 42 : un message STOCKE est restitue meme hors fenetre, marque
+ * `outsideWindow`. Seul ce qui n'est plus stocke reste NOT_AVAILABLE. La
+ * fenetre n'est pas elargie : le modele recoit une donnee, pas un contexte.
+ * `storedRecall: false` retablit le contrat e35-e41 (visible seulement),
+ * pour le controle experimental uniquement.
  */
 export function resolveRecallTurn(
   messages: ChatMessage[],
   turn: number,
   maxContextMessages: number,
   target: RecallTarget = 'user',
-  coverage?: HistoryCoverage
+  coverage?: HistoryCoverage,
+  storedRecall: boolean = true
 ): RecallLookup {
   const deleted = deletedTurns(normalizeCoverage(coverage));
   const total = messages.length;
@@ -214,6 +229,12 @@ export function resolveRecallTurn(
   const visibleFirst = total - visible + 1;
   const visibleLast = total;
   const isVisible = (position: number) => position >= visibleFirst && position <= visibleLast;
+  const partAt = (position: number): RecallPart => {
+    const content = messages[position - 1].content;
+    if (isVisible(position)) return { status: 'found', position, content };
+    if (storedRecall) return { status: 'found', position, content, outsideWindow: true };
+    return { status: 'not_available', position };
+  };
 
   const userPositions: number[] = [];
   for (let index = 0; index < total; index += 1) {
@@ -266,12 +287,7 @@ export function resolveRecallTurn(
     // supprime peut subsister, en tete d'historique, avant toute question.
     const orphan =
       turn === offset ? findReply(messages, 0, userPositions[0] ?? total + 1) : null;
-    const assistant: RecallPart =
-      orphan === null
-        ? { status: 'not_available' }
-        : isVisible(orphan)
-          ? { status: 'found', position: orphan, content: messages[orphan - 1].content }
-          : { status: 'not_available', position: orphan };
+    const assistant: RecallPart = orphan === null ? { status: 'not_available' } : partAt(orphan);
     return {
       ...base,
       status: 'not_available',
@@ -283,23 +299,11 @@ export function resolveRecallTurn(
 
   const index = turn - offset - 1;
   const position = userPositions[index];
-  const user: RecallPart = isVisible(position)
-    ? { status: 'found', position, content: messages[position - 1].content }
-    : { status: 'not_available', position };
+  const user = partAt(position);
 
   const replyPosition = findReply(messages, position, userPositions[index + 1] ?? total + 1);
-  let assistant: RecallPart;
-  if (replyPosition === null) {
-    assistant = { status: 'no_reply' };
-  } else if (isVisible(replyPosition)) {
-    assistant = {
-      status: 'found',
-      position: replyPosition,
-      content: messages[replyPosition - 1].content,
-    };
-  } else {
-    assistant = { status: 'not_available', position: replyPosition };
-  }
+  const assistant: RecallPart =
+    replyPosition === null ? { status: 'no_reply' } : partAt(replyPosition);
 
   if (user.status !== 'found') {
     return { ...base, status: 'not_available', reason: 'out_of_window', user, assistant };
@@ -367,7 +371,13 @@ function formatUserLookup(result: RecallLookup): string {
 
   if (result.status === 'found') {
     lines.push('Requested content: the user message of that turn');
-    lines.push(`Message position: ${result.messagePosition}`);
+    // Etape 42 : hors fenetre, une position de STOCKAGE n'apprendrait rien
+    // au modele et rejouerait la confusion d'e37 ; on donne la source.
+    lines.push(
+      result.user.outsideWindow
+        ? `Source: ${STORED_SOURCE}`
+        : `Message position: ${result.messagePosition}`
+    );
     lines.push('Message:');
     lines.push(`"${result.message}"`);
     lines.push('');
@@ -384,7 +394,9 @@ function pushPart(lines: string[], prefix: string, label: string, part: RecallPa
   lines.push(`${label}: ${prefix}_${part.status.toUpperCase()}`);
 
   if (part.status === 'found') {
-    lines.push(`${label} position: ${part.position}`);
+    lines.push(
+      part.outsideWindow ? `${label} source: ${STORED_SOURCE}` : `${label} position: ${part.position}`
+    );
     lines.push(`${label} content:`);
     lines.push(`"${part.content}"`);
   } else if (part.status === 'no_reply') {
@@ -441,8 +453,30 @@ export function buildRecallLookup(
   visible: ChatMessage[],
   messages: ChatMessage[],
   maxContextMessages: number,
-  coverage?: HistoryCoverage
+  coverage?: HistoryCoverage,
+  storedRecall: boolean = true
 ): string | null {
+  const data = resolveRecallData(visible, messages, maxContextMessages, coverage, storedRecall);
+  return data ? data.block : null;
+}
+
+/** Bloc de rappel et conclusion calculee par le code (etape 44). */
+export interface RecallData {
+  block: string;
+  /**
+   * Tout ce que la question demande a ete trouve (cible user, assistant,
+   * ou les deux pour `both`). Un resultat partiel n'est PAS conclusif.
+   */
+  found: boolean;
+}
+
+export function resolveRecallData(
+  visible: ChatMessage[],
+  messages: ChatMessage[],
+  maxContextMessages: number,
+  coverage?: HistoryCoverage,
+  storedRecall: boolean = true
+): RecallData | null {
   const last = visible[visible.length - 1];
   if (!last || last.role !== 'user') return null;
 
@@ -450,5 +484,12 @@ export function buildRecallLookup(
   if (turn === null) return null;
 
   const target = detectRecallTarget(last.content);
-  return formatRecallLookup(resolveRecallTurn(messages, turn, maxContextMessages, target, coverage));
+  const result = resolveRecallTurn(messages, turn, maxContextMessages, target, coverage, storedRecall);
+  const parts =
+    target === 'user' ? [result.user] : target === 'assistant' ? [result.assistant] : [result.user, result.assistant];
+
+  return {
+    block: formatRecallLookup(result),
+    found: parts.every((part) => part.status === 'found'),
+  };
 }

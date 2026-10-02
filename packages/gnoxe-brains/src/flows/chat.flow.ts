@@ -29,6 +29,10 @@ export interface ChatFlowInput {
    * historique complet. Voir `ChatContextOptions.historyCoverage`.
    */
   historyCoverage?: HistoryCoverage;
+  /** Voir `ChatContextOptions.recallStoredHistory` : controle experimental. */
+  recallStoredHistory?: boolean;
+  /** Voir `ChatContextOptions.recallGuard` : defaut conditionnel (Recall V1). */
+  recallGuard?: boolean | 'conditional';
 }
 
 export interface ChatFlowOutput {
@@ -112,6 +116,8 @@ async function prepareChat(input: ChatFlowInput): Promise<{
       recallResolver: input.recallResolver,
       provenanceCheck: input.provenanceCheck,
       historyCoverage: input.historyCoverage,
+      recallStoredHistory: input.recallStoredHistory,
+      recallGuard: input.recallGuard,
     }
   );
   const model = input.model || DEFAULT_MODEL;

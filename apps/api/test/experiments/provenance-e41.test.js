@@ -109,13 +109,19 @@ test('P5 : tour 20 FOUND, contenu exact', () => {
   assert.ok(block.includes('"On fixe la date du lancement public ?"'));
 });
 
-test('P6 : reponse du tour 12 stockee mais non transmise, pas supprimee', () => {
-  const block = last(probe('P6'));
-  assert.ok(block.includes('Assistant reply: ASSISTANT_NOT_AVAILABLE'));
-  assert.ok(block.includes('Unavailable user turns: 1-15'));
-  assert.ok(block.includes('Deleted user turns: 1-10'));
-  assert.equal(block.includes('tour de rôle'), false);
-});
+test(
+  'P6 : reponse du tour 12 stockee mais non transmise, pas supprimee',
+  {
+    skip: 'recall contract changed by É42; original É41.6 result remains reproducible at e709ba9',
+  },
+  () => {
+    const block = last(probe('P6'));
+    assert.ok(block.includes('Assistant reply: ASSISTANT_NOT_AVAILABLE'));
+    assert.ok(block.includes('Unavailable user turns: 1-15'));
+    assert.ok(block.includes('Deleted user turns: 1-10'));
+    assert.equal(block.includes('tour de rôle'), false);
+  }
+);
 
 test('OFF : aucun bloc de donnees, couverture toujours annoncee', () => {
   for (const id of ['P1', 'P4']) {

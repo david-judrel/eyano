@@ -1,8 +1,8 @@
 import { ChatMessage } from '@eyano/types';
-import { applyRecallGuard } from './recall-guard';
-import { buildRecallLookup } from '../recall/recall-resolver';
+import { applyRecallGuard, attachRecallData } from './recall-guard';
+import { resolveRecallData } from '../recall/recall-resolver';
 import { describeVisibleTurns, missingTurns } from '../recall/visible-turns';
-import { buildProvenanceCheck } from '../recall/provenance-check';
+import { resolveProvenanceData } from '../recall/provenance-check';
 import { HistoryCoverage, isPartialHistory, normalizeCoverage } from '../recall/history-coverage';
 
 /**
@@ -87,6 +87,25 @@ export interface ChatContextOptions {
    * sinon bornes, resolver et check numerotent et cherchent faux.
    */
   historyCoverage?: HistoryCoverage;
+  /**
+   * Etape 42 : le resolver restitue un message stocke hors fenetre (defaut).
+   * `false` retablit le contrat e35-e41 (visible seulement) et sert
+   * UNIQUEMENT au controle experimental.
+   */
+  recallStoredHistory?: boolean;
+  /**
+   * Etape 43 : garde de rappel e34 (defaut : posee). `false` retire le SEUL
+   * texte de la garde ; les blocs resolver et provenance restent au meme
+   * point de contact. Controle experimental uniquement.
+   *
+   * Etape 44 : `'conditional'` retire la garde SEULEMENT si tous les blocs
+   * joints sont des FOUND conclusifs, calcules par le code. NOT_FOUND,
+   * PARTIAL, NOT_AVAILABLE, resultat partiel ou absence de bloc : garde.
+   *
+   * Integration Recall V1 : `'conditional'` est le DEFAUT (option absente).
+   * `true` et `false` ne servent qu'a reproduire les conditions d'e43.
+   */
+  recallGuard?: boolean | 'conditional';
 }
 
 export function buildChatContext(
@@ -144,16 +163,35 @@ export function buildChatContext(
   const lookup =
     options.recallResolver === false
       ? null
-      : buildRecallLookup(recent, messages, maxContextMessages, coverage);
+      : resolveRecallData(
+          recent,
+          messages,
+          maxContextMessages,
+          coverage,
+          options.recallStoredHistory !== false
+        );
   //
   // Provenance Check (etape 38) : meme point de contact, meme principe. Le
   // bloc suit le lookup ; les deux ne se cumulent qu'exceptionnellement.
   const provenance =
     options.provenanceCheck === false
       ? null
-      : buildProvenanceCheck(recent, messages, maxContextMessages, coverage);
-  const data = [lookup, provenance].filter(Boolean).join('\n\n') || null;
-  const visible = applyRecallGuard(recent, data);
+      : resolveProvenanceData(recent, messages, maxContextMessages, coverage);
+  const blocks = [lookup, provenance].filter(
+    (entry): entry is NonNullable<typeof entry> => entry !== null
+  );
+  const data = blocks.map((entry) => entry.block).join('\n\n') || null;
+
+  // Etape 44 : la distinction "rien trouve" / "donnee fournie" est CALCULEE
+  // par le code. La garde e34, utile sur NOT_FOUND et nuisible sur FOUND
+  // (e43), n'est posee que la ou aucune donnee conclusive n'existe.
+  const conclusive = blocks.length > 0 && blocks.every((entry) => entry.found);
+  //
+  // Defaut (integration Recall V1) : conditionnel. `true` force la garde
+  // partout (condition ON d'e43), `false` la retire partout (OFF d'e43).
+  const mode = options.recallGuard ?? 'conditional';
+  const guarded = !(mode === false || (mode === 'conditional' && conclusive));
+  const visible = guarded ? applyRecallGuard(recent, data) : attachRecallData(recent, data);
 
   if (parts.length === 0) {
     return visible;

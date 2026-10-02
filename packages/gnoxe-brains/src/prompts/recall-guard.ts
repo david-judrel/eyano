@@ -61,3 +61,19 @@ export function applyRecallGuard(messages: ChatMessage[], extra?: string | null)
   };
   return guarded;
 }
+
+/**
+ * Etape 43 : les MEMES blocs de donnees, au MEME point de contact, sans la
+ * garde. Controle experimental uniquement (garde ON/OFF a donnees egales).
+ * Contenu produit : celui d'`applyRecallGuard` moins le seul texte
+ * `RECALL_GUARD`.
+ */
+export function attachRecallData(messages: ChatMessage[], data?: string | null): ChatMessage[] {
+  const last = messages[messages.length - 1];
+
+  if (!data || !last || last.role !== 'user') return messages;
+
+  const attached = [...messages];
+  attached[attached.length - 1] = { ...last, content: `${last.content}\n\n${data}` };
+  return attached;
+}

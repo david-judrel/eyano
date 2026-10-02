@@ -37,6 +37,21 @@
  *   node scripts/smoke.js --provenance-e41
  *                                       probes P1-P6 (e41.6), historique et
  *                                       couverture propres a chaque probe
+ *   node scripts/smoke.js --provenance-e42
+ *                                       probes Q1-Q6 (e42), rappel d'un tour
+ *                                       stocke hors fenetre
+ *   node scripts/smoke.js --provenance-e43
+ *                                       probes repris d'e40-e42 (e43, garde ON/OFF)
+ *   node scripts/smoke.js --no-guard     retire le seul texte de la garde e34
+ *                                       (blocs de donnees inchanges) : OFF d'e43
+ *   node scripts/smoke.js --guard-conditional
+ *                                       garde e34 posee seulement sans FOUND
+ *                                       conclusif (e44 ; defaut depuis Recall V1)
+ *   node scripts/smoke.js --guard-always garde toujours posee : condition ON d'e43
+ *                                       (comportement par defaut avant Recall V1)
+ *   node scripts/smoke.js --recall-visible-only
+ *                                       retablit le contrat e35-e41 du resolver
+ *                                       (visible seulement) : controle OFF d'e42
  *   node scripts/smoke.js --no-provenance
  *                                       desactive le Provenance Check (e38) :
  *                                       controle ON/OFF
@@ -56,6 +71,8 @@ const { SEED, PROBES } = require('./smoke/provenance');
 const { PROBES_E39 } = require('./smoke/provenance-e39');
 const { SEED_E40, PROBES_E40 } = require('./smoke/provenance-e40');
 const { PROBES_E41 } = require('./smoke/provenance-e41');
+const { PROBES_E42 } = require('./smoke/provenance-e42');
+const { PROBES_E43 } = require('./smoke/provenance-e43');
 const { scanRevelation } = require('./smoke/detect');
 
 /** Jeux de probes de provenance : chacun avec SON historique pre-ecrit. */
@@ -65,6 +82,8 @@ const PROVENANCE_SETS = {
   e40: { seed: SEED_E40, probes: PROBES_E40 },
   // e41.6 : chaque probe porte son historique, sa couverture et son canal.
   e41: { seed: null, probes: PROBES_E41 },
+  e42: { seed: null, probes: PROBES_E42 },
+  e43: { seed: null, probes: PROBES_E43 },
 };
 
 const API_ROOT = path.join(__dirname, '..');
@@ -73,7 +92,7 @@ const MISSION_CHANNEL = 'admin';
 // ------------------------------------------------------------------ options
 
 function parseArgs(argv) {
-  const options = { dry: false, missions: false, scenario: false, only: null, resolver: true, provenance: false, provenanceSet: 'e38', provenanceCheck: true };
+  const options = { dry: false, missions: false, scenario: false, only: null, resolver: true, provenance: false, provenanceSet: 'e38', provenanceCheck: true, storedRecall: true, guard: undefined };
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -97,6 +116,20 @@ function parseArgs(argv) {
     } else if (arg === '--provenance-e41') {
       options.provenance = true;
       options.provenanceSet = 'e41';
+    } else if (arg === '--provenance-e42') {
+      options.provenance = true;
+      options.provenanceSet = 'e42';
+    } else if (arg === '--provenance-e43') {
+      options.provenance = true;
+      options.provenanceSet = 'e43';
+    } else if (arg === '--no-guard') {
+      options.guard = false;
+    } else if (arg === '--guard-conditional') {
+      options.guard = 'conditional';
+    } else if (arg === '--guard-always') {
+      options.guard = true;
+    } else if (arg === '--recall-visible-only') {
+      options.storedRecall = false;
     } else if (arg === '--no-provenance') {
       options.provenanceCheck = false;
     } else if (arg === '--only') {
@@ -172,7 +205,7 @@ function countApiKeys() {
 
 // --------------------------------------------------------------- chemins
 
-async function runChat(entry, resolver, provenanceCheck) {
+async function runChat(entry, resolver, provenanceCheck, storedRecall, guard) {
   const messages = [
     ...(entry.history || []),
     { role: 'user', content: entry.utterance },
@@ -188,6 +221,8 @@ async function runChat(entry, resolver, provenanceCheck) {
     recallResolver: resolver,
     provenanceCheck,
     historyCoverage: entry.coverage,
+    recallStoredHistory: storedRecall,
+    recallGuard: guard,
   });
 
   return {
@@ -222,7 +257,7 @@ async function runMission(entry) {
  * La reponse est rendue au fur et a mesure : un echec en cours de sequence
  * conserve la transcript deja produite.
  */
-async function runScenario(scenario, resolver, provenanceCheck, onStep) {
+async function runScenario(scenario, resolver, provenanceCheck, storedRecall, guard, onStep) {
   const messages = [];
 
   for (let index = 0; index < scenario.turns.length; index += 1) {
@@ -236,6 +271,8 @@ async function runScenario(scenario, resolver, provenanceCheck, onStep) {
       systemPrompt: buildEyanoContext(),
       recallResolver: resolver,
       provenanceCheck,
+      recallStoredHistory: storedRecall,
+      recallGuard: guard,
     });
 
     messages.push({ role: 'assistant', content: output.content });
@@ -351,6 +388,16 @@ async function main() {
   );
   console.log(`resolver     : ${options.resolver ? 'ON' : 'OFF (garde e34 seule)'}`);
   console.log(`provenance   : ${options.provenanceCheck ? 'ON' : 'OFF'}`);
+  console.log(`rappel stocke: ${options.storedRecall ? 'ON (e42)' : 'OFF (visible seulement)'}`);
+  console.log(
+    `garde e34    : ${
+      options.guard === undefined || options.guard === 'conditional'
+        ? 'CONDITIONNELLE (defaut Recall V1)'
+        : options.guard
+          ? 'TOUJOURS (condition ON d e43)'
+          : 'OFF (blocs de donnees seuls)'
+    }`
+  );
   console.log(`contexte .env: ${loaded ? 'charge' : 'absent'}`);
   console.log(`cles presentes: ${countApiKeys()}`);
 
@@ -370,7 +417,14 @@ async function main() {
     for (const scenario of selected) {
       banner(`Scenario : ${scenario.title} (${scenario.id})`);
       try {
-        await runScenario(scenario, options.resolver, options.provenanceCheck, reportStep);
+        await runScenario(
+          scenario,
+          options.resolver,
+          options.provenanceCheck,
+          options.storedRecall,
+          options.guard,
+          reportStep
+        );
       } catch (error) {
         failures.push(scenario.id);
         console.log(`\n  !! ECHEC : ${error && error.message ? error.message : error}`);
@@ -380,7 +434,16 @@ async function main() {
     banner('Chemin chat');
     for (const entry of selected) {
       try {
-        reportEntry(entry, await runChat(entry, options.resolver, options.provenanceCheck));
+        reportEntry(
+          entry,
+          await runChat(
+            entry,
+            options.resolver,
+            options.provenanceCheck,
+            options.storedRecall,
+            options.guard
+          )
+        );
       } catch (error) {
         failures.push(entry.id);
         reportFailure(entry, error);
