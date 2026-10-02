@@ -37,6 +37,9 @@ test('detection : demandes d image reconnues', () => {
     'Peux-tu créer une image de plage ?',
     'Est-ce que tu peux dessiner un portrait de chat ?',
     'Can you generate an image of a dog?',
+    "Genere moi l'image d'un mouton",
+    'Génère-moi la photo d un coucher de soleil',
+    'crée le logo de mon entreprise',
   ]) {
     assert.equal(detectImageRequest(message), true, message);
   }
@@ -48,6 +51,8 @@ test('detection : conversations ordinaires ignorees', () => {
     'Comment générer une image avec Python ?',
     'Quel genre de musique aimes-tu ?',
     'Tu peux me donner un exemple ?',
+    "Décris-moi l'image que tu imagines",
+    'Fais le résumé de ce texte',
     'Explique-moi ce qu est une image Docker',
     'Peux-tu résumer ce document ?',
     'How do I create an image in Docker?',

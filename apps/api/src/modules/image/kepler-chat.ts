@@ -48,7 +48,7 @@ const EN_NOUNS = 'image|images|picture|pictures|illustration|illustrations|drawi
 
 /** Verbe (eventuellement -moi), determinant, au plus un mot, puis l'objet. */
 const FR_REQUEST = new RegExp(
-  `\\b(?:${FR_VERBS})(?:-(?:moi|nous|lui))?\\s+(?:(?:moi|nous)\\s+)?(?:une|un|des|deux|trois|quatre)\\s+(?:\\S+\\s+)?(?:${FR_NOUNS})\\b`
+  `\\b(?:${FR_VERBS})(?:-(?:moi|nous|lui))?\\s+(?:(?:moi|nous)\\s+)?(?:(?:une|un|des|deux|trois|quatre|le|la|les|mon|ma|mes)\\s+|l')(?:\\S+\\s+)?(?:${FR_NOUNS})\\b`
 );
 const EN_REQUEST = new RegExp(
   `\\b(?:${EN_VERBS})\\s+(?:me\\s+|us\\s+)?(?:an?|some|two|three|\\d+)\\s+(?:\\S+\\s+)?(?:${EN_NOUNS})\\b`
