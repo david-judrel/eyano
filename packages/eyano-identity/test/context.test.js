@@ -169,3 +169,16 @@ test('le contexte est une instruction complete, pas un fragment', () => {
 
   assert.deepEqual(flatten(CONTEXT).length, 1, 'une seule chaine, aucune accumulation');
 });
+
+// --------------------------------------- nettoyage A.2 : note de canal
+
+test('A.2 : la note WhatsApp n apparait que pour le canal WhatsApp', () => {
+  const whatsapp = buildEyanoContext({ channel: 'whatsapp' });
+  const note = 'Canal actuel : L\'utilisateur te contacte via WhatsApp.';
+
+  assert.ok(whatsapp.includes(note));
+  assert.ok(whatsapp.includes('images et documents texte - analyse-les'));
+  assert.ok(whatsapp.includes('Fichiers non supportés ou trop lourds → explique poliment.'));
+  assert.equal(buildEyanoContext().includes('Canal actuel'), false, 'web : inchange');
+  assert.equal(buildEyanoContext({ channel: 'admin' }).includes('Canal actuel'), false, 'missions : inchange');
+});

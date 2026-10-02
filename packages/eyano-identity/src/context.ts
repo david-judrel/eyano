@@ -52,6 +52,15 @@ export function buildEyanoContext(options: EyanoContextOptions = {}): string {
     return `- ${current ? '[contexte actuel] ' : ''}${entry.context} : ${entry.style}`;
   });
 
+  // Notes de canal : seulement pour le contexte actuel. Sans canal reconnu,
+  // la sortie est identique a l'octet pres a ce qu'elle etait avant.
+  const channelNotes = identity.communicationStyle.adaptations
+    .filter(
+      (entry) =>
+        Boolean(channel) && Boolean(entry.channelNote) && entry.context.toLowerCase().includes(channel!)
+    )
+    .map((entry) => `Canal actuel : ${entry.channelNote}`);
+
   const facets = identity.selfDescription.facets.map(
     (facet) => `- ${facet.aspect} : ${facet.text}`
   );
@@ -84,6 +93,7 @@ export function buildEyanoContext(options: EyanoContextOptions = {}): string {
     identity.communicationStyle.register,
     'Adaptation au contexte :',
     adaptations.join('\n'),
+    ...channelNotes,
 
     '### Règles de conduite',
     numbered(identity.behavioralRules),

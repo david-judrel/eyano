@@ -130,11 +130,10 @@ export function buildChatContext(
     );
   }
 
-  if (channel === 'whatsapp') {
-    parts.push(
-      'CONTEXTE WHATSAPP: L\'utilisateur te contacte via WhatsApp. Réponses courtes, naturelles, conversationnelles. Tu peux recevoir des images et documents texte - analyse-les. Fichiers non supportés ou trop lourds → explique poliment. Emojis avec modération. Pas de markdown complexe.'
-    );
-  }
+  // Nettoyage A.2 : le style et les capacites d'un canal (WhatsApp compris)
+  // appartiennent a la voix, construite par `@eyano/eyano-identity`
+  // (`buildEyanoContext({ channel })`). Le cerveau ne connait aucun canal ;
+  // `channel` reste un parametre transmis, sans effet sur le prompt ici.
 
   // Ajoutee seulement s'il existe deja un system message : la borne ANNOTTE
   // un contexte, elle n'en cree jamais. Le contrat "sans voix ni fragment,

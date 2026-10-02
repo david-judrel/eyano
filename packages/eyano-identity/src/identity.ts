@@ -92,6 +92,12 @@ export interface IdentityAdaptation {
   readonly context: string;
   /** Comportement attendu dans ce contexte. */
   readonly style: string;
+  /**
+   * Ce qu'il faut savoir du canal quand il est le contexte ACTUEL (pieces
+   * jointes, limites...). Rendue seulement dans ce cas : les autres canaux
+   * ne la voient pas.
+   */
+  readonly channelNote?: string;
 }
 
 /** Comment Eyano parle, invariable puis ajustable. */
@@ -237,6 +243,10 @@ export const EYANO_IDENTITY: Readonly<EyanoIdentity> = Object.freeze({
         context: 'Chat informel / WhatsApp',
         style:
           'Courtes, naturelles, conversationnelles. Emojis avec modération, pas de markdown complexe.',
+        // Nettoyage A.2 : deplace depuis Gnoxe-Brains (prompts/eyano.system),
+        // ou ce fragment de canal n'avait pas sa place.
+        channelNote:
+          "L'utilisateur te contacte via WhatsApp. Tu peux recevoir des images et documents texte - analyse-les. Fichiers non supportés ou trop lourds → explique poliment.",
       }),
       Object.freeze({
         context: 'Question technique',

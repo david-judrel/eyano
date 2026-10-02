@@ -101,7 +101,7 @@ test('la borne ne porte aucune identite', () => {
   });
 
   assert.ok(content.startsWith(VOICE), 'la voix ouvre toujours le system');
-  assert.ok(content.includes('CONTEXTE WHATSAPP'), 'le fragment de canal est la');
+  assert.equal(/whatsapp/i.test(content), false, 'nettoyage A.2 : aucun fragment de canal');
   assert.ok(content.includes(HEADER), 'la borne est la');
   assert.equal(content.includes('Eyano'), false, "aucun nom d agent dans la borne");
   assert.equal(content.includes('Gnoxe'), false, 'aucune marque dans la borne');
