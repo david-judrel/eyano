@@ -2,6 +2,7 @@ import { ModelProvider } from './model-provider';
 import { providerRegistry } from './registry';
 import { GeminiAdapter } from './gemini-adapter';
 import { PollinationsImageAdapter } from './pollinations-image-adapter';
+import { CloudflareImageAdapter } from './cloudflare-image-adapter';
 
 /**
  * Enregistrement par defaut des adapters.
@@ -33,16 +34,22 @@ export function setActiveModelProvider(id: string): void {
 export type ImageProvider = Pick<ModelProvider, 'name' | 'capabilities' | 'generateImage'>;
 
 let pollinations: PollinationsImageAdapter | null = null;
+let cloudflare: CloudflareImageAdapter | null = null;
 
 /**
  * Kepler Image : backend choisi par `KEPLER_IMAGE_BACKEND`. `pollinations`
- * active le transport HTTP de prototype ; toute autre valeur (ou absence)
- * garde le provider actif, comme avant.
+ * et `cloudflare` activent un transport HTTP dedie ; toute autre valeur (ou
+ * absence) garde le provider actif, comme avant.
  */
 export function getImageProvider(): ImageProvider {
-  if (process.env.KEPLER_IMAGE_BACKEND?.trim() === 'pollinations') {
+  const backend = process.env.KEPLER_IMAGE_BACKEND?.trim();
+  if (backend === 'pollinations') {
     pollinations ??= new PollinationsImageAdapter();
     return pollinations;
+  }
+  if (backend === 'cloudflare') {
+    cloudflare ??= new CloudflareImageAdapter();
+    return cloudflare;
   }
   return getModelProvider();
 }

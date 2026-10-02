@@ -362,3 +362,60 @@ test('pollinations : KEPLER_POLLINATIONS_MODEL choisit le modele de creation', a
     else process.env.KEPLER_POLLINATIONS_MODEL = previous;
   }
 });
+
+// ------------------------------------------------ transport cloudflare
+
+const { CloudflareImageAdapter } = require('../dist/providers/cloudflare-image-adapter.js');
+const CF = () => ({ accountId: 'acc-1', token: 'tok-1' });
+
+test('cloudflare : requete authentifiee vers le modele, image brute (SDXL)', async () => {
+  const calls = [];
+  const impl = async (url, init) => { calls.push({ url, init }); return new Response(Buffer.from('PNG!'), { status: 200, headers: { 'content-type': 'image/png' } }); };
+  const result = await new CloudflareImageAdapter(impl, CF).generateImage({ prompt: 'un chien' });
+
+  assert.equal(calls[0].url, 'https://api.cloudflare.com/client/v4/accounts/acc-1/ai/run/@cf/bytedance/stable-diffusion-xl-lightning');
+  assert.equal(calls[0].init.method, 'POST');
+  assert.equal(calls[0].init.headers.Authorization, 'Bearer tok-1');
+  assert.deepEqual(JSON.parse(calls[0].init.body), { prompt: 'un chien', width: 1024, height: 1024 });
+  assert.deepEqual(result, { data: Buffer.from('PNG!').toString('base64'), mimeType: 'image/png', model: DEFAULT_IMAGE_MODEL_ID, provider: 'cloudflare' });
+});
+
+test('cloudflare : reponse JSON { result: { image } } (FLUX) et modele reglable', async () => {
+  const calls = [];
+  const impl = async (url) => { calls.push(url); return new Response(JSON.stringify({ result: { image: JPEG_SOURCE } }), { status: 200, headers: { 'content-type': 'application/json' } }); };
+  const config = () => ({ ...CF(), model: '@cf/black-forest-labs/flux-1-schnell' });
+  const result = await new CloudflareImageAdapter(impl, config).generateImage({ prompt: 'x' });
+  assert.match(calls[0], /\/ai\/run\/@cf\/black-forest-labs\/flux-1-schnell$/);
+  assert.equal(result.data, JPEG_SOURCE);
+  assert.equal(result.mimeType, 'image/jpeg');
+});
+
+test('cloudflare : sans identifiants ou en retouche -> UNAVAILABLE, aucun appel', async () => {
+  let calls = 0;
+  const impl = async () => { calls++; return new Response(''); };
+  await assert.rejects(new CloudflareImageAdapter(impl, () => ({})).generateImage({ prompt: 'x' }), { code: 'UNAVAILABLE' });
+  await assert.rejects(new CloudflareImageAdapter(impl, CF).generateImage({ prompt: 'x', sourceImage: { data: JPEG_SOURCE, mimeType: 'image/jpeg' } }), { code: 'UNAVAILABLE' });
+  assert.equal(calls, 0);
+});
+
+test('cloudflare : statuts -> codes stables, sans detail brut', async () => {
+  for (const [status, code] of [[429, 'QUOTA_EXHAUSTED'], [401, 'UNAVAILABLE'], [400, 'NO_IMAGE'], [500, 'FAILED']]) {
+    const impl = async () => new Response('{"errors":[{"message":"secret backend"}]}', { status });
+    await assert.rejects(new CloudflareImageAdapter(impl, CF).generateImage({ prompt: 'x' }), (error) => {
+      assert.equal(error.code, code, `HTTP ${status}`);
+      assert.equal(/secret backend/.test(error.message), false);
+      return true;
+    });
+  }
+});
+
+test('choix du backend image : cloudflare', () => {
+  const previous = process.env.KEPLER_IMAGE_BACKEND;
+  try {
+    process.env.KEPLER_IMAGE_BACKEND = 'cloudflare';
+    assert.equal(getImageProvider().name, 'cloudflare');
+  } finally {
+    if (previous === undefined) delete process.env.KEPLER_IMAGE_BACKEND;
+    else process.env.KEPLER_IMAGE_BACKEND = previous;
+  }
+});
