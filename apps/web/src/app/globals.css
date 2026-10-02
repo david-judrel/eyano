@@ -6,8 +6,8 @@
 
 /*
  * EYANO — styles globaux. Uniquement ce qui ne peut pas vivre dans un
- * composant : base du document, focus clavier, barre de defilement, rendu
- * Markdown. Aucune valeur en dur : tout passe par les jetons (tokens.css).
+ * composant : base du document, focus clavier, barre de defilement.
+ * Aucune valeur en dur : tout passe par les jetons (tokens.css).
  */
 
 @layer base {
@@ -83,31 +83,4 @@
   .safe-top { padding-top: env(safe-area-inset-top); }
   .safe-bottom { padding-bottom: env(safe-area-inset-bottom); }
   .text-balance { text-wrap: balance; }
-}
-
-/* ---------------------------------------------------------------------------
-   Rendu Markdown des reponses (contenu genere : pas de classes possibles).
-   --------------------------------------------------------------------------- */
-.prose pre {
-  background: rgb(var(--ey-surface));
-  border: 1px solid rgb(var(--ey-border));
-  border-radius: 10px;
-  padding: 16px;
-  overflow-x: auto;
-}
-
-.prose code {
-  font-family: var(--font-mono), ui-monospace, monospace;
-  font-size: 0.8125rem;
-  background: rgb(var(--ey-surface));
-  border: 1px solid rgb(var(--ey-border-subtle));
-  color: rgb(var(--ey-foreground));
-  padding: 1px 6px;
-  border-radius: 6px;
-}
-
-.prose pre code {
-  background: none;
-  border: 0;
-  padding: 0;
 }

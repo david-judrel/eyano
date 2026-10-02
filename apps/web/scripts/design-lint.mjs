@@ -30,13 +30,8 @@ const PENDING = new Set([
   'app/error.tsx',
   'app/global-error.tsx',
   'app/not-found.tsx',
-  'components/ChatView.tsx',
-  'components/Composer.tsx',
-  'components/EmptyChat.tsx',
   'components/ImageGenerating.tsx',
   'components/LoginContent.tsx',
-  'components/MarkdownRenderer.tsx',
-  'components/MessageBubble.tsx',
   'components/MobileInstallGate.tsx',
   'components/ProfileContent.tsx',
 ]);

@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Sidebar } from './layout/Sidebar';
 import { TopBar } from './layout/TopBar';
-import { ChatView } from './ChatView';
+import { ChatView } from './chat/ChatView';
 import { useAppStore } from '@/lib/store';
 import { api } from '@/lib/api';
 import { Logo } from './ui/logo';

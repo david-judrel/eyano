@@ -1,40 +1,22 @@
 'use client';
 
 import { useEffect, useRef, useState, useCallback } from 'react';
+import { Check, Pencil, Sparkles, X } from 'lucide-react';
 import { EmptyChat } from './EmptyChat';
 import { Composer } from './Composer';
-import { MessageBubble } from './MessageBubble';
+import { ChatMessage } from './Message';
+import { ActivityStep } from '@/components/ai/ActivityStep';
+import { IconButton } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
 import { api } from '@/lib/api';
-import { Pencil, Check, X } from 'lucide-react';
 
-function TypingIndicator() {
-  return (
-    <div className="flex gap-3 animate-slide-up">
-      <div className="shrink-0 mt-1">
-        <div className="w-8 h-8 rounded-xl bg-brand/10 border border-brand/15%] flex items-center justify-center overflow-hidden animate-pulse-subtle">
-          <img src="/icon.png" alt="Eyano" className="h-5 w-5 object-contain" />
-        </div>
-      </div>
-      <div className="flex items-center gap-3 px-5 py-3.5 rounded-2xl rounded-bl-md bg-surface-2 border border-border">
-        <div className="flex items-center gap-1.5">
-          <span className="w-[6px] h-[6px] rounded-full bg-brand/60 animate-bounce" style={{ animationDelay: '0ms' }} />
-          <span className="w-[6px] h-[6px] rounded-full bg-brand/60 animate-bounce" style={{ animationDelay: '200ms' }} />
-          <span className="w-[6px] h-[6px] rounded-full bg-brand/60 animate-bounce" style={{ animationDelay: '400ms' }} />
-        </div>
-        <span className="text-[13px] text-brand animate-pulse-subtle">Eyano reflechit...</span>
-      </div>
-    </div>
-  );
-}
-
+/** Titre de la conversation, renommable sur place. */
 function ConversationHeader() {
   const { activeConversationId, conversations, updateConversation } = useAppStore();
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState('');
 
   const conversation = conversations.find((c) => c.id === activeConversationId);
-
   if (!conversation) return null;
 
   const handleSave = async () => {
@@ -46,35 +28,36 @@ function ConversationHeader() {
   };
 
   return (
-    <div className="flex items-center gap-2 py-2">
+    <div className="flex h-12 items-center gap-1">
       {isEditing ? (
-        <div className="flex items-center gap-2">
+        <>
           <input
-            type="text"
+            aria-label="Titre de la conversation"
             value={editTitle}
             onChange={(e) => setEditTitle(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') setIsEditing(false); }}
-            className="bg-transparent border-b border-brand/40 text-foreground text-sm font-medium focus:outline-none px-1 py-0.5 min-w-[200px]"
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') handleSave();
+              if (e.key === 'Escape') setIsEditing(false);
+            }}
+            className="h-8 min-w-0 flex-1 rounded-md border border-border bg-surface px-2 text-label text-foreground"
             autoFocus
           />
-          <button onClick={handleSave} className="p-1 text-brand hover:bg-brand/10 rounded">
-            <Check className="h-4 w-4" />
-          </button>
-          <button onClick={() => setIsEditing(false)} className="p-1 text-foreground/30 hover:text-foreground hover:bg-foreground/10 rounded">
-            <X className="h-4 w-4" />
-          </button>
-        </div>
+          <IconButton label="Valider" icon={Check} size="sm" tooltip={false} onClick={handleSave} />
+          <IconButton label="Annuler" icon={X} size="sm" tooltip={false} onClick={() => setIsEditing(false)} />
+        </>
       ) : (
-        <div className="flex items-center gap-2 group">
-          <h2 className="text-sm font-medium text-foreground/60 truncate max-w-[300px]">
-            {conversation.title || 'Nouvelle conversation'}
-          </h2>
-          <button
-            onClick={() => { setEditTitle(conversation.title || ''); setIsEditing(true); }}
-            className="p-1 text-foreground/20 hover:text-foreground/50 opacity-0 group-hover:opacity-100 transition-all rounded hover:bg-surface-2"
-          >
-            <Pencil className="h-3 w-3" />
-          </button>
+        <div className="group flex min-w-0 items-center gap-1">
+          <h2 className="truncate text-label text-foreground-secondary">{conversation.title || 'Nouvelle conversation'}</h2>
+          <IconButton
+            label="Renommer la conversation"
+            icon={Pencil}
+            size="sm"
+            className="lg:opacity-0 lg:focus-visible:opacity-100 lg:group-hover:opacity-100"
+            onClick={() => {
+              setEditTitle(conversation.title || '');
+              setIsEditing(true);
+            }}
+          />
         </div>
       )}
     </div>
@@ -224,27 +207,27 @@ export function ChatView({ onRequireLogin }: ChatViewProps) {
   }, [activeConversationId, isStreaming, messages, selectedModel, user]);
 
   return (
-    <div className="flex flex-col w-full h-full overflow-hidden">
+    <div className="flex h-full w-full flex-col overflow-hidden">
       {activeConversationId && (
-        <div className="shrink-0 z-10 bg-background/80 backdrop-blur-xl border-b border-border px-4 lg:px-6">
-          <div className="max-w-[800px] mx-auto">
+        <div className="shrink-0 border-b border-border-subtle bg-background">
+          <div className="mx-auto max-w-content px-4 sm:px-6">
             <ConversationHeader />
           </div>
         </div>
       )}
 
-      <div className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden custom-scrollbar">
+      <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
         {activeConversationId ? (
-          <div className="max-w-[800px] mx-auto px-4 lg:px-6 py-6 space-y-6">
+          <div className="mx-auto flex max-w-content flex-col gap-8 px-4 py-8 sm:px-6">
             {messages.map((msg) => (
-              <MessageBubble
+              <ChatMessage
                 key={msg.id}
                 message={msg}
                 isStreaming={msg.id === streamingMessageId && isStreaming}
                 onRetry={msg.status === 'FAILED' ? () => handleRetry(msg.id) : undefined}
               />
             ))}
-            {isStreaming && !streamingMessageId && <TypingIndicator />}
+            {isStreaming && !streamingMessageId && <ActivityStep icon={Sparkles} label="Eyano réfléchit…" status="running" />}
             <div ref={messagesEndRef} />
           </div>
         ) : (
@@ -252,15 +235,11 @@ export function ChatView({ onRequireLogin }: ChatViewProps) {
         )}
       </div>
 
-      <div className="shrink-0 z-30 w-full bg-gradient-to-t from-background via-background/95 to-transparent pt-8 pb-4 px-4 safe-bottom">
-        <div className="w-full min-w-0 max-w-[700px] mx-auto">
+      <div className="safe-bottom shrink-0 bg-background px-4 pb-3 pt-2 sm:px-6">
+        <div className="mx-auto w-full min-w-0 max-w-content">
           <Composer onRequireLogin={onRequireLogin} />
         </div>
       </div>
     </div>
   );
-}
-
-function cn(...classes: (string | boolean | undefined)[]) {
-  return classes.filter(Boolean).join(' ');
 }

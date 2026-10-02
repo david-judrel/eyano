@@ -2,23 +2,15 @@
 
 import { useRef, useEffect, useState, useCallback } from 'react';
 
-import {
-  Send,
-  X,
-  Image,
-  FileText,
-  Paperclip,
-  StopCircle,
-  Loader2,
-  Camera,
-  Sparkles,
-} from 'lucide-react';
+import { ArrowUp, Camera, FileText, Image, Paperclip, Sparkles, Square, X } from 'lucide-react';
 
 import { useRouter } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/toast';
+import { IconButton } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/overlay';
 
 interface AttachedFile {
   file: File;
@@ -102,7 +94,6 @@ export function Composer({ onRequireLogin }: ComposerProps) {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const dropdownRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   // Verrou anti-double-soumission
@@ -189,26 +180,6 @@ export function Composer({ onRequireLogin }: ComposerProps) {
       )}px`;
     }
   }, [input]);
-
-  /**
-   * Fermer le dropdown lorsqu'on clique ailleurs
-   */
-  useEffect(() => {
-    const handleClickOutside = (e: MouseEvent) => {
-      if (
-        dropdownRef.current &&
-        !dropdownRef.current.contains(e.target as Node)
-      ) {
-        setDropdownOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handleClickOutside);
-
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
 
   /**
    * Nettoyage des previews lorsque le composant est démonté
@@ -662,267 +633,147 @@ export function Composer({ onRequireLogin }: ComposerProps) {
     !isSubmittingRef.current;
 
   return (
-    <div className="w-full min-w-0 pb-2 pt-1 relative">
+    <div className="relative w-full min-w-0">
       {isDragging && (
         <div
-          className="absolute inset-x-0 bottom-0 top-[-100px] z-50 flex flex-col items-center justify-center bg-background/90 backdrop-blur-md rounded-3xl border-2 border-dashed border-brand/50 animate-in fade-in"
+          className="absolute inset-0 z-raised flex flex-col items-center justify-center gap-2 rounded-xl border-2 border-dashed border-focus bg-background animate-fade-in"
           onDrop={handleDrop}
           onDragOver={(e) => e.preventDefault()}
           onDragLeave={() => setIsDragging(false)}
         >
-          <div className="p-4 rounded-full bg-brand/10 mb-3">
-            <Paperclip className="h-8 w-8 text-brand" />
-          </div>
-
-          <span className="text-lg font-semibold text-foreground">
-            Déposez vos fichiers ici
-          </span>
+          <Paperclip className="icon-md text-foreground-muted" aria-hidden />
+          <span className="text-label text-foreground">Déposez vos fichiers ici</span>
         </div>
       )}
 
       <div
-        ref={dropdownRef}
-        className="relative w-full"
+        className={cn(
+          'flex w-full min-w-0 flex-col rounded-xl border bg-surface-raised shadow-subtle transition-colors duration-fast',
+          isDragging ? 'border-focus' : 'border-border hover:border-border-strong focus-within:border-focus'
+        )}
+        onDrop={handleDrop}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setIsDragging(true);
+        }}
+        onDragLeave={() => setIsDragging(false)}
       >
-        <div
-          className={cn(
-            'relative flex flex-col rounded-[2rem] transition-all duration-300 w-full min-w-0 overflow-hidden',
-            'border backdrop-blur-xl',
-
-            attachedFiles.length > 0
-              ? 'bg-surface/95 border-brand/30 shadow-[0_0_25px_rgba(57,255,20,0.08)]'
-              : isDragging
-                ? 'border-brand/40 bg-surface/90 shadow-[0_0_30px_rgba(57,255,20,0.1)]'
-                : canSend
-                  ? 'border-brand/20 bg-surface/80 shadow-[0_0_15px_rgba(57,255,20,0.05)]'
-                  : 'border-border bg-surface/60 hover:border-border-strong'
-          )}
-
-          onDrop={handleDrop}
-
-          onDragOver={(e) => {
-            e.preventDefault();
-            setIsDragging(true);
-          }}
-
-          onDragLeave={() => setIsDragging(false)}
-        >
-          {attachedFiles.length > 0 && (
-            <div className="flex flex-wrap gap-2 px-4 pt-4 pb-2 animate-in slide-in-from-top-2 duration-300">
-              {attachedFiles.map((af, i) => (
-                <div
-                  key={`${af.file.name}-${i}`}
-                  className="relative group/file shrink-0"
-                >
-                  {af.type === 'image' && af.preview ? (
-                    <div className="w-[80px] h-[80px] sm:w-[100px] sm:h-[100px] rounded-xl overflow-hidden border border-border bg-background">
-                      <img
-                        src={af.preview}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  ) : (
-                    <div className="w-[80px] h-[80px] sm:w-[100px] sm:h-[100px] rounded-xl border border-border bg-background flex flex-col items-center justify-center gap-1.5 p-2">
-                      <div className="w-8 h-8 rounded-lg bg-brand/[10%] border border-brand/20 flex items-center justify-center">
-                        <span className="text-[9px] font-bold text-brand">
-                          {getFileIcon(af.file.name)}
-                        </span>
-                      </div>
-
-                      <span className="text-[9px] text-foreground/50 font-medium truncate w-full text-center px-1">
-                        {af.file.name}
-                      </span>
-                    </div>
-                  )}
-
-                  <button
-                    type="button"
-                    onClick={() => removeFile(i)}
-                    className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-surface-3 border border-border flex items-center justify-center opacity-0 group-hover/file:opacity-100 transition-all hover:bg-red-500/20 hover:border-red-500/40 z-10"
-                  >
-                    <X className="h-3 w-3 text-foreground/60" />
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {imageMode && (
-            <div className="px-4 pt-3">
-              <button
-                type="button"
-                onClick={() => setImageMode(false)}
-                className="group inline-flex items-center gap-1.5 rounded-full border border-brand/25 bg-brand/[8%] px-3 py-1 text-xs font-medium text-brand hover:bg-brand/[14%] transition-colors"
-                title="Retirer le mode image"
-              >
-                <Sparkles className="h-3.5 w-3.5" />
-                Image
-                <X className="h-3 w-3 opacity-60 group-hover:opacity-100" />
-              </button>
-            </div>
-          )}
-
-          <div className="flex items-end gap-2 px-3 py-3">
-            <div className="shrink-0 mb-1">
-              <button
-                type="button"
-                onClick={() => setDropdownOpen(!dropdownOpen)}
-                className={cn(
-                  'p-2.5 rounded-xl transition-all duration-200 border',
-
-                  dropdownOpen
-                    ? 'text-brand bg-brand/[8%] border-brand/20 rotate-45'
-                    : 'text-foreground/25 hover:text-foreground/60 hover:bg-surface-2 border-transparent hover:border-border'
-                )}
-              >
-                <Paperclip className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="flex-1 min-w-0 relative">
-              <textarea
-                ref={textareaRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={handleKeyDown}
-                onPaste={handlePaste}
-                placeholder={
-                  imageMode
-                    ? "Décrivez l'image à créer..."
-                    : attachedFiles.length > 0
-                      ? 'Ajouter un message...'
-                      : 'Posez votre question à Eyano...'
-                }
-                maxLength={MAX_CHARS}
-                rows={1}
-                className="w-full min-w-0 bg-transparent resize-none text-[15px] leading-relaxed py-2.5 pr-2 text-foreground/90 placeholder:text-foreground/25 focus:outline-none focus:ring-0 overflow-y-auto overflow-x-hidden break-words whitespace-pre-wrap scrollbar-hide"
-                style={{ maxHeight: '200px' }}
-              />
-              {input.length > MAX_CHARS * 0.8 && (
-                <div className={cn(
-                  "absolute -bottom-1 right-0 text-[10px] font-medium tabular-nums",
-                  input.length >= MAX_CHARS ? "text-red-400" : "text-muted"
-                )}>
-                  {input.length}/{MAX_CHARS}
-                </div>
-              )}
-            </div>
-
-            {isStreaming ? (
-              <button
-                type="button"
-                onClick={handleStop}
-                className="shrink-0 p-2.5 rounded-full bg-red-500 text-white hover:bg-red-600 active:scale-90 transition-all duration-200 shadow-[0_0_15px_rgba(239,68,68,0.3)] mb-1 animate-pulse-subtle"
-              >
-                <StopCircle className="h-4 w-4" />
-              </button>
-            ) : (
-              <button
-                type="button"
-                onClick={handleSubmit}
-                disabled={!canSend}
-                className={cn(
-                  'shrink-0 p-2.5 rounded-full transition-all duration-200 flex items-center justify-center mb-1',
-                  'disabled:opacity-15 disabled:cursor-not-allowed',
-
-                  canSend
-                    ? 'bg-brand text-brand-foreground hover:brightness-110 active:scale-90 shadow-[0_0_15px_rgba(57,255,20,0.25)]'
-                    : 'bg-border text-foreground/20'
-                )}
-              >
-                {isSubmittingRef.current ? (
-                  <Loader2 className="h-4 w-4 animate-spin" />
+        {attachedFiles.length > 0 && (
+          <ul aria-label="Pièces jointes" className="flex flex-wrap gap-2 px-3 pt-3">
+            {attachedFiles.map((af, i) => (
+              <li key={`${af.file.name}-${i}`} className="relative shrink-0">
+                {af.type === 'image' && af.preview ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- apercu local (blob) avant envoi
+                  <img src={af.preview} alt={af.file.name} className="h-16 w-16 rounded-md border border-border-subtle object-cover" />
                 ) : (
-                  <Send className="h-4 w-4" />
+                  <div className="flex h-16 w-16 flex-col items-center justify-center gap-1 rounded-md border border-border-subtle bg-surface p-1">
+                    <span className="text-caption font-medium text-foreground-secondary">{getFileIcon(af.file.name)}</span>
+                    <span className="w-full truncate text-center text-caption text-foreground-muted">{af.file.name}</span>
+                  </div>
                 )}
-              </button>
-            )}
-          </div>
-        </div>
+                <button
+                  type="button"
+                  aria-label={`Retirer ${af.file.name}`}
+                  onClick={() => removeFile(i)}
+                  className="absolute -right-1.5 -top-1.5 flex h-5 w-5 items-center justify-center rounded-full border border-border bg-surface-overlay text-foreground-secondary shadow-subtle transition-colors duration-fast hover:text-foreground"
+                >
+                  <X className="h-3 w-3" aria-hidden />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
 
-        {dropdownOpen && (
-          <div className="absolute bottom-full left-0 mb-3 w-56 rounded-2xl bg-surface/95 backdrop-blur-xl border border-border shadow-[0_8px_32px_rgba(0,0,0,0.4)] z-50 animate-in fade-in slide-in-from-bottom-2 duration-200 overflow-hidden p-1.5">
-            {canCreateImages && (
-              <button
-                type="button"
-                onClick={() => {
-                  setImageMode(true);
-                  setDropdownOpen(false);
-                  textareaRef.current?.focus();
-                }}
-                className="group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-foreground/60 hover:bg-brand/[8%] hover:text-foreground active:scale-[0.98] transition-all duration-150 cursor-pointer"
-              >
-                <Sparkles className="h-4 w-4 text-foreground/30 group-hover:text-brand transition-colors" />
-
-                <span className="text-[13px] font-medium">
-                  Créer une image
-                </span>
-
-                <span className="ml-auto text-[11px] text-foreground/15 group-hover:text-foreground/25 transition-colors">
-                  Kepler
-                </span>
-              </button>
-            )}
-
+        {imageMode && (
+          <div className="px-3 pt-3">
             <button
               type="button"
-              onClick={() => {
-                imageInputRef.current?.click();
-                setDropdownOpen(false);
-              }}
-              className="group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-foreground/60 hover:bg-brand/[8%] hover:text-foreground active:scale-[0.98] transition-all duration-150 cursor-pointer"
+              onClick={() => setImageMode(false)}
+              aria-label="Retirer le mode image"
+              className="inline-flex h-7 items-center gap-1.5 rounded-full bg-brand-subtle px-3 text-label text-brand-text transition-colors duration-fast hover:bg-selected"
             >
-              <Image className="h-4 w-4 text-foreground/30 group-hover:text-brand transition-colors" />
-
-              <span className="text-[13px] font-medium">
-                Image
-              </span>
-
-              <span className="ml-auto text-[11px] text-foreground/15 group-hover:text-foreground/25 transition-colors">
-                Galerie
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                cameraInputRef.current?.click();
-                setDropdownOpen(false);
-              }}
-              className="group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-foreground/60 hover:bg-brand/[8%] hover:text-foreground active:scale-[0.98] transition-all duration-150 cursor-pointer"
-            >
-              <Camera className="h-4 w-4 text-foreground/30 group-hover:text-brand transition-colors" />
-
-              <span className="text-[13px] font-medium">
-                Caméra
-              </span>
-
-              <span className="ml-auto text-[11px] text-foreground/15 group-hover:text-foreground/25 transition-colors">
-                Photo
-              </span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                fileInputRef.current?.click();
-                setDropdownOpen(false);
-              }}
-              className="group w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-foreground/60 hover:bg-brand/[8%] hover:text-foreground active:scale-[0.98] transition-all duration-150 cursor-pointer"
-            >
-              <FileText className="h-4 w-4 text-foreground/30 group-hover:text-brand transition-colors" />
-
-              <span className="text-[13px] font-medium">
-                Document
-              </span>
-
-              <span className="ml-auto text-[11px] text-foreground/15 group-hover:text-foreground/25 transition-colors">
-                PDF, DOC
-              </span>
+              <Sparkles className="icon-xs" aria-hidden />
+              Image
+              <X className="icon-xs" aria-hidden />
             </button>
           </div>
         )}
+
+        <div className="flex items-end gap-1 p-2">
+          <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+            <DropdownMenuTrigger asChild>
+              <IconButton label="Joindre un fichier ou créer une image" icon={Paperclip} />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="start" className="w-60">
+              {canCreateImages && (
+                <DropdownMenuItem
+                  icon={Sparkles}
+                  hint="Kepler"
+                  onSelect={() => {
+                    setImageMode(true);
+                    setTimeout(() => textareaRef.current?.focus(), 0);
+                  }}
+                >
+                  Créer une image
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem icon={Image} hint="Galerie" onSelect={() => imageInputRef.current?.click()}>
+                Image
+              </DropdownMenuItem>
+              <DropdownMenuItem icon={Camera} hint="Photo" onSelect={() => cameraInputRef.current?.click()}>
+                Caméra
+              </DropdownMenuItem>
+              <DropdownMenuItem icon={FileText} hint="PDF, DOC" onSelect={() => fileInputRef.current?.click()}>
+                Document
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <div className="relative min-w-0 flex-1">
+            <textarea
+              ref={textareaRef}
+              aria-label="Message à Eyano"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onPaste={handlePaste}
+              placeholder={
+                imageMode
+                  ? "Décrivez l'image à créer…"
+                  : attachedFiles.length > 0
+                    ? 'Ajouter un message…'
+                    : 'Posez votre question à Eyano…'
+              }
+              maxLength={MAX_CHARS}
+              rows={1}
+              className="scrollbar-hide block w-full min-w-0 resize-none overflow-y-auto overflow-x-hidden whitespace-pre-wrap break-words bg-transparent px-1 py-2 text-body-md text-foreground placeholder:text-foreground-muted focus-visible:outline-none"
+              style={{ maxHeight: '200px' }}
+            />
+            {input.length > MAX_CHARS * 0.8 && (
+              <div
+                className={cn(
+                  'absolute -bottom-1 right-0 text-caption tabular-nums',
+                  input.length >= MAX_CHARS ? 'text-error' : 'text-foreground-muted'
+                )}
+              >
+                {input.length}/{MAX_CHARS}
+              </div>
+            )}
+          </div>
+
+          {isStreaming ? (
+            <IconButton label="Arrêter la génération" icon={Square} variant="secondary" onClick={handleStop} />
+          ) : (
+            <IconButton
+              label="Envoyer"
+              icon={ArrowUp}
+              variant="primary"
+              disabled={!canSend}
+              loading={isSubmittingRef.current}
+              onClick={handleSubmit}
+            />
+          )}
+        </div>
       </div>
 
       <input
@@ -970,8 +821,8 @@ export function Composer({ onRequireLogin }: ComposerProps) {
         }}
       />
 
-      <p className="text-center text-[10px] text-foreground/15 mt-3 select-none px-4">
-        Eyano peut faire des erreurs. Verifiez les informations importantes.
+      <p className="mt-2 select-none text-center text-caption text-foreground-muted">
+        Eyano peut faire des erreurs. Vérifiez les informations importantes.
       </p>
     </div>
   );
