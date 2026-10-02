@@ -40,7 +40,7 @@ function normalize(text: string): string {
 }
 
 const FR_VERBS =
-  'genere|generer|generes|cree|creer|crees|dessine|dessiner|fais|faire|fait|produis|produire|realise|realiser|illustre|illustrer|imagine|imaginer';
+  'genere|generer|generes|genre|gener|cree|creer|crees|dessine|dessiner|fais|faire|fait|produis|produire|realise|realiser|illustre|illustrer|imagine|imaginer';
 const FR_NOUNS =
   "image|images|illustration|illustrations|dessin|dessins|photo|photos|affiche|affiches|logo|logos|visuel|visuels|portrait|portraits|fond d'ecran|wallpaper";
 const EN_VERBS = 'generate|create|draw|make|paint|render|design';
@@ -55,8 +55,11 @@ const EN_REQUEST = new RegExp(
 );
 /** « Dessine-moi un mouton » : l'imperatif suffit. */
 const FR_DRAW = /\bdessine-(?:moi|nous)\b/;
-/** Questions sur la capacite ou la methode : pas une demande. */
-const META_QUESTION = /^\s*(?:comment|pourquoi|est-ce que tu (?:sais|peux)|sais-tu|how|why|can you|could you)\b/;
+/**
+ * Questions sur la methode : pas une demande. « Peux-tu… », « tu peux… »,
+ * « can you… » restent des demandes (formulation polie la plus courante).
+ */
+const META_QUESTION = /^\s*(?:comment|pourquoi|how|why)\b/;
 
 /**
  * Vrai si le message demande la GENERATION d'une image. Deterministe et

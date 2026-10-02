@@ -32,6 +32,11 @@ test('detection : demandes d image reconnues', () => {
     "Crée-moi une affiche pour un concert",
     'Generate an image of a red fox',
     'draw me a picture of the sea',
+    'tu peux me genre une image de chien?',
+    'Tu peux me générer une image de chien ?',
+    'Peux-tu créer une image de plage ?',
+    'Est-ce que tu peux dessiner un portrait de chat ?',
+    'Can you generate an image of a dog?',
   ]) {
     assert.equal(detectImageRequest(message), true, message);
   }
@@ -41,7 +46,8 @@ test('detection : conversations ordinaires ignorees', () => {
   for (const message of [
     'Bonjour, comment vas-tu ?',
     'Comment générer une image avec Python ?',
-    'Est-ce que tu peux créer une image ?',
+    'Quel genre de musique aimes-tu ?',
+    'Tu peux me donner un exemple ?',
     'Explique-moi ce qu est une image Docker',
     'Peux-tu résumer ce document ?',
     'How do I create an image in Docker?',
