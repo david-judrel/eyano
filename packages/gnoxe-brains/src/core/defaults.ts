@@ -7,7 +7,7 @@ import { MissionEngine } from '../missions/mission-engine';
 import { MissionExecutor } from '../missions/mission-executor';
 import { ToolRegistry, toolRegistry as defaultToolRegistry } from '../tools/registry';
 import { ensureToolsRegistered } from '../tools/bootstrap';
-import { getModelProvider } from '../providers/bootstrap';
+import { getModelProvider, getImageProvider, ImageProvider } from '../providers/bootstrap';
 import { ModelProvider } from '../providers/model-provider';
 import { Orchestrator } from '../orchestrator/orchestrator';
 import { PlanBuilder } from '../orchestrator/planner';
@@ -47,6 +47,11 @@ export interface DefaultExecutorOptions {
  */
 export function resolveDefaultModelProvider(): ModelProvider {
   return getModelProvider();
+}
+
+/** Resout le fournisseur de generation d'images (Kepler Image). */
+export function resolveDefaultImageProvider(): ImageProvider {
+  return getImageProvider();
 }
 
 /** Instancie le pipeline standard : recherche, analyse, verification, redaction. */

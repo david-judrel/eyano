@@ -13,7 +13,7 @@ import { PlanBuilder } from '../orchestrator/planner';
 import { MissionObserver } from '../observability/observer';
 import { GnoxeBrainsConfig, getGnoxeBrainsConfig } from './config';
 import { GNOXE_BRAINS_PERSONALITY, buildGnoxeBrainsInstruction } from './personality';
-import { createDefaultExecutor, resolveDefaultModelProvider } from './defaults';
+import { createDefaultExecutor, resolveDefaultModelProvider, resolveDefaultImageProvider } from './defaults';
 import { modelResolver } from './model-resolver';
 import { providerCapabilityResolver } from './provider-capability-resolver';
 import { executionPolicy } from './execution-policy';
@@ -279,7 +279,9 @@ export class GnoxeBrains {
       );
     }
 
-    const provider = this.resolveProvider();
+    // Un provider injecte (tests) sert aussi les images ; sinon, le backend
+    // d'images configure, qui peut differer de celui du chat.
+    const provider = this.injectedProvider ?? resolveDefaultImageProvider();
     if (!provider.capabilities().imageGeneration || typeof provider.generateImage !== 'function') {
       throw new ImageGenerationError('UNAVAILABLE', "La generation d'images n'est pas disponible.");
     }

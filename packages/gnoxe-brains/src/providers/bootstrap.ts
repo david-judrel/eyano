@@ -1,6 +1,7 @@
 import { ModelProvider } from './model-provider';
 import { providerRegistry } from './registry';
 import { GeminiAdapter } from './gemini-adapter';
+import { PollinationsImageAdapter } from './pollinations-image-adapter';
 
 /**
  * Enregistrement par defaut des adapters.
@@ -26,4 +27,22 @@ export function getModelProvider(): ModelProvider {
 export function setActiveModelProvider(id: string): void {
   ensureProvidersRegistered();
   providerRegistry.setActive(id);
+}
+
+/** Fournisseur de la generation d'images : la sous-partie utile du contrat. */
+export type ImageProvider = Pick<ModelProvider, 'name' | 'capabilities' | 'generateImage'>;
+
+let pollinations: PollinationsImageAdapter | null = null;
+
+/**
+ * Kepler Image : backend choisi par `KEPLER_IMAGE_BACKEND`. `pollinations`
+ * active le transport HTTP de prototype ; toute autre valeur (ou absence)
+ * garde le provider actif, comme avant.
+ */
+export function getImageProvider(): ImageProvider {
+  if (process.env.KEPLER_IMAGE_BACKEND?.trim() === 'pollinations') {
+    pollinations ??= new PollinationsImageAdapter();
+    return pollinations;
+  }
+  return getModelProvider();
 }

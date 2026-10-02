@@ -212,3 +212,79 @@ test('transport : autre erreur -> FAILED, sans le detail brut du backend', async
 test('capacite : le transport declare la generation d images', () => {
   assert.equal(new GeminiAdapter().capabilities().imageGeneration, true);
 });
+
+// ------------------------------------------- second transport (prototype)
+
+const { PollinationsImageAdapter } = require('../dist/providers/pollinations-image-adapter.js');
+const { getImageProvider } = require('../dist/providers/bootstrap.js');
+
+function fakeHttp(status, contentType, body = Buffer.from('JPEG')) {
+  const calls = [];
+  const impl = async (url, init) => {
+    calls.push({ url, init });
+    return new Response(body, { status, headers: { 'content-type': contentType } });
+  };
+  return { calls, impl };
+}
+
+test('pollinations : requete authentifiee, filtre actif, image en base64', async () => {
+  const http = fakeHttp(200, 'image/jpeg');
+  const adapter = new PollinationsImageAdapter(http.impl, () => 'cle-test');
+  const result = await adapter.generateImage({ prompt: 'un chien roux' });
+
+  const url = new URL(http.calls[0].url);
+  assert.equal(decodeURIComponent(url.pathname), '/image/un chien roux');
+  assert.equal(url.searchParams.get('safe'), 'true');
+  assert.equal(url.searchParams.get('model'), 'zimage');
+  assert.equal(http.calls[0].init.headers.Authorization, 'Bearer cle-test');
+  assert.deepEqual(result, {
+    data: Buffer.from('JPEG').toString('base64'),
+    mimeType: 'image/jpeg',
+    model: DEFAULT_IMAGE_MODEL_ID,
+    provider: 'pollinations',
+  });
+});
+
+test('pollinations : sans cle -> UNAVAILABLE, aucun appel', async () => {
+  const http = fakeHttp(200, 'image/jpeg');
+  const adapter = new PollinationsImageAdapter(http.impl, () => undefined);
+  await assert.rejects(adapter.generateImage({ prompt: 'x' }), { code: 'UNAVAILABLE' });
+  assert.equal(http.calls.length, 0);
+});
+
+test('pollinations : statuts HTTP -> codes stables, sans detail brut', async () => {
+  for (const [status, code] of [[401, 'UNAVAILABLE'], [403, 'UNAVAILABLE'], [402, 'QUOTA_EXHAUSTED'], [429, 'QUOTA_EXHAUSTED'], [400, 'NO_IMAGE'], [500, 'FAILED']]) {
+    const http = fakeHttp(status, 'application/json', Buffer.from('{"error":"secret backend"}'));
+    const adapter = new PollinationsImageAdapter(http.impl, () => 'cle-test');
+    await assert.rejects(adapter.generateImage({ prompt: 'x' }), (error) => {
+      assert.equal(error.code, code, `HTTP ${status}`);
+      assert.equal(/secret backend/.test(error.message), false);
+      return true;
+    });
+  }
+});
+
+test('pollinations : reponse qui n est pas une image -> NO_IMAGE ; reseau -> FAILED', async () => {
+  const notImage = new PollinationsImageAdapter(fakeHttp(200, 'application/json').impl, () => 'k');
+  await assert.rejects(notImage.generateImage({ prompt: 'x' }), { code: 'NO_IMAGE' });
+  const down = new PollinationsImageAdapter(async () => { throw new Error('ECONNRESET'); }, () => 'k');
+  await assert.rejects(down.generateImage({ prompt: 'x' }), { code: 'FAILED' });
+});
+
+test('pollinations : modele inconnu -> UNKNOWN_MODEL', async () => {
+  const adapter = new PollinationsImageAdapter(fakeHttp(200, 'image/png').impl, () => 'k');
+  await assert.rejects(adapter.generateImage({ prompt: 'x', model: 'inconnu' }), { code: 'UNKNOWN_MODEL' });
+});
+
+test('choix du backend image : KEPLER_IMAGE_BACKEND, defaut inchange', () => {
+  const previous = process.env.KEPLER_IMAGE_BACKEND;
+  try {
+    delete process.env.KEPLER_IMAGE_BACKEND;
+    assert.notEqual(getImageProvider().name, 'pollinations');
+    process.env.KEPLER_IMAGE_BACKEND = 'pollinations';
+    assert.equal(getImageProvider().name, 'pollinations');
+  } finally {
+    if (previous === undefined) delete process.env.KEPLER_IMAGE_BACKEND;
+    else process.env.KEPLER_IMAGE_BACKEND = previous;
+  }
+});
