@@ -196,3 +196,113 @@ export async function runKeplerInChat(
 
   return { text: KEPLER_SUCCESS_TEXT, attachment };
 }
+
+// ------------------------------------------------- suite d'une image (contexte)
+
+/** Message d'historique tel que lu en base (pieces jointes publiques). */
+export interface KeplerHistoryMessage {
+  role: string;
+  content: string;
+  attachments?: { storageKey?: string | null }[];
+}
+
+/** Vrai si ce message d'Eyano porte une image Kepler. */
+export function isKeplerImageMessage(message: KeplerHistoryMessage): boolean {
+  return message.role === 'assistant' && (message.attachments ?? []).some((a) => a.storageKey === 'db:kepler');
+}
+
+/** Nombre maximal de demandes reprises pour une retouche. */
+const MAX_THREAD = 4;
+
+/**
+ * Demandes de l'utilisateur ayant produit les images les plus recentes, si
+ * la DERNIERE reponse d'Eyano est une image (sinon : aucune). Ordre
+ * chronologique : la demande d'origine puis ses retouches.
+ */
+export function imageThread(history: KeplerHistoryMessage[]): string[] {
+  const prompts: string[] = [];
+  let i = history.length - 1;
+  while (i >= 1 && prompts.length < MAX_THREAD) {
+    const answer = history[i];
+    const request = history[i - 1];
+    if (!isKeplerImageMessage(answer) || request.role !== 'user') break;
+    prompts.unshift(request.content.trim());
+    i -= 2;
+  }
+  return prompts;
+}
+
+/** Indices d'une retouche de l'image precedente. */
+const FOLLOW_UP =
+  /\b(?:plus|moins|mieux|meilleur|meilleure|refais|refaire|recommence|encore|autre|change|changer|modifie|modifier|ajoute|ajouter|enleve|enlever|retire|retirer|mets|mettre|rends|rendre|version|style|couleur|couleurs|fond|realiste|cartoon|manga|anime|zoom|sourire|lumiere|sombre|clair|jeune|vieux|vieille|sans|avec|more|less|better|again|another|change|add|remove|make it)\b/;
+/** Vraies questions ou remerciements : la conversation reprend. */
+const NOT_FOLLOW_UP =
+  /\b(?:merci|qui|pourquoi|comment|quel|quelle|quels|quelles|explique|expliquer|raconte|resume|traduis|ecris|redige|thanks|who|why|how|what|explain|write)\b/;
+const MAX_FOLLOW_UP_WORDS = 25;
+
+/** Vrai si le message, juste apres une image, demande de la retoucher. */
+export function detectImageFollowUp(raw: string): boolean {
+  if (typeof raw !== 'string') return false;
+  const text = correctTypos(normalize(raw)).trim();
+  if (!text || text.split(/\s+/).length > MAX_FOLLOW_UP_WORDS) return false;
+  if (NOT_FOLLOW_UP.test(text)) return false;
+  return FOLLOW_UP.test(text);
+}
+
+/** Longueur maximale d'un prompt d'image (limite du moteur). */
+const MAX_PROMPT = 2000;
+
+/** Prompt d'une retouche : la demande d'origine, ses retouches, la nouvelle. */
+export function buildFollowUpPrompt(thread: string[], content: string): string {
+  const [origin, ...edits] = thread;
+  const parts = [origin, ...edits, content.trim()].filter(Boolean);
+  const prompt =
+    parts.length === 1
+      ? parts[0]
+      : `${parts[0]}. Modifications demandées, dans l'ordre : ${parts.slice(1).join(' ; ')}`;
+  return prompt.length > MAX_PROMPT ? prompt.slice(prompt.length - MAX_PROMPT) : prompt;
+}
+
+/**
+ * Decide si Kepler traite ce message, et avec quel prompt.
+ *   - nouvelle demande d'image (texte ou mode image) : le message tel quel ;
+ *   - retouche juste apres une image : la demande d'origine + la retouche ;
+ *   - sinon : `null`, le chat repond.
+ */
+export function planKepler(
+  content: string,
+  history: KeplerHistoryMessage[],
+  mode?: ChatMode,
+  env: NodeJS.ProcessEnv = process.env
+): { prompt: string } | null {
+  if (!isKeplerImageEnabled(env)) return null;
+
+  const thread = imageThread(history);
+  if (thread.length > 0 && !detectImageRequest(content) && detectImageFollowUp(content)) {
+    return { prompt: buildFollowUpPrompt(thread, content) };
+  }
+  if (mode === 'image' || detectImageRequest(content)) {
+    return { prompt: content };
+  }
+  return null;
+}
+
+/**
+ * Consigne ajoutee au chat quand Kepler est actif : Eyano sait creer des
+ * images ; le chat ne doit jamais pretendre le contraire.
+ */
+export function keplerChatNote(env: NodeJS.ProcessEnv = process.env): string {
+  if (!isKeplerImageEnabled(env)) return '';
+  return [
+    '',
+    '',
+    "Création d'images : tu SAIS créer des images grâce à Kepler, ton module d'images.",
+    "Les messages marqués « [Image créée par Kepler] » dans l'historique sont des images que tu as réellement créées.",
+    "Ne dis jamais que tu ne peux pas créer d'images. Si l'utilisateur en veut une ou veut retoucher la précédente, invite-le à la décrire avec « génère une image de… » ou à choisir « Créer une image » dans le menu du trombone.",
+  ].join('\n');
+}
+
+/** Contenu d'un message d'historique tel que le chat doit le voir. */
+export function historyContentForChat(message: KeplerHistoryMessage): string {
+  return isKeplerImageMessage(message) ? `${message.content} [Image créée par Kepler]` : message.content;
+}

@@ -17,6 +17,11 @@ const {
   keplerFailureText,
   KEPLER_SUCCESS_TEXT,
   MAX_KEPLER_IMAGE_BYTES,
+  planKepler,
+  imageThread,
+  detectImageFollowUp,
+  keplerChatNote,
+  historyContentForChat,
 } = require(path.join(__dirname, '..', 'dist', 'modules', 'image', 'kepler-chat.js'));
 const { ImageGenerationError } = require('@eyano/gnoxe-brains');
 
@@ -142,4 +147,65 @@ test('image vide ou trop lourde : refusee, rien en base', async () => {
   const big = await runKeplerInChat('x', 'm', { generate: async () => ({ data: huge, mimeType: 'image/png' }), db });
   assert.equal(big.code, 'TOO_LARGE');
   assert.equal(db.created.length, 0);
+});
+
+// ------------------------------------------------- suite d'une image (contexte)
+
+const ON = { KEPLER_IMAGE_ENABLED: 'true' };
+const user = (content) => ({ role: 'user', content, attachments: [] });
+const image = () => ({ role: 'assistant', content: "Voici l'image générée.", attachments: [{ storageKey: 'db:kepler' }] });
+const reply = (content) => ({ role: 'assistant', content, attachments: [] });
+
+test('retouche : « fais le plus mieux » apres une image reprend la demande d origine', () => {
+  const history = [user("Génère moi une imag relaist d'un mc musclé et humain"), image()];
+  const plan = planKepler('fais le plus mieux', history, undefined, ON);
+  assert.ok(plan, 'Kepler doit prendre la main');
+  assert.match(plan.prompt, /mc musclé et humain/);
+  assert.match(plan.prompt, /fais le plus mieux/);
+});
+
+test('retouches successives : toute la chaine, dans l ordre', () => {
+  const history = [user('génère une image de chat'), image(), user('plus réaliste'), image()];
+  assert.deepEqual(imageThread(history), ['génère une image de chat', 'plus réaliste']);
+  const plan = planKepler('ajoute un chapeau', history, undefined, ON);
+  assert.match(plan.prompt, /^génère une image de chat\. Modifications demandées, dans l'ordre : plus réaliste ; ajoute un chapeau$/);
+});
+
+test('retouche : jamais si la derniere reponse n est pas une image', () => {
+  const history = [user('génère une image de chat'), image(), user('merci'), reply('Avec plaisir !')];
+  assert.equal(planKepler('plus réaliste', history, undefined, ON), null);
+});
+
+test('apres une image, une vraie question reste au chat', () => {
+  const history = [user('génère une image de chat'), image()];
+  for (const message of ['merci beaucoup', 'c est qui ce chat ?', 'explique-moi la photosynthèse', 'comment tu as fait ?']) {
+    assert.equal(planKepler(message, history, undefined, ON), null, message);
+  }
+});
+
+test('apres une image, une nouvelle demande complete repart de zero', () => {
+  const history = [user('génère une image de chat'), image()];
+  assert.deepEqual(planKepler('génère une image de voiture rouge', history, undefined, ON), { prompt: 'génère une image de voiture rouge' });
+});
+
+test('detection des retouches', () => {
+  for (const message of ['fais le plus mieux', 'plus réaliste', 'change le fond', 'ajoute un chapeau', 'refais-le', 'en noir avec un sourire', 'make it brighter']) {
+    assert.equal(detectImageFollowUp(message), true, message);
+  }
+  for (const message of ['merci', 'ok', 'super', 'qui est-ce ?']) {
+    assert.equal(detectImageFollowUp(message), false, message);
+  }
+});
+
+test('drapeau coupe : aucune retouche, aucune consigne', () => {
+  const history = [user('génère une image de chat'), image()];
+  assert.equal(planKepler('plus réaliste', history, undefined, {}), null);
+  assert.equal(keplerChatNote({}), '');
+});
+
+test('le chat sait qu il cree des images et voit lesquelles', () => {
+  assert.match(keplerChatNote(ON), /Kepler/);
+  assert.match(keplerChatNote(ON), /Ne dis jamais que tu ne peux pas/);
+  assert.equal(historyContentForChat(image()), "Voici l'image générée. [Image créée par Kepler]");
+  assert.equal(historyContentForChat(reply('Bonjour')), 'Bonjour');
 });

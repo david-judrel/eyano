@@ -8,7 +8,14 @@ import {
   DEFAULT_MODEL_ID,
   DEFAULT_IMAGE_MODEL_ID,
 } from '@eyano/gnoxe-brains';
-import { runKeplerInChat, shouldUseKepler, KeplerChatAttachment, ChatMode } from '../image/kepler-chat';
+import {
+  runKeplerInChat,
+  planKepler,
+  keplerChatNote,
+  historyContentForChat,
+  KeplerChatAttachment,
+  ChatMode,
+} from '../image/kepler-chat';
 import { buildEyanoContext } from '@eyano/eyano-identity';
 import { ChatMessage, ImageAttachment } from '@eyano/types';
 import { MessagesService } from '../messages/messages.service';
@@ -59,8 +66,10 @@ export class AiService {
       prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
     ]);
 
+    const keplerPlan = planKepler(content, history, mode);
+
     const messages: ChatMessage[] = [
-      ...history.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+      ...history.map((m) => ({ role: m.role as 'user' | 'assistant', content: historyContentForChat(m) })),
       { role: 'user', content, images: images && images.length > 0 ? images : undefined },
     ];
 
@@ -71,10 +80,10 @@ export class AiService {
 
     // Kepler Image (experimental) : une demande d'image ne passe pas par le
     // modele de conversation. Drapeau coupe : chemin inchange.
-    if (shouldUseKepler(content, process.env, mode)) {
+    if (keplerPlan) {
       const startedAt = Date.now();
       const assistant = await this.messagesService.createStreaming(conversationId, DEFAULT_IMAGE_MODEL_ID, providerName);
-      const outcome = await runKeplerInChat(content, assistant.id);
+      const outcome = await runKeplerInChat(keplerPlan.prompt, assistant.id);
       await this.messagesService.completeStreaming(assistant.id, outcome.text, { latencyMs: Date.now() - startedAt });
       const keplerTitle = await this.resolveTitle(conversationId, messages);
       return {
@@ -92,7 +101,7 @@ export class AiService {
       messages,
       model,
       userName: user?.name || undefined,
-      systemPrompt: buildEyanoContext(),
+      systemPrompt: buildEyanoContext() + keplerChatNote(),
     });
 
     const latencyMs = Date.now() - startTime;
@@ -160,8 +169,10 @@ export class AiService {
       prisma.user.findUnique({ where: { id: userId }, select: { name: true } }),
     ]);
 
+    const keplerPlan = planKepler(content, history, mode);
+
     const messages: ChatMessage[] = [
-      ...history.map((m) => ({ role: m.role as 'user' | 'assistant', content: m.content })),
+      ...history.map((m) => ({ role: m.role as 'user' | 'assistant', content: historyContentForChat(m) })),
       { role: 'user', content, images: images && images.length > 0 ? images : undefined },
     ];
 
@@ -178,11 +189,11 @@ export class AiService {
 
     // Kepler Image (experimental) : l'image arrive dans le fil, apres le texte
     // d'Eyano, par l'evenement `image`. Drapeau coupe : chemin inchange.
-    if (shouldUseKepler(content, process.env, mode)) {
+    if (keplerPlan) {
       const startedAt = Date.now();
       try {
         yield { type: 'image_pending' as const };
-        const outcome = await runKeplerInChat(content, assistantMessage.id);
+        const outcome = await runKeplerInChat(keplerPlan.prompt, assistantMessage.id);
         yield { type: 'text' as const, content: outcome.text };
         if (outcome.attachment) {
           yield { type: 'image' as const, attachment: outcome.attachment };
@@ -223,7 +234,7 @@ export class AiService {
         messages,
         model,
         userName: user?.name || undefined,
-        systemPrompt: buildEyanoContext(),
+        systemPrompt: buildEyanoContext() + keplerChatNote(),
       });
 
       for await (const chunk of stream) {
