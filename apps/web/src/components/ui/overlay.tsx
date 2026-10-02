@@ -128,7 +128,7 @@ export function DialogContent({ title, description, footer, size = 'md', classNa
             {description ? (
               <RadixDialog.Description className="text-body-sm text-foreground-muted">{description}</RadixDialog.Description>
             ) : (
-              <RadixDialog.Description className="sr-only">{typeof title === 'string' ? title : 'Fenetre'}</RadixDialog.Description>
+              <RadixDialog.Description className="sr-only">{typeof title === 'string' ? title : 'Fenêtre'}</RadixDialog.Description>
             )}
           </div>
           <RadixDialog.Close asChild>

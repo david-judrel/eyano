@@ -1,8 +1,8 @@
 'use client';
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { Sidebar } from './Sidebar';
-import { TopBar } from './TopBar';
+import { Sidebar } from './layout/Sidebar';
+import { TopBar } from './layout/TopBar';
 import { ChatView } from './ChatView';
 import { useAppStore } from '@/lib/store';
 import { api } from '@/lib/api';
@@ -42,8 +42,8 @@ export function ChatApp() {
 
   if (!authInitialized) {
     return (
-      <div className="flex h-full w-full items-center justify-center bg-background">
-        <Logo size="lg" className="animate-spin opacity-40" />
+      <div className="flex h-full w-full items-center justify-center bg-background" role="status" aria-label="Chargement">
+        <Logo size="lg" className="animate-pulse-subtle" />
       </div>
     );
   }
@@ -51,7 +51,7 @@ export function ChatApp() {
   return (
     <div className="flex h-full w-full overflow-hidden bg-background">
       {user && <Sidebar />}
-      <div className="flex-1 flex flex-col min-w-0 h-full relative">
+      <div className="relative flex h-full min-w-0 flex-1 flex-col">
         <TopBar onLoginClick={() => router.push('/login')} />
         <ChatView onRequireLogin={handleRequireLogin} />
       </div>

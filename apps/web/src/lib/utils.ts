@@ -1,5 +1,20 @@
 import { clsx, type ClassValue } from 'clsx';
-import { twMerge } from 'tailwind-merge';
+import { extendTailwindMerge } from 'tailwind-merge';
+
+/**
+ * tailwind-merge doit connaitre l'echelle du Design System : sinon il prend
+ * `text-label` pour une couleur et le supprime face a `text-foreground`.
+ */
+const twMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      'font-size': [
+        { text: ['display', 'heading-xl', 'heading-lg', 'heading-md', 'heading-sm', 'body-lg', 'body-md', 'body-sm', 'label', 'caption', 'code'] },
+      ],
+      shadow: [{ shadow: ['subtle', 'raised', 'overlay'] }],
+    },
+  },
+});
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));

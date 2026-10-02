@@ -48,7 +48,7 @@ export function Showcase() {
         <header className="flex flex-col gap-2">
           <p className="text-caption text-foreground-muted">EYANO</p>
           <h1 className="text-heading-xl text-foreground">Design System</h1>
-          <p className="text-body-md text-foreground-secondary">Primitives et etats. Voir DESIGN-SYSTEM.md.</p>
+          <p className="text-body-md text-foreground-secondary">Primitives et états. Voir DESIGN-SYSTEM.md.</p>
         </header>
 
         <Section title="Typographie">
@@ -59,9 +59,9 @@ export function Showcase() {
             <p className="text-heading-md text-foreground">Heading MD</p>
             <p className="text-heading-sm text-foreground">Heading SM</p>
             <p className="text-body-lg text-foreground">Body LG — lecture longue.</p>
-            <p className="text-body-md text-foreground">Body MD — texte par defaut, messages.</p>
+            <p className="text-body-md text-foreground">Body MD — texte par défaut, messages.</p>
             <p className="text-body-md text-foreground-secondary">Body MD secondaire — texte d&apos;accompagnement.</p>
-            <p className="text-body-sm text-foreground-muted">Body SM discret — metadonnees.</p>
+            <p className="text-body-sm text-foreground-muted">Body SM discret — métadonnées.</p>
             <p className="text-label text-foreground">Label</p>
             <p className="text-caption text-foreground-muted">Caption — 12:04</p>
             <code className="font-mono text-code text-foreground">npm run test -w apps/web</code>
@@ -81,8 +81,8 @@ export function Showcase() {
             <Button variant="primary" size="md">Moyen</Button>
             <Button variant="primary" size="lg">Grand</Button>
             <Button variant="primary" loading>Envoi</Button>
-            <Button variant="primary" disabled>Desactive</Button>
-            <Button variant="secondary" disabled>Desactive</Button>
+            <Button variant="primary" disabled>Désactivé</Button>
+            <Button variant="secondary" disabled>Désactivé</Button>
           </Row>
           <Row>
             <IconButton label="Copier" icon={Copy} />
@@ -90,19 +90,19 @@ export function Showcase() {
             <IconButton label="Rechercher" icon={Search} variant="outline" />
             <IconButton label="Nouveau" icon={Plus} variant="primary" />
             <IconButton label="Supprimer" icon={Trash2} variant="destructive" />
-            <IconButton label="Copier (desactive)" icon={Copy} disabled />
+            <IconButton label="Copier (désactivé)" icon={Copy} disabled />
           </Row>
         </Section>
 
         <Section title="Formulaires">
           <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Adresse e-mail" description="Utilisee pour la connexion." required>
+            <Field label="Adresse e-mail" description="Utilisée pour la connexion." required>
               <Input type="email" placeholder="awa@exemple.com" />
             </Field>
-            <Field label="Mot de passe" error="Au moins 8 caracteres.">
+            <Field label="Mot de passe" error="Au moins 8 caractères.">
               <Input type="password" defaultValue="1234" />
             </Field>
-            <Field label="Role">
+            <Field label="Rôle">
               <Select
                 defaultValue="USER"
                 options={[
@@ -112,15 +112,15 @@ export function Showcase() {
                 ]}
               />
             </Field>
-            <Field label="Desactive">
+            <Field label="Désactivé">
               <Input disabled placeholder="Non modifiable" />
             </Field>
           </div>
           <Field label="Message">
-            <Textarea placeholder="Decrivez votre demande..." />
+            <Textarea placeholder="Décrivez votre demande…" />
           </Field>
           <Checkbox label="Se souvenir de moi" description="Sur cet appareil uniquement." defaultChecked />
-          <Switch label="Generation d'images" description="Kepler cree des images dans le chat." defaultChecked />
+          <Switch label="Génération d'images" description="Kepler crée des images dans le chat." defaultChecked />
         </Section>
 
         <Section title="Badges, avatars, retours">
@@ -137,18 +137,18 @@ export function Showcase() {
             <Avatar fallback="AT" />
             <Avatar fallback="AT" size="lg" />
             <Spinner />
-            <div className="w-48"><Progress label="Creation de l'image" value={45} /></div>
+            <div className="w-48"><Progress label="Création de l'image" value={45} /></div>
             <div className="w-48"><Progress label="Recherche" /></div>
           </Row>
-          <Alert tone="info" title="Information">Les reponses peuvent contenir des erreurs.</Alert>
-          <Alert tone="success" title="Enregistre">Vos preferences ont ete mises a jour.</Alert>
-          <Alert tone="warning" title="Quota bientot atteint">Il reste 12 images aujourd&apos;hui.</Alert>
-          <Alert tone="error" title="Echec de l'envoi" action={<Button size="sm" variant="ghost">Reessayer</Button>}>
-            Verifiez votre connexion.
+          <Alert tone="info" title="Information">Les réponses peuvent contenir des erreurs.</Alert>
+          <Alert tone="success" title="Enregistré">Vos preferences ont été mises à jour.</Alert>
+          <Alert tone="warning" title="Quota bientôt atteint">Il reste 12 images aujourd&apos;hui.</Alert>
+          <Alert tone="error" title="Échec de l'envoi" action={<Button size="sm" variant="ghost">Réessayer</Button>}>
+            Vérifiez votre connexion.
           </Alert>
           <Row>
-            <Button onClick={() => addToast('Conversation supprimee.', 'success')}>Toast succes</Button>
-            <Button onClick={() => addToast("La generation de l'image a echoue.", 'error')}>Toast erreur</Button>
+            <Button onClick={() => addToast('Conversation supprimée.', 'success')}>Toast succès</Button>
+            <Button onClick={() => addToast("La génération de l'image a échoué.", 'error')}>Toast erreur</Button>
           </Row>
         </Section>
 
@@ -160,7 +160,7 @@ export function Showcase() {
             </Card>
             <Card interactive>
               <h3 className="text-heading-md text-foreground">Carte interactive</h3>
-              <p className="mt-1 text-body-sm text-foreground-muted">Bordure renforcee au survol.</p>
+              <p className="mt-1 text-body-sm text-foreground-muted">Bordure renforcée au survol.</p>
             </Card>
           </div>
           <Separator />
@@ -169,27 +169,27 @@ export function Showcase() {
             <Skeleton className="h-4 w-1/2" />
           </div>
           <Card padding="none">
-            <EmptyState icon={Search} title="Aucun resultat" description="Essayez une autre recherche." />
+            <EmptyState icon={Search} title="Aucun résultat" description="Essayez une autre recherche." />
           </Card>
         </Section>
 
         <Section title="Overlays et navigation">
           <Row>
             <Dialog>
-              <DialogTrigger asChild><Button>Ouvrir une fenetre</Button></DialogTrigger>
+              <DialogTrigger asChild><Button>Ouvrir une fenêtre</Button></DialogTrigger>
               <DialogContent
                 title="Supprimer la conversation ?"
-                description="Cette action est definitive."
+                description="Cette action est définitive."
                 footer={<><Button variant="ghost">Annuler</Button><Button variant="destructive">Supprimer</Button></>}
               >
-                <p className="text-body-md text-foreground-secondary">La conversation et ses images seront supprimees.</p>
+                <p className="text-body-md text-foreground-secondary">La conversation et ses images seront supprimées.</p>
               </DialogContent>
             </Dialog>
             <DropdownMenu>
               <DropdownMenuTrigger asChild><Button variant="outline">Menu</Button></DropdownMenuTrigger>
               <DropdownMenuContent align="start">
                 <DropdownMenuItem icon={Copy} hint="Ctrl C">Copier</DropdownMenuItem>
-                <DropdownMenuItem icon={RefreshCw}>Regenerer</DropdownMenuItem>
+                <DropdownMenuItem icon={RefreshCw}>Régénérer</DropdownMenuItem>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem icon={Trash2} destructive>Supprimer</DropdownMenuItem>
               </DropdownMenuContent>
@@ -197,19 +197,19 @@ export function Showcase() {
             <Popover>
               <PopoverTrigger asChild><Button variant="ghost">Popover</Button></PopoverTrigger>
               <PopoverContent>
-                <p className="text-label text-foreground">Modele</p>
+                <p className="text-label text-foreground">Modèle</p>
                 <p className="mt-1 text-body-sm text-foreground-muted">Gnoxe Brains 1 — rapide et polyvalent.</p>
               </PopoverContent>
             </Popover>
           </Row>
           <Tabs defaultValue="general">
             <TabsList>
-              <TabsTrigger value="general">General</TabsTrigger>
-              <TabsTrigger value="securite">Securite</TabsTrigger>
+              <TabsTrigger value="general">Général</TabsTrigger>
+              <TabsTrigger value="securite">Sécurité</TabsTrigger>
               <TabsTrigger value="usage">Usage</TabsTrigger>
             </TabsList>
-            <TabsContent value="general"><p className="text-body-md text-foreground-secondary">Contenu de l&apos;onglet General.</p></TabsContent>
-            <TabsContent value="securite"><p className="text-body-md text-foreground-secondary">Contenu Securite.</p></TabsContent>
+            <TabsContent value="general"><p className="text-body-md text-foreground-secondary">Contenu de l&apos;onglet Général.</p></TabsContent>
+            <TabsContent value="securite"><p className="text-body-md text-foreground-secondary">Contenu Sécurité.</p></TabsContent>
             <TabsContent value="usage"><p className="text-body-md text-foreground-secondary">Contenu Usage.</p></TabsContent>
           </Tabs>
         </Section>

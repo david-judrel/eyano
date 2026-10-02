@@ -5,7 +5,9 @@ import { useParams, useRouter } from 'next/navigation';
 import { ChatApp } from '@/components/ChatApp';
 import { useAppStore } from '@/lib/store';
 import { api } from '@/lib/api';
-import { Logo } from '@/components/ui/logo';
+import { MessageSquareOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/feedback';
 
 export function ConversationContent() {
   const params = useParams();
@@ -39,13 +41,12 @@ export function ConversationContent() {
   if (error) {
     return (
       <div className="flex h-full w-full items-center justify-center bg-background">
-        <div className="text-center space-y-4">
-          <Logo size="lg" className="opacity-40" />
-          <p className="text-foreground/60 text-sm">Conversation introuvable ou acces refuse.</p>
-          <button onClick={() => router.push('/')} className="text-brand text-sm font-medium hover:underline">
-            Retour a l&apos;accueil
-          </button>
-        </div>
+        <EmptyState
+          icon={MessageSquareOff}
+          title="Conversation introuvable"
+          description="Elle n'existe pas ou vous n'y avez pas accès."
+          action={<Button onClick={() => router.push('/')}>Retour à l&apos;accueil</Button>}
+        />
       </div>
     );
   }

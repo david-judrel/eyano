@@ -31,7 +31,6 @@ const PENDING = new Set([
   'app/global-error.tsx',
   'app/not-found.tsx',
   'components/ChatView.tsx',
-  'components/ConversationContent.tsx',
   'components/Composer.tsx',
   'components/EmptyChat.tsx',
   'components/ImageGenerating.tsx',
@@ -40,9 +39,6 @@ const PENDING = new Set([
   'components/MessageBubble.tsx',
   'components/MobileInstallGate.tsx',
   'components/ProfileContent.tsx',
-  'components/Sidebar.tsx',
-  'components/ThemeSwitcher.tsx',
-  'components/TopBar.tsx',
 ]);
 
 const PALETTE = 'red|green|blue|yellow|orange|amber|emerald|gray|zinc|neutral|slate|purple|pink|indigo|cyan|teal|lime|sky|violet|rose|fuchsia|stone';
