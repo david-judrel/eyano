@@ -4,6 +4,7 @@ import Script from 'next/script';
 import { PWAProvider } from '@/components/PWAProvider';
 import { SWRegister } from '@/components/SWRegister';
 import { ThemeProvider } from '@/lib/theme-provider';
+import { AppProviders } from '@/components/AppProviders';
 import { getDefaultMetadata } from '@/lib/metadata';
 
 const fontSans = Inter({ subsets: ['latin'], variable: '--font-sans', display: 'swap' });
@@ -40,10 +41,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       </head>
       <body className="h-dvh bg-background text-foreground antialiased overflow-hidden">
         <ThemeProvider>
-          <PWAProvider>
-          {children}
-          {/* <SWRegister /> */}
-          </PWAProvider>
+          <AppProviders>
+            <PWAProvider>
+              {children}
+              {/* <SWRegister /> */}
+            </PWAProvider>
+          </AppProviders>
         </ThemeProvider>
       </body>
     </html>

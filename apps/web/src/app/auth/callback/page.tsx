@@ -5,7 +5,6 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useAppStore } from '@/lib/store';
 import { api } from '@/lib/api';
 import { Logo } from '@/components/ui/logo';
-import { ToastContainer } from '@/components/Toast';
 
 function CallbackHandler() {
   const router = useRouter();
@@ -54,7 +53,6 @@ function CallbackHandler() {
 export default function AuthCallbackPage() {
   return (
     <div className="flex min-h-screen w-full bg-background items-center justify-center">
-      <ToastContainer />
       <Suspense fallback={
         <div className="flex flex-col items-center gap-4">
           <Logo size="lg" className="animate-spin opacity-60" />

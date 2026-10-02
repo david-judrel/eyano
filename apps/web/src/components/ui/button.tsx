@@ -1,54 +1,103 @@
 'use client';
 
-import { type ButtonHTMLAttributes, forwardRef } from 'react';
+import { forwardRef, type ButtonHTMLAttributes } from 'react';
+import { Slot } from '@radix-ui/react-slot';
 import { cva, type VariantProps } from 'class-variance-authority';
+import { Loader2, type LucideIcon } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Tooltip } from './tooltip';
 
+/**
+ * Bouton EYANO. `primary` (vert) : l'action principale de la vue, une seule.
+ * Le focus clavier vient du style global (:focus-visible).
+ */
 export const buttonVariants = cva(
   [
-    'inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl font-medium',
-    'transition-all duration-150 active:scale-[0.97]',
-    'disabled:pointer-events-none disabled:opacity-50',
-    'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/30 focus-visible:ring-offset-2 focus-visible:ring-offset-[#08090a]',
+    'inline-flex shrink-0 select-none items-center justify-center gap-2 whitespace-nowrap rounded-md text-label',
+    'transition-colors duration-fast ease-standard',
+    'disabled:cursor-not-allowed disabled:bg-transparent disabled:text-foreground-disabled disabled:border-border-subtle',
+    'aria-busy:cursor-progress',
   ],
   {
     variants: {
       variant: {
-        brand: 'bg-brand text-black hover:brightness-110',
-        primary: 'bg-white/[8%] text-white hover:bg-white/[12%]',
-        secondary: 'bg-white/[4%] text-white/60 hover:bg-white/[8%]',
-        outline: 'border border-white/[8%] bg-transparent text-white/60 hover:bg-white/[4%]',
-        ghost: 'bg-transparent text-white/60 hover:bg-white/[6%]',
-        destructive: 'bg-red-500/10 text-red-400 hover:bg-red-500/20',
+        primary: 'bg-brand text-brand-foreground hover:bg-brand-hover active:bg-brand-active disabled:bg-surface',
+        secondary: 'bg-surface-raised text-foreground border border-border hover:border-border-strong hover:bg-hover active:bg-pressed',
+        outline: 'border border-border text-foreground hover:bg-hover active:bg-pressed',
+        ghost: 'text-foreground-secondary hover:bg-hover hover:text-foreground active:bg-pressed',
+        destructive: 'bg-error-subtle text-error hover:bg-error hover:text-foreground-inverse active:bg-error',
       },
       size: {
-        sm: 'h-8 px-3 text-[13px]',
-        md: 'h-10 px-4 text-[13px]',
-        lg: 'h-12 px-6 text-[14px]',
-        icon: 'h-10 w-10 shrink-0',
+        sm: 'h-8 px-3',
+        md: 'h-10 px-4',
+        lg: 'h-12 px-5 text-body-md font-medium',
       },
     },
-    defaultVariants: {
-      variant: 'primary',
-      size: 'md',
-    },
-  },
+    defaultVariants: { variant: 'secondary', size: 'md' },
+  }
 );
 
-export interface ButtonProps
-  extends ButtonHTMLAttributes<HTMLButtonElement>,
-    VariantProps<typeof buttonVariants> {}
+export interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement>, VariantProps<typeof buttonVariants> {
+  /** Affiche un indicateur et bloque l'action. */
+  loading?: boolean;
+  /** Icone Lucide placee avant le libelle. */
+  icon?: LucideIcon;
+  /** Rend l'enfant (lien...) avec le style du bouton. */
+  asChild?: boolean;
+}
 
 export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, type = 'button', ...props }, ref) => {
+  ({ className, variant, size, loading = false, icon: Icon, asChild = false, disabled, children, type = 'button', ...props }, ref) => {
+    if (asChild) {
+      return <Slot ref={ref} className={cn(buttonVariants({ variant, size }), className)} {...props}>{children}</Slot>;
+    }
     return (
       <button
         ref={ref}
         type={type}
+        disabled={disabled || loading}
+        aria-busy={loading || undefined}
         className={cn(buttonVariants({ variant, size }), className)}
         {...props}
-      />
+      >
+        {loading ? <Loader2 className="icon-sm animate-spin" aria-hidden /> : Icon ? <Icon className="icon-sm" aria-hidden /> : null}
+        {children}
+      </button>
     );
-  },
+  }
 );
 Button.displayName = 'Button';
+
+const iconButtonSizes = { sm: 'h-8 w-8', md: 'h-10 w-10', lg: 'h-12 w-12' } as const;
+
+export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
+  /** Nom accessible, OBLIGATOIRE : lu par les lecteurs d'ecran, affiche en info-bulle. */
+  label: string;
+  icon: LucideIcon;
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'destructive';
+  size?: keyof typeof iconButtonSizes;
+  /** Info-bulle au survol (par defaut : oui). */
+  tooltip?: boolean;
+  loading?: boolean;
+}
+
+/** Bouton constitue d'une seule icone. Toujours nomme, toujours focusable. */
+export const IconButton = forwardRef<HTMLButtonElement, IconButtonProps>(
+  ({ label, icon: Icon, variant = 'ghost', size = 'md', tooltip = true, loading = false, disabled, className, type = 'button', ...props }, ref) => {
+    const button = (
+      <button
+        ref={ref}
+        type={type}
+        aria-label={label}
+        disabled={disabled || loading}
+        aria-busy={loading || undefined}
+        className={cn(buttonVariants({ variant }), 'px-0', iconButtonSizes[size], className)}
+        {...props}
+      >
+        {loading ? <Loader2 className="icon-sm animate-spin" aria-hidden /> : <Icon className={size === 'lg' ? 'icon-md' : 'icon-sm'} aria-hidden />}
+      </button>
+    );
+    return tooltip ? <Tooltip content={label}>{button}</Tooltip> : button;
+  }
+);
+IconButton.displayName = 'IconButton';

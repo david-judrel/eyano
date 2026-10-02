@@ -11,7 +11,6 @@ import { EYANO_MODELS } from '@eyano/types';
 import { api } from '@/lib/api';
 import { Avatar } from '@/components/ui/avatar';
 import { Logo } from '@/components/ui/logo';
-import { ToastContainer } from '@/components/Toast';
 import { useToast } from '@/lib/toast';
 import { cn } from '@/lib/utils';
 import { useTheme } from '@/lib/theme-provider';
@@ -83,7 +82,6 @@ export function ProfileContent() {
 
   return (
     <div className="h-full w-full bg-background flex flex-col overflow-y-auto overflow-x-hidden">
-      <ToastContainer />
 
       <header className="sticky top-0 z-30 backdrop-blur-xl bg-[var(--ey-background)]/90 border-b border-[var(--ey-border)] shrink-0">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 lg:h-16 flex items-center justify-between">

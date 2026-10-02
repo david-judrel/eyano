@@ -1,23 +1,27 @@
 'use client';
 
-import { type InputHTMLAttributes, forwardRef } from 'react';
+import { forwardRef, type InputHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
+import { controlClasses, useField } from './field';
 
-export const Input = forwardRef<HTMLInputElement, InputHTMLAttributes<HTMLInputElement>>(
-  ({ className, type = 'text', ...props }, ref) => {
-    return (
-      <input
-        ref={ref}
-        type={type}
-        className={cn(
-          'h-11 w-full rounded-xl border border-white/[8%] bg-white/[4%] px-4 text-[14px] text-white placeholder:text-white/25',
-          'transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-brand/20 focus-visible:border-brand/20',
-          'disabled:cursor-not-allowed disabled:opacity-50',
-          className,
-        )}
-        {...props}
-      />
-    );
-  },
-);
+export interface InputProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'size'> {
+  size?: 'md' | 'lg';
+}
+
+/** Champ texte. Dans un <Field>, recoit automatiquement id et aria-*. */
+export const Input = forwardRef<HTMLInputElement, InputProps>(({ className, type = 'text', size = 'md', ...props }, ref) => {
+  const field = useField();
+  return (
+    <input
+      ref={ref}
+      type={type}
+      id={field?.id}
+      aria-describedby={field?.describedBy}
+      aria-invalid={field?.invalid || undefined}
+      required={field?.required}
+      className={cn(controlClasses, size === 'lg' ? 'h-12 px-4' : 'h-10 px-3', className)}
+      {...props}
+    />
+  );
+});
 Input.displayName = 'Input';

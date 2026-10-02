@@ -42,14 +42,7 @@ const PENDING = new Set([
   'components/ProfileContent.tsx',
   'components/Sidebar.tsx',
   'components/ThemeSwitcher.tsx',
-  'components/Toast.tsx',
   'components/TopBar.tsx',
-  'components/ui/avatar.tsx',
-  'components/ui/button.tsx',
-  'components/ui/empty-state.tsx',
-  'components/ui/input.tsx',
-  'components/ui/skeleton.tsx',
-  'components/ui/textarea.tsx',
 ]);
 
 const PALETTE = 'red|green|blue|yellow|orange|amber|emerald|gray|zinc|neutral|slate|purple|pink|indigo|cyan|teal|lime|sky|violet|rose|fuchsia|stone';

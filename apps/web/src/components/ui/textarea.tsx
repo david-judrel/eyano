@@ -1,22 +1,24 @@
 'use client';
 
-import { type TextareaHTMLAttributes, forwardRef } from 'react';
+import { forwardRef, type TextareaHTMLAttributes } from 'react';
 import { cn } from '@/lib/utils';
+import { controlClasses, useField } from './field';
 
+/** Zone de texte. Dans un <Field>, recoit automatiquement id et aria-*. */
 export const Textarea = forwardRef<HTMLTextAreaElement, TextareaHTMLAttributes<HTMLTextAreaElement>>(
   ({ className, ...props }, ref) => {
+    const field = useField();
     return (
       <textarea
         ref={ref}
-        className={cn(
-          'w-full resize-none rounded-ey-md border border-border bg-surface px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground',
-          'transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring',
-          'disabled:cursor-not-allowed disabled:opacity-50',
-          className,
-        )}
+        id={field?.id}
+        aria-describedby={field?.describedBy}
+        aria-invalid={field?.invalid || undefined}
+        required={field?.required}
+        className={cn(controlClasses, 'min-h-20 resize-none px-3 py-2', className)}
         {...props}
       />
     );
-  },
+  }
 );
 Textarea.displayName = 'Textarea';

@@ -1,5 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Dossier de compilation reglable : permet un second serveur de dev
+  // (verification visuelle) sans ecraser `.next` du serveur principal.
+  distDir: process.env.NEXT_DIST_DIR || '.next',
   images: {
     remotePatterns: [
       {

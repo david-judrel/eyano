@@ -7,7 +7,6 @@ import { useAppStore } from '@/lib/store';
 import { api } from '@/lib/api';
 import { Logo } from '@/components/ui/logo';
 import { cn } from '@/lib/utils';
-import { ToastContainer } from '@/components/Toast';
 
 type Step = 'choose' | 'email-login' | 'email-register';
 
@@ -90,7 +89,6 @@ export function LoginContent() {
 
   return (
     <div className="flex h-full w-full bg-background overflow-y-auto overflow-x-hidden">
-      <ToastContainer />
 
       {/* PARTIE GAUCHE - BRANDING DESKTOP */}
       <div className="relative hidden lg:flex lg:w-1/2 items-center justify-center overflow-hidden bg-surface">
