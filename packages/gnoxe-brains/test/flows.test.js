@@ -452,3 +452,20 @@ test('declencheur : tolere les fautes de frappe sur les mots d actualite', async
     assert.equal(searchCalls.length, 0, content);
   }
 });
+
+test('recherche : une question de suite reprend le sujet de la question precedente', async () => {
+  install(createFakeModelProvider());
+  const messages = [
+    { role: 'user', content: 'qui est Denis sassou nguesso' },
+    { role: 'assistant', content: 'Denis Sassou-Nguesso est un homme d Etat congolais.' },
+    { role: 'user', content: 'son dernier mendats?' },
+  ];
+  searchCalls.length = 0;
+  await chatFlowSync(baseInput({ messages }));
+  assert.equal(searchCalls.length, 1);
+  assert.match(searchCalls[0], /^Denis sassou nguesso son dernier mendats/);
+
+  searchCalls.length = 0;
+  await chatFlowSync(baseInput({ messages: [...messages.slice(0, 2), { role: 'user', content: 'quel est le dernier album de Fally Ipupa sorti en 2026' }] }));
+  assert.doesNotMatch(searchCalls[0], /sassou/i, 'question autonome : sujet precedent non ajoute');
+});

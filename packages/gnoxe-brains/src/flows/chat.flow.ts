@@ -2,7 +2,7 @@ import { ChatMessage } from '@eyano/types';
 import { getGnoxeBrains } from '../core/singleton';
 import { buildChatContext } from '../prompts/eyano.system';
 import { HistoryCoverage } from '../recall/history-coverage';
-import { webSearch, buildSearchContext } from '../tools/web-search.tool';
+import { webSearch, buildSearchContext, searchKeywords } from '../tools/web-search.tool';
 import { getDefaultModel } from '../models';
 
 export interface ChatFlowInput {
@@ -120,14 +120,38 @@ function extractSearchQuery(lastUserMessage: string, conversationHistory: ChatMe
     .replace(/^(tu peux |est-ce que tu |peux-tu |pourrais-tu |j'aimerais savoir |dis-moi |explique-moi |raconte-moi )/i, '')
     .trim();
 
-  if (query.length < 5) {
-    const recentContext = conversationHistory.slice(-4).map(m => m.content).join(' ');
-    const contextWords = recentContext.split(/\s+/).slice(-10).join(' ');
-    query = `${contextWords} ${query}`.trim();
+  // Question de suite (« son dernier mandat ? ») : sans son sujet, la
+  // recherche part sur n'importe quoi. Le sujet est repris de la question
+  // precedente de l'utilisateur.
+  if (isFollowUpQuestion(query)) {
+    const subject = previousSubject(lastUserMessage, conversationHistory);
+    if (subject && !withoutAccents(query.toLowerCase()).includes(withoutAccents(subject.toLowerCase()))) {
+      query = `${subject} ${query}`.trim();
+    }
   }
 
   if (query.length > 150) query = query.substring(0, 150);
   return query || lastUserMessage.substring(0, 100);
+}
+
+/** Renvoi a quelqu'un ou quelque chose deja cite, ou question trop courte pour etre autonome. */
+const REFERENCE_WORDS =
+  /\b(son|sa|ses|il|elle|ils|elles|lui|leur|leurs|celui-ci|celle-ci|ce dernier|cette derniere|his|her|their|he|she|they)\b/i;
+
+/** Courte, ou courte avec un renvoi : une question longue porte son propre sujet. */
+function isFollowUpQuestion(query: string): boolean {
+  const words = searchKeywords(query).split(/\s+/).filter(Boolean).length;
+  return words < 3 || (words < 5 && REFERENCE_WORDS.test(query));
+}
+
+/** Mots-cles de la question precedente de l'utilisateur (le sujet de la conversation). */
+function previousSubject(lastUserMessage: string, conversationHistory: ChatMessage[]): string {
+  const previous = [...conversationHistory]
+    .reverse()
+    .filter((m) => m.role === 'user' && m.content.trim() !== lastUserMessage.trim())
+    .map((m) => searchKeywords(m.content))
+    .find((keywords) => keywords.length > 0);
+  return (previous ?? '').split(/\s+/).slice(0, 6).join(' ');
 }
 
 function estimateTokens(messages: ChatMessage[]): number {
