@@ -1,6 +1,6 @@
 'use client';
 
-import { LogOut, Trash2, ChevronLeft, Crown, Plus, Settings, MessageSquare, Pencil, MoreVertical, X, Shield, Sun, Moon, Monitor } from 'lucide-react';
+import { LogOut, Trash2, ChevronLeft, Crown, Plus, Settings, MessageSquare, Pencil, MoreVertical, X, Shield, Sun, Moon, Monitor, Telescope } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useAppStore } from '@/lib/store';
@@ -10,6 +10,7 @@ import { Avatar } from './ui/avatar';
 import { Logo } from './ui/logo';
 import { useLongPress } from '@/hooks/useLongPress';
 import { useTheme } from '@/lib/theme-provider';
+import { KEPLER_IMAGE_ENABLED } from '@/lib/features';
 
 interface ConversationItemProps {
   conv: { id: string; title: string | null; updatedAt: string };
@@ -257,6 +258,15 @@ export function Sidebar() {
           
           {/* Theme Switcher */}
           <ThemeSwitcherRow />
+
+          {/* Kepler Image (experimental) : absent tant que le drapeau est coupe */}
+          {KEPLER_IMAGE_ENABLED && (
+            <button onClick={() => { router.push('/kepler'); setSidebarOpen(false); }}
+              className="w-full flex items-center gap-2.5 px-3 py-2.5 mb-3 rounded-xl border border-border text-foreground/70 text-[13px] font-medium hover:bg-foreground/[4%] transition-all touch-manipulation">
+              <Telescope className="h-4 w-4 text-brand" /> Kepler Image
+              <span className="ml-auto text-[10px] uppercase tracking-wider text-foreground/30">Exp.</span>
+            </button>
+          )}
 
           {(user?.role === 'ADMIN' || user?.role === 'SUPER_ADMIN') && (
             <button onClick={() => { router.push('/admin/overview'); setSidebarOpen(false); }}

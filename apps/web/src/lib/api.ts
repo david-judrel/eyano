@@ -1,4 +1,14 @@
+import { type GeneratedImage, keplerErrorCode } from './kepler';
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+
+/** Echec de Kepler Image, porteur du code stable de l'API. */
+export class KeplerRequestError extends Error {
+  constructor(readonly code: string) {
+    super(code);
+    this.name = 'KeplerRequestError';
+  }
+}
 
 export interface StreamEvent {
   type: 'start' | 'message_created' | 'text' | 'done' | 'error';
@@ -61,6 +71,33 @@ class ApiClient {
 
   async delete<T>(path: string): Promise<T> {
     return this.request<T>('DELETE', path);
+  }
+
+  /**
+   * Kepler Image (experimental). En cas d'echec, leve `KeplerRequestError`
+   * avec le code stable de l'API (le message affiche est choisi cote web).
+   */
+  async generateImage(prompt: string): Promise<GeneratedImage> {
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+    const token = this.getToken();
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
+    let res: Response;
+    try {
+      res = await fetch(`${API_URL}/image/generate`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ prompt }),
+      });
+    } catch {
+      throw new KeplerRequestError('NETWORK');
+    }
+
+    const body = await res.json().catch(() => null);
+    if (!res.ok) {
+      throw new KeplerRequestError(keplerErrorCode(res.status, body));
+    }
+    return { data: body.data, mimeType: body.mimeType };
   }
 
   async chatStream(
