@@ -44,18 +44,20 @@ export interface ChatFlowOutput {
 
 const DEFAULT_MODEL = getDefaultModel();
 
+/**
+ * Questions qui dependent de l'actualite ou de faits susceptibles d'avoir
+ * change. Volontairement cible : une recherche ajoute quelques secondes, et
+ * des resultats hors sujet brouillent la reponse (« comment », « bug »,
+ * « cout » — qui matchait « écouter » — ne declenchent plus rien).
+ */
 const SEARCH_TRIGGERS = [
-  /album/i, /chanson/i, /artiste/i, /musicien/i, /concert/i,
-  /dernier/i, /derniere/i, /nouveau/i, /nouvelle/i, /recent/i,
-  /sorti/i, /release/i, /actualit/i, /news/i,
-  /prix/i, /cout/i, /tarif/i, /combien/i,
-  /date/i, /quand/i, /annee/i,
-  /qui est/i, /c'est qui/i, /connais/i, /savoir/i,
-  /alternatif/i, /compar/i, /meilleur/i,
-  /installer/i, /configurer/i, /creer/i,
-  /tutorial/i, /comment/i,
-  /probleme/i, /erreur/i, /bug/i, /fix/i,
-  /actualit/i, /info/i, /nouvelle/i,
+  /album/i, /chanson/i, /\bclip\b/i, /artiste/i, /musicien/i, /chanteu/i, /concert/i, /\bfilm\b/i, /s[ée]rie/i,
+  /derni[eè]re?s?\b/i, /nouveau/i, /nouvelle/i, /r[ée]cent/i,
+  /sorti/i, /release/i, /actualit/i, /\bnews\b/i,
+  /\bprix\b/i, /tarif/i, /combien co[uû]te/i,
+  /\bquand\b/i, /ann[ée]e/i, /aujourd/i, /\bhier\b/i, /cette semaine/i,
+  /qui est/i, /c'est qui/i,
+  /\bmatch\b/i, /\bscore\b/i, /r[ée]sultat/i, /classement/i, /[ée]lection/i, /pr[ée]sident/i, /ministre/i,
   /202[4-9]/i, /203[0-9]/i,
 ];
 

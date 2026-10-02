@@ -426,3 +426,15 @@ test("apps/api : ai.service.ts n a pas ete converti vers GnoxeBrains", () => {
   assert.ok(!aiService.includes('GnoxeBrains'), 'ai.service.ts doit rester inchange');
   assert.ok(!aiService.includes('getModelProvider'), 'ai.service.ts doit rester inchange');
 });
+
+test('declencheur : l actualite declenche la recherche, les questions pratiques non', async () => {
+  install(createFakeModelProvider());
+  await chatFlowSync(baseInput({ messages: [{ role: 'user', content: "c'est quoi le dernier album de Fally Ipupa ?" }] }));
+  assert.equal(searchCalls.length, 1);
+
+  for (const content of ['Comment installer Node.js ?', 'Tu peux écouter ma question ?', 'J ai un bug dans mon code', 'Crée un plan de révision']) {
+    searchCalls.length = 0;
+    await chatFlowSync(baseInput({ messages: [{ role: 'user', content }] }));
+    assert.equal(searchCalls.length, 0, content);
+  }
+});
