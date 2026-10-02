@@ -19,11 +19,11 @@ const {
   buildChatContext,
   PROVENANCE_CHECK_HEAD,
 } = require('@eyano/gnoxe-brains');
-const { SEED, PROBES } = require('../scripts/smoke/provenance');
-const { SCENARIOS } = require('../scripts/smoke/scenarios');
+const { SEED, PROBES } = require('../../scripts/smoke/provenance');
+const { SCENARIOS } = require('../../scripts/smoke/scenarios');
 
 const WINDOW = 20;
-const HARNESS = fs.readFileSync(path.join(__dirname, '..', 'scripts', 'smoke.js'), 'utf8');
+const HARNESS = fs.readFileSync(path.join(__dirname, '..', '..', 'scripts', 'smoke.js'), 'utf8');
 
 function withProbe(probe) {
   return [...SEED, { role: 'user', content: probe.utterance }];
