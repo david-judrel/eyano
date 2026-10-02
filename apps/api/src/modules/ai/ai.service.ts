@@ -179,6 +179,7 @@ export class AiService {
     if (shouldUseKepler(content)) {
       const startedAt = Date.now();
       try {
+        yield { type: 'image_pending' as const };
         const outcome = await runKeplerInChat(content, assistantMessage.id);
         yield { type: 'text' as const, content: outcome.text };
         if (outcome.attachment) {

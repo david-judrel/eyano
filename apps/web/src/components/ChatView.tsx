@@ -163,11 +163,17 @@ export function ChatView({ onRequireLogin }: ChatViewProps) {
             updateConversation(activeConversationId, {});
           }
         },
+        onImagePending: () => {
+          const msgId = useAppStore.getState().streamingMessageId;
+          if (msgId) useAppStore.getState().updateMessage(msgId, { imagePending: true });
+        },
+
         onImage: (attachment) => {
           const msgId = useAppStore.getState().streamingMessageId;
           if (!msgId) return;
           const target = useAppStore.getState().messages.find((m) => m.id === msgId);
           useAppStore.getState().updateMessage(msgId, {
+            imagePending: false,
             attachments: [...(target?.attachments || []), { ...attachment, storageKey: 'db:kepler' }],
           });
         },
@@ -187,11 +193,15 @@ export function ChatView({ onRequireLogin }: ChatViewProps) {
               });
             }
           }
+          const pendingId = useAppStore.getState().streamingMessageId;
+          if (pendingId) useAppStore.getState().updateMessage(pendingId, { imagePending: false });
           setIsStreaming(false);
           setStreamingContent('');
           setStreamingMessageId(null);
         },
         onError: (error) => {
+          const pendingId = useAppStore.getState().streamingMessageId;
+          if (pendingId) useAppStore.getState().updateMessage(pendingId, { imagePending: false });
           setIsStreaming(false);
           setStreamingContent('');
           setStreamingMessageId(null);
@@ -205,6 +215,8 @@ export function ChatView({ onRequireLogin }: ChatViewProps) {
         },
       });
     } catch {
+      const pendingId = useAppStore.getState().streamingMessageId;
+      if (pendingId) useAppStore.getState().updateMessage(pendingId, { imagePending: false });
       setIsStreaming(false);
       setStreamingContent('');
       setStreamingMessageId(null);

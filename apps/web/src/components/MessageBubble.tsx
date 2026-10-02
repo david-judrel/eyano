@@ -6,6 +6,7 @@ import { api } from '@/lib/api';
 import { Message, MessageAttachment } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { MarkdownRenderer } from './MarkdownRenderer';
+import { ImageGenerating } from './ImageGenerating';
 import { Logo } from './ui/logo';
 
 interface MessageBubbleProps {
@@ -208,6 +209,12 @@ export function MessageBubble({ message, isStreaming, onRetry, onEdit }: Message
             <MarkdownRenderer content={message.content} />
           )}
         </div>
+
+        {message.imagePending && (
+          <div className="mt-2">
+            <ImageGenerating />
+          </div>
+        )}
 
         {hasAttachments && (
           <div className="mt-2">

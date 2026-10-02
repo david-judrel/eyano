@@ -53,6 +53,8 @@ export interface Message {
   createdAt: string;
   isStreaming?: boolean;
   attachments?: MessageAttachment[];
+  /** Image Kepler en cours de creation (affichage d'attente). */
+  imagePending?: boolean;
   images?: ImageAttachment[];
 }
 

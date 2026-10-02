@@ -1,7 +1,7 @@
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
 
 export interface StreamEvent {
-  type: 'start' | 'message_created' | 'text' | 'image' | 'done' | 'error';
+  type: 'start' | 'message_created' | 'text' | 'image_pending' | 'image' | 'done' | 'error';
   content?: string;
   messageId?: string;
   title?: string | null;
@@ -73,6 +73,7 @@ class ApiClient {
       onStart?: (data: { messageId: string }) => void;
       onMessageCreated?: (data: { messageId: string }) => void;
       onChunk?: (chunk: { content: string }) => void;
+      onImagePending?: () => void;
       onImage?: (attachment: { id: string; fileName: string; mimeType: string; size: number }) => void;
       onDone?: (data: {
         messageId: string;
@@ -127,6 +128,9 @@ class ApiClient {
                 break;
               case 'text':
                 callbacks?.onChunk?.({ content: event.content || '' });
+                break;
+              case 'image_pending':
+                callbacks?.onImagePending?.();
                 break;
               case 'image':
                 if (event.attachment) callbacks?.onImage?.(event.attachment);

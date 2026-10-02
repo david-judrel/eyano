@@ -341,6 +341,8 @@ export function Composer({ onRequireLogin }: ComposerProps) {
   const handleStop = () => {
     abortRef.current?.abort();
 
+    const pendingId = useAppStore.getState().streamingMessageId;
+    if (pendingId) useAppStore.getState().updateMessage(pendingId, { imagePending: false });
     setIsStreaming(false);
     setStreamingContent('');
     setStreamingMessageId(null);
@@ -527,11 +529,17 @@ export function Composer({ onRequireLogin }: ComposerProps) {
             }
           },
 
+          onImagePending: () => {
+            const msgId = useAppStore.getState().streamingMessageId;
+            if (msgId) useAppStore.getState().updateMessage(msgId, { imagePending: true });
+          },
+
           onImage: (attachment) => {
             const msgId = useAppStore.getState().streamingMessageId;
             if (!msgId) return;
             const target = useAppStore.getState().messages.find((m) => m.id === msgId);
             useAppStore.getState().updateMessage(msgId, {
+              imagePending: false,
               attachments: [...(target?.attachments || []), { ...attachment, storageKey: 'db:kepler' }],
             });
           },
@@ -559,6 +567,8 @@ export function Composer({ onRequireLogin }: ComposerProps) {
               });
             }
 
+            const pendingId = useAppStore.getState().streamingMessageId;
+            if (pendingId) useAppStore.getState().updateMessage(pendingId, { imagePending: false });
             setIsStreaming(false);
             setStreamingContent('');
             setStreamingMessageId(null);
@@ -566,6 +576,8 @@ export function Composer({ onRequireLogin }: ComposerProps) {
           },
 
           onError: (error) => {
+            const pendingId = useAppStore.getState().streamingMessageId;
+            if (pendingId) useAppStore.getState().updateMessage(pendingId, { imagePending: false });
             setIsStreaming(false);
             setStreamingContent('');
             setStreamingMessageId(null);
@@ -593,6 +605,8 @@ export function Composer({ onRequireLogin }: ComposerProps) {
     } catch (err) {
       console.error('Submit error:', err);
 
+      const pendingId = useAppStore.getState().streamingMessageId;
+      if (pendingId) useAppStore.getState().updateMessage(pendingId, { imagePending: false });
       setIsStreaming(false);
       setStreamingContent('');
       setStreamingMessageId(null);
