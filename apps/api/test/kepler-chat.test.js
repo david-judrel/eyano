@@ -399,3 +399,15 @@ test('consigne du chat : jamais de modele ni de fournisseur ; retouche annoncee'
     assert.doesNotMatch(text, /pollinations|sana|flux|gemini|google|z-image/i);
   }
 });
+
+test('echecs techniques : un seul message sobre, sans quota ni detail interne', () => {
+  const { KEPLER_FAILURE_TEXT } = require(require('node:path').join(__dirname, '..', 'dist', 'modules', 'image', 'kepler-chat.js'));
+  assert.equal(KEPLER_FAILURE_TEXT, 'Impossible de générer cette image.');
+  for (const code of ['QUOTA_EXHAUSTED', 'UNAVAILABLE', 'FAILED', 'TOO_LARGE', 'UNKNOWN_MODEL']) {
+    assert.equal(keplerFailureText(code), KEPLER_FAILURE_TEXT, code);
+  }
+  for (const code of ['QUOTA_EXHAUSTED', 'UNAVAILABLE', 'FAILED', 'NO_IMAGE', 'INVALID_PROMPT']) {
+    assert.doesNotMatch(keplerFailureText(code), /quota|plus tard|modèle|disponible/i, code);
+    assert.match(keplerFailureText(code), /^Impossible de générer cette image/, code);
+  }
+});

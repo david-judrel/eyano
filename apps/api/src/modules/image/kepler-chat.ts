@@ -187,23 +187,23 @@ export function shouldUseKepler(
 
 /** Reponse d'Eyano pour chaque echec stable du moteur image. */
 export function keplerFailureText(code: string): string {
+  // Echecs techniques (quota, service indisponible, erreur) : un seul message
+  // sobre, sans detail interne. Seuls les cas ou l'utilisateur peut agir
+  // recoivent une precision.
   switch (code) {
-    case 'QUOTA_EXHAUSTED':
-      return "Je ne peux pas générer d'image pour le moment : l'accès à la génération d'images n'est pas disponible (quota du modèle). Réessaie un peu plus tard.";
     case 'NO_IMAGE':
-      return "Je n'ai pas réussi à produire d'image pour cette demande. Tu peux essayer de la reformuler ?";
+      return 'Impossible de générer cette image. Essaie de reformuler ta demande.';
     case 'INVALID_PROMPT':
-      return "Je n'ai pas pu utiliser ta demande : la description est trop longue, ou l'image jointe n'est pas au bon format (PNG, JPEG ou WebP, 10 Mo maximum).";
-    case 'TOO_LARGE':
-      return "L'image générée est trop volumineuse pour être conservée. Réessaie, éventuellement avec une demande plus simple.";
-    case 'UNAVAILABLE':
-      return "La génération d'images n'est pas disponible pour le moment.";
+      return 'Impossible de générer cette image : la description est trop longue, ou l’image jointe n’est pas au bon format (PNG, JPEG ou WebP, 10 Mo maximum).';
     default:
-      return "La génération de l'image a échoué. Réessaie dans un instant.";
+      return KEPLER_FAILURE_TEXT;
   }
 }
 
 export const KEPLER_SUCCESS_TEXT = "Voici l'image générée.";
+
+/** Reponse a un echec technique (quota epuise, service indisponible, erreur). */
+export const KEPLER_FAILURE_TEXT = 'Impossible de générer cette image.';
 
 const EXTENSIONS: Record<string, string> = {
   'image/png': 'png',
