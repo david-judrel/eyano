@@ -1,4 +1,5 @@
-import { Controller, Get, Patch, Param, Body, Query, UseGuards, Req, ForbiddenException } from '@nestjs/common';
+import { Controller, Get, Patch, Param, Body, Query, UseGuards, Req, Res, ForbiddenException } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AdminService } from './admin.service';
 import { AuthGuard } from '../../guards/auth.guard';
@@ -115,5 +116,53 @@ export class AdminController {
   @ApiOperation({ summary: 'Statistiques des logs d\'audit' })
   async getAuditStats() {
     return this.auditService.getStats();
+  }
+
+  // ----------------------------------------------- suivi des conversations
+  // Lecture seule, SUPER_ADMIN uniquement ; chaque conversation ouverte est
+  // journalisee dans l'audit (qui a lu quoi, et quand).
+
+  @Get('conversations')
+  @UseGuards(SuperAdminGuard)
+  @ApiOperation({ summary: 'Conversations de tous les utilisateurs (SUPER_ADMIN, lecture seule)' })
+  async listConversations(
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('search') search?: string,
+    @Query('userId') userId?: string
+  ) {
+    return this.adminService.listConversations({
+      page: page ? parseInt(page, 10) : 1,
+      limit: limit ? Math.min(parseInt(limit, 10), 50) : 20,
+      search,
+      userId,
+    });
+  }
+
+  @Get('conversations/:id')
+  @UseGuards(SuperAdminGuard)
+  @ApiOperation({ summary: "Lire une conversation d'un utilisateur (SUPER_ADMIN, journalise)" })
+  async getConversation(@Param('id') id: string, @Req() req: any) {
+    const conversation = await this.adminService.getConversation(id);
+    await this.auditService.log({
+      userId: req.user.userId,
+      action: 'VIEW_USER_CONVERSATION',
+      target: id,
+      details: { ownerId: conversation.user.id },
+      ip: req.ip,
+    });
+    return conversation;
+  }
+
+  @Get('attachments/:id/content')
+  @UseGuards(SuperAdminGuard)
+  @ApiOperation({ summary: "Image d'une conversation (SUPER_ADMIN)" })
+  async getAttachmentContent(@Param('id') id: string, @Res() res: Response) {
+    const file = await this.adminService.getAttachmentContent(id);
+    res.setHeader('Content-Type', file.mimeType);
+    res.setHeader('Content-Length', String(file.data.length));
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.end(file.data);
   }
 }

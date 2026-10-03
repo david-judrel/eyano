@@ -164,9 +164,10 @@ class ApiClient {
   }
 
   /** Image conservee par l'API (Kepler), en URL locale utilisable par <img>. */
-  async getFileObjectUrl(id: string): Promise<string> {
+  async getFileObjectUrl(id: string, scope: 'owner' | 'admin' = 'owner'): Promise<string> {
     const token = this.getToken();
-    const res = await fetch(`${API_URL}/files/${encodeURIComponent(id)}/content`, {
+    const path = scope === 'admin' ? `/admin/attachments/${encodeURIComponent(id)}/content` : `/files/${encodeURIComponent(id)}/content`;
+    const res = await fetch(`${API_URL}${path}`, {
       headers: token ? { Authorization: `Bearer ${token}` } : {},
     });
     if (!res.ok) throw new Error(`HTTP ${res.status}`);

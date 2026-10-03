@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
-import { ArrowLeft, Cpu, FileText, LayoutDashboard, LogOut, Menu, Users, X } from 'lucide-react';
+import { ArrowLeft, Cpu, FileText, LayoutDashboard, LogOut, Menu, MessagesSquare, Users, X } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { api } from '@/lib/api';
 import { cn } from '@/lib/utils';
@@ -15,12 +15,14 @@ import { RoleBadge } from '@/components/admin/AdminKit';
 const navItems = [
   { label: "Vue d'ensemble", href: '/admin/overview', icon: LayoutDashboard },
   { label: 'Utilisateurs', href: '/admin/users', icon: Users },
+  { label: 'Conversations', href: '/admin/conversations', icon: MessagesSquare, superAdminOnly: true },
   { label: 'IA et clés', href: '/admin/ai', icon: Cpu },
   { label: 'Audit', href: '/admin/audit', icon: FileText },
 ];
 
-function AdminNav({ pathname, onNavigate, onLogout, onClose }: {
+function AdminNav({ pathname, role, onNavigate, onLogout, onClose }: {
   pathname: string;
+  role?: string;
   onNavigate: (href: string) => void;
   onLogout: () => void;
   onClose?: () => void;
@@ -37,8 +39,8 @@ function AdminNav({ pathname, onNavigate, onLogout, onClose }: {
       </div>
 
       <nav aria-label="Administration" className="flex flex-1 flex-col gap-0.5 px-3">
-        {navItems.map(({ label, href, icon: Icon }) => {
-          const active = pathname === href;
+        {navItems.filter((item) => !item.superAdminOnly || role === 'SUPER_ADMIN').map(({ label, href, icon: Icon }) => {
+          const active = pathname === href || pathname.startsWith(`${href}/`);
           return (
             <button
               key={href}
@@ -115,11 +117,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   return (
     <div className="flex h-full w-full bg-background">
       <aside className="hidden w-sidebar shrink-0 flex-col border-r border-border-subtle bg-background-subtle lg:flex">
-        <AdminNav pathname={pathname} onNavigate={navigate} onLogout={handleLogout} />
+        <AdminNav pathname={pathname} role={user?.role} onNavigate={navigate} onLogout={handleLogout} />
       </aside>
       <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
         <SheetContent title="Menu d'administration" className="lg:hidden">
-          <AdminNav pathname={pathname} onNavigate={navigate} onLogout={handleLogout} onClose={() => setSidebarOpen(false)} />
+          <AdminNav pathname={pathname} role={user?.role} onNavigate={navigate} onLogout={handleLogout} onClose={() => setSidebarOpen(false)} />
         </SheetContent>
       </Sheet>
 

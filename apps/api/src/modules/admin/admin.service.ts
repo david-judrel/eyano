@@ -1,6 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { prisma } from '../../lib/prisma';
 import { UserRole, UserStatus } from '@prisma/client';
+import { ATTACHMENT_PUBLIC_SELECT } from '../files/attachment-select';
 
 @Injectable()
 export class AdminService {
@@ -137,5 +138,77 @@ export class AdminService {
         today: messagesToday,
       },
     };
+  }
+
+  // ----------------------------------------------- suivi des conversations
+
+  /** Toutes les conversations, les plus recentes d'abord (titre, auteur, volume). */
+  async listConversations(params: { page?: number; limit?: number; search?: string; userId?: string }) {
+    const { page = 1, limit = 20, search, userId } = params;
+    const where: any = {};
+    if (userId) where.userId = userId;
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { user: { email: { contains: search, mode: 'insensitive' } } },
+        { user: { name: { contains: search, mode: 'insensitive' } } },
+      ];
+    }
+
+    const [conversations, total] = await Promise.all([
+      prisma.conversation.findMany({
+        where,
+        select: {
+          id: true,
+          title: true,
+          createdAt: true,
+          updatedAt: true,
+          user: { select: { id: true, email: true, name: true, avatarUrl: true } },
+          _count: { select: { messages: true } },
+        },
+        orderBy: { updatedAt: 'desc' },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      prisma.conversation.count({ where }),
+    ]);
+
+    return { conversations, pagination: { page, limit, total, pages: Math.max(1, Math.ceil(total / limit)) } };
+  }
+
+  /** Une conversation complete : auteur et messages (pieces jointes sans octets). */
+  async getConversation(id: string) {
+    const conversation = await prisma.conversation.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        title: true,
+        createdAt: true,
+        updatedAt: true,
+        user: { select: { id: true, email: true, name: true, avatarUrl: true, role: true, status: true } },
+        messages: {
+          orderBy: { createdAt: 'asc' },
+          select: {
+            id: true,
+            role: true,
+            content: true,
+            status: true,
+            model: true,
+            latencyMs: true,
+            createdAt: true,
+            attachments: { select: ATTACHMENT_PUBLIC_SELECT },
+          },
+        },
+      },
+    });
+    if (!conversation) throw new NotFoundException('Conversation non trouvee');
+    return conversation;
+  }
+
+  /** Octets d'une piece jointe conservee en base (images Kepler). */
+  async getAttachmentContent(id: string): Promise<{ data: Buffer; mimeType: string }> {
+    const attachment = await prisma.attachment.findUnique({ where: { id }, select: { data: true, mimeType: true } });
+    if (!attachment?.data) throw new NotFoundException('Fichier non trouve');
+    return { data: Buffer.from(attachment.data), mimeType: attachment.mimeType };
   }
 }

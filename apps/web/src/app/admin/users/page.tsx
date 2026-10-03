@@ -1,7 +1,8 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Crown, Lock, MoreHorizontal, Search, Shield, UserCheck, UserX } from 'lucide-react';
+import { Crown, Lock, MessagesSquare, MoreHorizontal, Search, Shield, UserCheck, UserX } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 import { api } from '@/lib/api';
 import { useAppStore } from '@/lib/store';
 import { PageHeader } from '@/components/layout/Page';
@@ -44,6 +45,7 @@ interface UsersResponse {
 const ALL = 'ALL';
 
 export default function AdminUsers() {
+  const router = useRouter();
   const { user: currentUser } = useAppStore();
   const [users, setUsers] = useState<User[]>([]);
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
@@ -164,6 +166,14 @@ export default function AdminUsers() {
                         <IconButton label={`Actions pour ${user.email}`} icon={MoreHorizontal} size="sm" tooltip={false} />
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        {isSuperAdmin && (
+                          <>
+                            <DropdownMenuItem icon={MessagesSquare} onSelect={() => router.push(`/admin/conversations?userId=${user.id}`)}>
+                              Voir ses conversations
+                            </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                          </>
+                        )}
                         {user.status === 'ACTIVE' ? (
                           <>
                             <DropdownMenuItem icon={Lock} onSelect={() => handleStatusChange(user.id, 'INACTIVE')}>Désactiver</DropdownMenuItem>

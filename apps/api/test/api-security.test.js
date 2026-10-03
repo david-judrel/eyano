@@ -279,3 +279,27 @@ test('I6 : personne ne modifie son propre role ni son propre statut', async () =
   assert.equal(SUPER.role, 'SUPER_ADMIN');
   assert.equal(ADMIN.status, 'ACTIVE');
 });
+
+// ----------------------------------------- I7 : suivi des conversations (admin)
+
+test('I7 : lire les conversations des utilisateurs exige SUPER_ADMIN (lecture seule)', () => {
+  const guardsOf = (method) => (Reflect.getMetadata('__guards__', AdminController.prototype[method]) || []).map((g) => g.name);
+  for (const method of ['listConversations', 'getConversation', 'getAttachmentContent']) {
+    assert.ok(guardsOf(method).includes('SuperAdminGuard'), `${method} protege par SuperAdminGuard`);
+  }
+  assert.throws(() => new SuperAdminGuard().canActivate(httpContext(req(ADMIN))), 'un ADMIN est refuse');
+  const routes = Object.getOwnPropertyNames(AdminController.prototype).filter((m) => /conversation/i.test(m));
+  assert.deepEqual(routes.sort(), ['getConversation', 'listConversations'], 'aucune route de modification');
+});
+
+test('I7 : chaque conversation lue par un SUPER_ADMIN est journalisee', async () => {
+  const logs = [];
+  const tracked = new AdminController(
+    { getConversation: async (id) => ({ id, user: { id: A.id }, messages: [] }) },
+    { async log(entry) { logs.push(entry); } }
+  );
+  await tracked.getConversation(conversationA.id, req(SUPER));
+  assert.deepEqual(logs.map((l) => [l.userId, l.action, l.target, l.details.ownerId]), [
+    [SUPER.id, 'VIEW_USER_CONVERSATION', conversationA.id, A.id],
+  ]);
+});

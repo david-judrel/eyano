@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Activity, FileText, Key, Shield, User, type LucideIcon } from 'lucide-react';
+import { Activity, Eye, FileText, Key, Shield, User, type LucideIcon } from 'lucide-react';
 import { api } from '@/lib/api';
 import { PageHeader } from '@/components/layout/Page';
 import { Select } from '@/components/ui/select';
@@ -43,6 +43,7 @@ const actionLabels: Record<string, { label: string; icon: LucideIcon }> = {
   UPDATE_USER_ROLE: { label: 'Modification de rôle', icon: Shield },
   UPDATE_USER_STATUS: { label: 'Modification de statut', icon: User },
   RUN_MISSION: { label: 'Mission IA', icon: Activity },
+  VIEW_USER_CONVERSATION: { label: "Lecture d'une conversation", icon: Eye },
 };
 
 const ALL = 'ALL';
@@ -87,6 +88,7 @@ export default function AdminAudit() {
           { value: 'RESET_PROVIDER_KEYS', label: 'Réinitialisation des clés' },
           { value: 'UPDATE_USER_ROLE', label: 'Modification de rôle' },
           { value: 'UPDATE_USER_STATUS', label: 'Modification de statut' },
+          { value: 'VIEW_USER_CONVERSATION', label: "Lecture d'une conversation" },
         ]}
       />
 
