@@ -1,11 +1,26 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { FileText, ImageOff } from 'lucide-react';
+import { Download, FileText, ImageOff, Maximize2 } from 'lucide-react';
 import { api } from '@/lib/api';
 import type { MessageAttachment } from '@/lib/store';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/feedback';
+import { Button, IconButton } from '@/components/ui/button';
+import { Dialog, DialogContent } from '@/components/ui/overlay';
+
+/**
+ * Telechargement d'une image deja chargee : l'URL blob est meme origine, le
+ * navigateur gere la sauvegarde (nom de fichier conserve).
+ */
+function downloadImage(objectUrl: string, fileName: string) {
+  const link = document.createElement('a');
+  link.href = objectUrl;
+  link.download = fileName || 'image-kepler.png';
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+}
 
 /**
  * Image produite par Kepler : chargee avec le jeton (route protegee), puis
@@ -14,6 +29,7 @@ import { Skeleton } from '@/components/ui/feedback';
 export function ImageResult({ id, fileName }: { id: string; fileName: string }) {
   const [src, setSrc] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  const [open, setOpen] = useState(false);
 
   useEffect(() => {
     let objectUrl: string | null = null;
@@ -39,11 +55,41 @@ export function ImageResult({ id, fileName }: { id: string; fileName: string }) 
 
   if (src) {
     return (
-      <figure className="w-full max-w-md overflow-hidden rounded-lg border border-border-subtle">
-        {/* eslint-disable-next-line @next/next/no-img-element -- URL locale (blob) d'une image protegee */}
-        <img src={src} alt="Image créée par Kepler" className="h-auto w-full" />
-        <figcaption className="sr-only">{fileName}</figcaption>
-      </figure>
+      <>
+        <figure className="group relative w-full max-w-md overflow-hidden rounded-lg border border-border-subtle">
+          <button type="button" className="block w-full cursor-zoom-in" onClick={() => setOpen(true)} aria-label="Agrandir l'image">
+            {/* eslint-disable-next-line @next/next/no-img-element -- URL locale (blob) d'une image protegee */}
+            <img src={src} alt="Image créée par Kepler" className="h-auto w-full" />
+          </button>
+          <figcaption className="sr-only">{fileName}</figcaption>
+          <div className="absolute right-2 top-2 flex gap-1 lg:opacity-0 lg:focus-within:opacity-100 lg:group-hover:opacity-100">
+            <IconButton label="Agrandir l'image" icon={Maximize2} size="sm" variant="secondary" onClick={() => setOpen(true)} />
+            <IconButton
+              label="Télécharger l'image"
+              icon={Download}
+              size="sm"
+              variant="secondary"
+              onClick={() => downloadImage(src, fileName)}
+            />
+          </div>
+        </figure>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent
+            title="Image créée par Kepler"
+            description={fileName}
+            size="lg"
+            className="sm:max-w-4xl"
+            footer={
+              <Button variant="secondary" icon={Download} onClick={() => downloadImage(src, fileName)}>
+                Télécharger
+              </Button>
+            }
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element -- URL locale (blob) d'une image protegee */}
+            <img src={src} alt="Image créée par Kepler" className="mx-auto h-auto w-full rounded-md border border-border-subtle" />
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
   if (failed) {

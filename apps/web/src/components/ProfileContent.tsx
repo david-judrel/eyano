@@ -2,24 +2,32 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { 
-  ArrowLeft, Save, Loader2, Mail, User, Calendar, LogOut, Pencil, X, 
-  ShieldCheck, Key, Palette, Database, Bell, Globe, ChevronRight, Eye, EyeOff 
+import {
+  ArrowLeft, Bell, Calendar, Copy, Database, Eye, EyeOff, Globe, Key, LogOut, Mail, Palette, Pencil,
+  ShieldCheck, X,
 } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { EYANO_MODELS } from '@eyano/types';
 import { api } from '@/lib/api';
-import { Avatar } from '@/components/ui/avatar';
-import { Logo } from '@/components/ui/logo';
 import { useToast } from '@/lib/toast';
-import { cn } from '@/lib/utils';
 import { useTheme } from '@/lib/theme-provider';
+import { cn } from '@/lib/utils';
+import { Logo } from '@/components/ui/logo';
+import { Avatar } from '@/components/ui/avatar';
+import { Badge } from '@/components/ui/badge';
+import { Button, IconButton } from '@/components/ui/button';
+import { Field } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Select } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Card, Separator, Spinner } from '@/components/ui/feedback';
+import { Container, PageHeader } from '@/components/layout/Page';
 
 export function ProfileContent() {
   const router = useRouter();
   const { user, setUser, setConversations } = useAppStore();
   const { addToast } = useToast();
-  const { theme, setTheme, resolvedTheme } = useTheme();
+  const { theme, setTheme } = useTheme();
 
   const [name, setName] = useState('');
   const [apiKey, setApiKey] = useState('sk-eyano-xxxxxxxxxxxx');
@@ -72,198 +80,235 @@ export function ProfileContent() {
 
   if (loading) {
     return (
-      <div className="flex h-[100dvh] w-full bg-[var(--ey-background)] items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-[var(--ey-brand)]" />
+      <div className="flex h-full w-full items-center justify-center bg-background">
+        <Spinner size="md" label="Chargement du profil" />
       </div>
     );
   }
 
   if (!user) return null;
 
-  return (
-    <div className="h-full w-full bg-background flex flex-col overflow-y-auto overflow-x-hidden">
+  const identity = [
+    { icon: Mail, label: 'Adresse e-mail', value: user.email, mono: true },
+    {
+      icon: Calendar,
+      label: 'Membre depuis',
+      value: new Date(user.createdAt || Date.now()).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }),
+      mono: false,
+    },
+    { icon: Database, label: 'ID utilisateur', value: `${user.id?.slice(0, 8)}…`, mono: true },
+  ];
 
-      <header className="sticky top-0 z-30 backdrop-blur-xl bg-[var(--ey-background)]/90 border-b border-[var(--ey-border)] shrink-0">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-14 lg:h-16 flex items-center justify-between">
-          <button onClick={() => router.back()} 
-            className="flex items-center gap-2 text-[var(--ey-muted-foreground)] hover:text-[var(--ey-brand)] transition-colors active:scale-95 touch-manipulation">
-            <ArrowLeft className="h-5 w-5" />
-            <span className="text-sm font-medium hidden sm:inline">Retour au chat</span>
-          </button>
-          <div className="flex items-center gap-3 opacity-70">
+  return (
+    <div className="flex h-full w-full flex-col overflow-y-auto overflow-x-hidden bg-background">
+      <header className="sticky top-0 z-sticky shrink-0 border-b border-border-subtle bg-background">
+        <Container size="wide" className="flex h-topbar items-center justify-between">
+          <Button variant="ghost" size="sm" icon={ArrowLeft} onClick={() => router.back()}>
+            Retour au chat
+          </Button>
+          <div className="flex items-center gap-2">
             <Logo size="sm" />
-            <span className="text-sm font-bold tracking-tight hidden sm:inline">Paramètres & Compte</span>
+            <span className="text-label text-foreground-secondary">Paramètres &amp; Compte</span>
           </div>
-        </div>
+        </Container>
       </header>
 
-      <main className="flex-1 max-w-6xl mx-auto w-full px-4 sm:px-6 py-6 lg:py-10 space-y-8 pb-24 lg:pb-10">
-        
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 lg:gap-8">
-          
-          <div className="lg:col-span-4 space-y-6">
-            
-            <div className="relative rounded-2xl border border-[var(--ey-border)] bg-[var(--ey-surface)] overflow-hidden p-6 flex flex-col items-center text-center gap-4">
-              <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_0%,rgba(57,255,20,0.06)_0%,transparent_50%)] pointer-events-none" />
-              
-              <Avatar src={user.avatarUrl} fallback={user.name?.[0]} size="lg"
-                className="w-24 h-24 text-3xl bg-[var(--ey-brand-dim)] text-[var(--ey-brand)] border-2 border-[var(--ey-brand)]/20 shadow-lg relative z-10" />
-              
-              <div className="w-full relative z-10">
+      <main className="flex-1">
+        <Container size="wide" className="py-6 lg:py-10">
+          <PageHeader
+            title="Mon profil"
+            description="Identité, préférences et sécurité de votre compte."
+            className="mb-6"
+          />
+
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12 lg:gap-8">
+            <div className="flex flex-col gap-6 lg:col-span-4">
+              <Card className="flex flex-col items-center gap-4">
+                <Avatar
+                  src={user.avatarUrl}
+                  alt={user.name || user.email}
+                  fallback={(user.name?.[0] || user.email[0] || '?').toUpperCase()}
+                  size="lg"
+                  className="h-20 w-20 text-display"
+                />
+
                 {!editingName ? (
-                  <>
-                    <h1 className="text-xl font-bold text-[var(--ey-foreground)] truncate">{user.name || 'Utilisateur'}</h1>
-                    <p className="text-sm text-[var(--ey-muted-foreground)] mt-1 break-all">{user.email}</p>
+                  <div className="flex w-full flex-col items-center gap-1 text-center animate-fade-in">
+                    <h2 className="truncate text-heading-md text-foreground">{user.name || 'Utilisateur'}</h2>
+                    <p className="break-all text-body-sm text-foreground-muted">{user.email}</p>
                     {user.role && (
-                      <div className="inline-flex items-center gap-1.5 mt-3 px-2.5 py-1 rounded-full bg-[var(--ey-brand-dim)] border border-[var(--ey-brand)]/15">
-                        <ShieldCheck className="h-3 w-3 text-[var(--ey-brand)]" />
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-[var(--ey-brand)]">{user.role}</span>
-                      </div>
+                      <Badge tone="brand" className="mt-2">
+                        <ShieldCheck className="icon-xs" aria-hidden />
+                        {user.role}
+                      </Badge>
                     )}
-                    <button onClick={() => setEditingName(true)} 
-                      className="mt-4 w-full h-10 rounded-xl border border-[var(--ey-border)] text-xs font-bold text-[var(--ey-muted-foreground)] hover:text-[var(--ey-brand)] hover:border-[var(--ey-brand)]/30 transition-all flex items-center justify-center gap-2 touch-manipulation">
-                      <Pencil className="h-3.5 w-3.5" /> Modifier le profil
-                    </button>
-                  </>
+                    <Button variant="outline" size="sm" icon={Pencil} className="mt-4 w-full" onClick={() => setEditingName(true)}>
+                      Modifier le profil
+                    </Button>
+                  </div>
                 ) : (
-                  <div className="space-y-3 animate-in fade-in slide-in-from-top-2">
-                    <input value={name} onChange={(e) => setName(e.target.value)} autoFocus maxLength={60}
-                      className="w-full h-10 rounded-xl border border-[var(--ey-brand)]/40 bg-[var(--ey-background)] px-3 text-sm text-[var(--ey-foreground)] focus:outline-none" placeholder="Votre nom" />
+                  <div className="flex w-full flex-col gap-3 animate-fade-in">
+                    <Field label="Nom" required>
+                      <Input
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                        autoFocus
+                        maxLength={60}
+                        placeholder="Votre nom"
+                      />
+                    </Field>
                     <div className="flex gap-2">
-                      <button onClick={handleSaveName} disabled={saving || name.length < 3}
-                        className="flex-1 h-9 rounded-lg bg-[var(--ey-brand)] text-[var(--ey-brand-foreground)] text-xs font-bold active:scale-95 touch-manipulation">
-                        {saving ? <Loader2 className="h-3 w-3 animate-spin mx-auto" /> : 'Sauvegarder'}
-                      </button>
-                      <button onClick={() => setEditingName(false)}
-                        className="h-9 w-9 rounded-lg border border-[var(--ey-border)] text-[var(--ey-muted-foreground)] active:scale-95 touch-manipulation flex items-center justify-center">
-                        <X className="h-4 w-4" />
-                      </button>
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        className="flex-1"
+                        loading={saving}
+                        disabled={name.length < 3}
+                        onClick={handleSaveName}
+                      >
+                        Sauvegarder
+                      </Button>
+                      <IconButton label="Annuler la modification" icon={X} variant="outline" size="sm" onClick={() => setEditingName(false)} />
                     </div>
                   </div>
                 )}
-              </div>
-            </div>
+              </Card>
 
-            <div className="rounded-2xl border border-[var(--ey-border)] bg-[var(--ey-surface)] overflow-hidden divide-y divide-[var(--ey-border)]">
-              {[
-                { icon: Mail, label: 'Email', value: user.email },
-                { icon: Calendar, label: 'Membre depuis', value: new Date(user.createdAt || Date.now()).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' }) },
-                { icon: Database, label: 'ID Utilisateur', value: user.id?.slice(0, 8) + '...' },
-              ].map((item, i) => (
-                <div key={i} className="px-4 py-3 flex items-center gap-3">
-                  <item.icon className="h-4 w-4 text-[var(--ey-muted-foreground)] shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-[10px] font-bold text-[var(--ey-muted-foreground)] uppercase tracking-wider">{item.label}</p>
-                    <p className="text-sm text-[var(--ey-foreground)] truncate font-mono">{item.value}</p>
+              <Card padding="none">
+                {identity.map((item, index) => (
+                  <div key={item.label}>
+                    {index > 0 && <Separator />}
+                    <div className="flex items-center gap-3 px-4 py-3">
+                      <item.icon className="icon-sm shrink-0 text-foreground-muted" aria-hidden />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-caption text-foreground-muted">{item.label}</p>
+                        <p className={cn('truncate text-body-sm text-foreground', item.mono && 'font-mono')}>{item.value}</p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </Card>
             </div>
-          </div>
 
-          <div className="lg:col-span-8 space-y-6">
-            
-            <div className="rounded-2xl border border-[var(--ey-border)] bg-[var(--ey-surface)] overflow-hidden">
-              <div className="px-5 py-4 border-b border-[var(--ey-border)] flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-[var(--ey-brand-dim)]"><Key className="h-4 w-4 text-[var(--ey-brand)]" /></div>
-                <div><h2 className="text-base font-semibold text-[var(--ey-foreground)]">Clé API</h2><p className="text-xs text-[var(--ey-muted-foreground)]">Utilisez cette clé pour accéder à l&apos;API Eyano.</p></div>
-              </div>
-              <div className="p-5">
-                <div className="flex items-center gap-2 bg-[var(--ey-background)] border border-[var(--ey-border)] rounded-xl px-4 py-3 group focus-within:border-[var(--ey-brand)]/40 transition-colors">
-                  <code className="flex-1 text-sm font-mono text-[var(--ey-foreground)] truncate">
+            <div className="flex flex-col gap-6 lg:col-span-8">
+              <Card>
+                <div className="flex items-center gap-2">
+                  <Key className="icon-sm text-foreground-muted" aria-hidden />
+                  <h3 className="text-heading-sm text-foreground">Clé API</h3>
+                </div>
+                <p className="mt-1 text-body-sm text-foreground-muted">Utilisez cette clé pour accéder à l&apos;API Eyano.</p>
+
+                <div className="mt-4 flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2">
+                  <code className="min-w-0 flex-1 truncate font-mono text-code text-foreground">
                     {showKey ? apiKey : '••••••••••••••••••••••••••••••••'}
                   </code>
-                  <button onClick={() => setShowKey(!showKey)} className="p-2 text-[var(--ey-muted-foreground)] hover:text-[var(--ey-foreground)] transition-colors touch-manipulation">
-                    {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                  <button onClick={() => { navigator.clipboard.writeText(apiKey); addToast('Clé copiée', 'success'); }} 
-                    className="px-3 py-1.5 rounded-lg bg-[var(--ey-surface-2)] text-xs font-bold text-[var(--ey-foreground)] hover:bg-[var(--ey-brand-dim)] hover:text-[var(--ey-brand)] transition-all touch-manipulation">
+                  <IconButton
+                    label={showKey ? 'Masquer la clé' : 'Afficher la clé'}
+                    icon={showKey ? EyeOff : Eye}
+                    size="sm"
+                    tooltip={false}
+                    onClick={() => setShowKey(!showKey)}
+                  />
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    icon={Copy}
+                    onClick={() => {
+                      navigator.clipboard.writeText(apiKey);
+                      addToast('Clé copiée', 'success');
+                    }}
+                  >
                     Copier
-                  </button>
+                  </Button>
                 </div>
-                <p className="text-[10px] text-[var(--ey-muted-foreground)] mt-2 ml-1">Ne partagez jamais votre clé API publiquement.</p>
-              </div>
-            </div>
+                <p className="mt-2 text-caption text-foreground-muted">Ne partagez jamais votre clé API publiquement.</p>
+              </Card>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              
-              <div className="rounded-2xl border border-[var(--ey-border)] bg-[var(--ey-surface)] p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 rounded-lg bg-[var(--ey-surface-2)]"><Palette className="h-4 w-4 text-[var(--ey-muted-foreground)]" /></div>
-                  <h3 className="text-sm font-semibold text-[var(--ey-foreground)]">Apparence</h3>
-                </div>
-                <div className="flex bg-[var(--ey-background)] rounded-xl p-1 border border-[var(--ey-border)]">
-                  {(['system', 'dark', 'light'] as const).map((t) => (
-                    <button key={t} onClick={() => setTheme(t)}
-                      className={cn("flex-1 py-2 rounded-lg text-xs font-bold capitalize transition-all touch-manipulation",
-                        theme === t ? 'bg-[var(--ey-surface-2)] text-[var(--ey-foreground)] shadow-sm' : 'text-[var(--ey-muted-foreground)] hover:text-[var(--ey-foreground)]')}>
-                      {t === 'system' ? 'Auto' : t === 'dark' ? 'Sombre' : 'Clair'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              <div className="rounded-2xl border border-[var(--ey-border)] bg-[var(--ey-surface)] p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 rounded-lg bg-[var(--ey-surface-2)]"><Globe className="h-4 w-4 text-[var(--ey-muted-foreground)]" /></div>
-                  <h3 className="text-sm font-semibold text-[var(--ey-foreground)]">Langue</h3>
-                </div>
-                <select value={prefs.language} onChange={(e) => setPrefs({...prefs, language: e.target.value})}
-                  className="w-full h-10 rounded-xl bg-[var(--ey-background)] border border-[var(--ey-border)] px-3 text-sm text-[var(--ey-foreground)] focus:outline-none appearance-none cursor-pointer touch-manipulation">
-                  <option value="fr">Français 🇫</option>
-                  <option value="en">English 🇬🇧</option>
-                  <option value="ln">Lingala 🇨🇩</option>
-                </select>
-              </div>
-
-              <div className="rounded-2xl border border-[var(--ey-border)] bg-[var(--ey-surface)] p-5 flex flex-col justify-between">
-                <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-lg bg-[var(--ey-surface-2)]"><Bell className="h-4 w-4 text-[var(--ey-muted-foreground)]" /></div>
-                  <h3 className="text-sm font-semibold text-[var(--ey-foreground)]">Notifications</h3>
-                </div>
-                <label className="flex items-center justify-between cursor-pointer group touch-manipulation">
-                  <span className="text-xs text-[var(--ey-muted-foreground)]">Alertes par email</span>
-                  <div className={cn("w-11 h-6 rounded-full transition-colors relative", prefs.notifications ? 'bg-[var(--ey-brand)]' : 'bg-[var(--ey-surface-2)]')}>
-                    <div className={cn("absolute top-1 w-4 h-4 rounded-full bg-white transition-transform", prefs.notifications ? 'left-6' : 'left-1')} />
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <Card>
+                  <div className="flex items-center gap-2">
+                    <Palette className="icon-sm text-foreground-muted" aria-hidden />
+                    <h3 className="text-heading-sm text-foreground">Apparence</h3>
                   </div>
-                  <input type="checkbox" checked={prefs.notifications} onChange={() => setPrefs({...prefs, notifications: !prefs.notifications})} className="hidden" />
-                </label>
+                  <Field label="Thème" className="mt-4">
+                    <Select
+                      value={theme}
+                      onValueChange={(value) => setTheme(value as 'light' | 'dark' | 'system')}
+                      options={[
+                        { value: 'system', label: 'Système' },
+                        { value: 'dark', label: 'Sombre' },
+                        { value: 'light', label: 'Clair' },
+                      ]}
+                    />
+                  </Field>
+                </Card>
+
+                <Card>
+                  <div className="flex items-center gap-2">
+                    <Globe className="icon-sm text-foreground-muted" aria-hidden />
+                    <h3 className="text-heading-sm text-foreground">Langue</h3>
+                  </div>
+                  <Field label="Langue de l'interface" className="mt-4">
+                    <Select
+                      value={prefs.language}
+                      onValueChange={(value) => setPrefs({ ...prefs, language: value })}
+                      options={[
+                        { value: 'fr', label: 'Français' },
+                        { value: 'en', label: 'English' },
+                        { value: 'ln', label: 'Lingala' },
+                      ]}
+                    />
+                  </Field>
+                </Card>
+
+                <Card>
+                  <div className="flex items-center gap-2">
+                    <Bell className="icon-sm text-foreground-muted" aria-hidden />
+                    <h3 className="text-heading-sm text-foreground">Notifications</h3>
+                  </div>
+                  <Switch
+                    className="mt-4"
+                    label="Alertes par e-mail"
+                    checked={prefs.notifications}
+                    onCheckedChange={(checked) => setPrefs({ ...prefs, notifications: checked })}
+                  />
+                </Card>
+
+                <Card>
+                  <div className="flex items-center gap-2">
+                    <Database className="icon-sm text-foreground-muted" aria-hidden />
+                    <h3 className="text-heading-sm text-foreground">Historique</h3>
+                  </div>
+                  <Field label="Conservation des conversations" className="mt-4">
+                    <Select
+                      value={prefs.dataRetention}
+                      onValueChange={(value) => setPrefs({ ...prefs, dataRetention: value })}
+                      options={[
+                        { value: '7d', label: '7 jours' },
+                        { value: '30d', label: '30 jours' },
+                        { value: 'forever', label: 'Illimité' },
+                      ]}
+                    />
+                  </Field>
+                </Card>
               </div>
 
-              <div className="rounded-2xl border border-[var(--ey-border)] bg-[var(--ey-surface)] p-5">
-                <div className="flex items-center gap-3 mb-4">
-                  <div className="p-2 rounded-lg bg-[var(--ey-surface-2)]"><Database className="h-4 w-4 text-[var(--ey-muted-foreground)]" /></div>
-                  <h3 className="text-sm font-semibold text-[var(--ey-foreground)]">Historique</h3>
+              <Card className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <h3 className="text-heading-sm text-error">Session active</h3>
+                  <p className="mt-1 text-body-sm text-foreground-muted">Déconnectez-vous de tous les appareils.</p>
                 </div>
-                <div className="space-y-2">
-                  {['7d', '30d', 'forever'].map((val) => (
-                    <button key={val} onClick={() => setPrefs({...prefs, dataRetention: val})}
-                      className={cn("w-full flex items-center justify-between px-3 py-2 rounded-lg text-xs transition-all touch-manipulation",
-                        prefs.dataRetention === val ? 'bg-[var(--ey-brand-dim)] text-[var(--ey-brand)] border border-[var(--ey-brand)]/20' : 'text-[var(--ey-muted-foreground)] hover:bg-[var(--ey-surface-2)]')}>
-                      <span>{val === '7d' ? '7 jours' : val === '30d' ? '30 jours' : 'Illimité'}</span>
-                      {prefs.dataRetention === val && <ChevronRight className="h-3 w-3" />}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
+                <Button variant="destructive" icon={LogOut} className="w-full sm:w-auto" onClick={handleLogout}>
+                  Se déconnecter
+                </Button>
+              </Card>
             </div>
-
-            <div className="rounded-2xl border border-red-500/10 bg-red-500/[2%] overflow-hidden p-5 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div>
-                <h3 className="text-sm font-bold text-red-400">Session active</h3>
-                <p className="text-xs text-[var(--ey-muted-foreground)] mt-1">Déconnectez-vous de tous les appareils.</p>
-              </div>
-              <button onClick={handleLogout} 
-                className="w-full sm:w-auto h-10 px-5 rounded-xl border border-red-500/20 text-red-400 text-xs font-bold hover:bg-red-500/10 transition-all active:scale-95 touch-manipulation flex items-center justify-center gap-2">
-                <LogOut className="h-3.5 w-3.5" /> Se déconnecter
-              </button>
-            </div>
-
           </div>
-        </div>
-        
-        <p className="text-center text-[10px] text-[var(--ey-muted-foreground)]/40 select-none pt-4">Eyano v1.0 — Propulsé par Gnoxe AI</p>
+
+          <p className="mt-8 text-center text-caption text-foreground-muted select-none">
+            Eyano v1.0 — Propulsé par Gnoxe AI
+          </p>
+        </Container>
       </main>
     </div>
   );
