@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Check, LogOut, MoreHorizontal, Pencil, Plus, Settings, Shield, Sparkles, Trash2, X } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
@@ -238,6 +239,12 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
           <span className="text-caption text-foreground-muted">Thème</span>
           <ThemeSwitcher />
         </div>
+
+        <nav aria-label="Informations légales" className="flex flex-wrap gap-x-3 gap-y-1 px-1 text-caption text-foreground-muted">
+          <Link href="/conditions" className="hover:text-foreground">Conditions</Link>
+          <Link href="/confidentialite" className="hover:text-foreground">Confidentialité</Link>
+          <Link href="/securite" className="hover:text-foreground">Sécurité</Link>
+        </nav>
 
         {user && (
           <div className="flex items-center gap-2 rounded-md px-1 py-1">
