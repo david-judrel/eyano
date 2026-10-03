@@ -16,6 +16,7 @@ const EXEMPT = {
   'app/layout.tsx': 'theme-color des navigateurs : valeur litterale exigee par la balise meta',
   'app/api/og/route.tsx': "image Open Graph generee cote serveur : pas de CSS, valeurs litterales",
   'lib/metadata.ts': 'couleurs des manifestes / meta : valeurs litterales exigees',
+  'components/ui/brand-icons.tsx': 'logos de marques tierces : couleurs imposees par leur charte',
 };
 
 /** Fichiers pas encore migres (liste qui ne doit faire que diminuer). */
@@ -24,7 +25,6 @@ const PENDING = new Set([
   'app/error.tsx',
   'app/global-error.tsx',
   'app/not-found.tsx',
-  'components/LoginContent.tsx',
   'components/MobileInstallGate.tsx',
   'components/ProfileContent.tsx',
 ]);

@@ -2,11 +2,16 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Mail, Lock, User, ArrowLeft, ArrowRight, Loader2, Eye, EyeOff, Check, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Mail, X } from 'lucide-react';
 import { useAppStore } from '@/lib/store';
 import { api } from '@/lib/api';
 import { Logo } from '@/components/ui/logo';
-import { cn } from '@/lib/utils';
+import { Button, IconButton } from '@/components/ui/button';
+import { Field } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { Alert } from '@/components/ui/feedback';
+import { GoogleIcon } from '@/components/ui/brand-icons';
+import { LegalConsent } from '@/components/legal/LegalConsent';
 
 type Step = 'choose' | 'email-login' | 'email-register';
 
@@ -87,193 +92,135 @@ export function LoginContent() {
     }
   };
 
-  return (
-    <div className="flex h-full w-full bg-background overflow-y-auto overflow-x-hidden">
+  const isLogin = step === 'email-login';
+  const showPassword = isLogin ? showLoginPassword : showRegisterPassword;
 
-      {/* PARTIE GAUCHE - BRANDING DESKTOP */}
-      <div className="relative hidden lg:flex lg:w-1/2 items-center justify-center overflow-hidden bg-surface">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(57,255,20,0.08)_0%,transparent_60%)]" />
-        <div className="relative z-10 text-center px-10 animate-fade-in">
-          <div className="mx-auto mb-8 flex h-24 w-24 items-center justify-center rounded-3xl border border-brand/20 bg-brand/[8%] glow-brand overflow-hidden">
-            <Logo size="xl" />
-          </div>
-          <h1 className="text-6xl font-bold tracking-tighter text-foreground mb-4">Eyano</h1>
-          <p className="text-lg text-muted font-light max-w-md mx-auto">
-            Votre assistant IA intelligent conçu pour l&apos;excellence.
-          </p>
+  return (
+    <div className="flex h-full w-full overflow-y-auto overflow-x-hidden bg-background">
+      <div className="hidden items-center justify-center border-r border-border-subtle bg-background-subtle lg:flex lg:w-1/2">
+        <div className="flex max-w-md flex-col items-center px-10 text-center animate-fade-in">
+          <Logo size="xl" />
+          <h1 className="mt-6 text-display text-foreground">Eyano</h1>
+          <p className="mt-3 text-body-lg text-foreground-secondary">Votre assistant IA intelligent conçu pour l&apos;excellence.</p>
         </div>
       </div>
 
-      {/* PARTIE DROITE - FORMULAIRES */}
-      <div className="flex w-full flex-col items-center justify-center px-6 py-8 lg:w-1/2 relative">
+      <div className="flex w-full flex-col items-center justify-center px-4 py-12 sm:px-6 lg:w-1/2">
+        <div className="flex w-full max-w-sm flex-col animate-fade-in">
+          {step !== 'choose' && (
+            <Button variant="ghost" size="sm" icon={ArrowLeft} className="mb-6 self-start" onClick={() => setStep('choose')}>
+              Retour
+            </Button>
+          )}
 
-        {/* Conteneur Principal Centré */}
-        <div className="w-full max-w-[400px] relative z-10 animate-fade-in-up">
-
-          {/* LOGO MOBILE */}
-          <div className="flex flex-col items-center mb-10">
-            <div className="mb-6 flex h-16 w-16 items-center justify-center rounded-2xl border border-brand/20 bg-brand/[8%] glow-brand overflow-hidden">
-              <Logo size="lg" />
-            </div>
-
-            <h1 className="text-3xl font-bold tracking-tight text-foreground text-center">
-              {step === 'choose' ? 'Bienvenue' : step === 'email-login' ? 'Connexion' : 'Inscription'}
+          <div className="flex flex-col items-center text-center">
+            <Logo size="lg" className="lg:hidden" />
+            <h1 className="mt-4 text-heading-xl text-foreground lg:mt-0">
+              {step === 'choose' ? 'Bienvenue' : isLogin ? 'Connexion' : 'Inscription'}
             </h1>
-            <p className="text-muted text-sm mt-2 text-center">
+            <p className="mt-2 text-body-md text-foreground-muted">
               {step === 'choose'
                 ? 'Comment souhaitez-vous continuer ?'
-                : step === 'email-login'
+                : isLogin
                   ? 'Accédez à votre espace Eyano.'
-                  : 'Rejoignez l\'élite de l\'IA.'}
+                  : "Rejoignez l'élite de l'IA."}
             </p>
           </div>
 
-          {/* BOUTON RETOUR */}
-          {(step === 'email-login' || step === 'email-register') && (
-            <button
-              onClick={() => setStep('choose')}
-              className="absolute -top-16 left-0 flex items-center gap-2 text-muted hover:text-brand transition-colors group p-2 -ml-2"
-            >
-              <div className="p-2 rounded-full bg-surface border border-border group-hover:border-brand/20 transition-all">
-                <ArrowLeft className="h-4 w-4" />
-              </div>
-              <span className="text-sm font-medium hidden sm:inline">Retour</span>
-            </button>
-          )}
-
-          {/* ETAPE 1 : CHOIX */}
           {step === 'choose' && (
-            <div className="space-y-4 mt-8">
-              <button
-                onClick={() => setStep('email-login')}
-                className="group flex h-14 w-full items-center justify-center gap-3 rounded-2xl border border-border bg-surface text-foreground font-semibold transition-all hover:border-brand/30 active:scale-[0.98]"
-              >
-                <Mail className="h-5 w-5 text-muted group-hover:text-brand transition-colors" />
-                Continuer avec email
-              </button>
-
-              <button
-                type="button"
-                onClick={handleGoogleOAuth}
-                className="group flex h-14 w-full items-center justify-center gap-3 rounded-2xl border border-border bg-surface text-foreground font-semibold transition-all hover:bg-surface-2 active:scale-[0.98]"
-              >
-                <svg className="h-5 w-5" viewBox="0 0 24 24">
-                  <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/>
-                  <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-                  <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-                  <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-                </svg>
+            <div className="mt-8 flex flex-col gap-3">
+              <Button size="lg" icon={Mail} className="w-full" onClick={() => setStep('email-login')}>
+                Continuer avec e-mail
+              </Button>
+              <Button size="lg" className="w-full" onClick={handleGoogleOAuth}>
+                <GoogleIcon className="icon-sm" />
                 Continuer avec Google
-              </button>
-
-              <div className="pt-6 text-center">
-                <p className="text-sm text-muted">
-                  Pas encore de compte ?{' '}
-                  <button onClick={() => setStep('email-register')} className="font-semibold text-brand ml-1">
-                    Créer un compte
-                  </button>
-                </p>
-              </div>
+              </Button>
+              <LegalConsent action="continue" className="mt-1" />
+              <p className="mt-4 text-center text-body-sm text-foreground-muted">
+                Pas encore de compte ?{' '}
+                <button type="button" onClick={() => setStep('email-register')} className="font-medium text-foreground underline underline-offset-4">
+                  Créer un compte
+                </button>
+              </p>
             </div>
           )}
 
-          {/* FORMULAIRES */}
-          {(step === 'email-login' || step === 'email-register') && (
-            <form onSubmit={step === 'email-login' ? handleLogin : handleRegister} className="space-y-4 mt-8">
-
-              {step === 'email-register' && (
-                <div className="relative group">
-                  <User className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-foreground/20 group-focus-within:text-brand transition-colors" />
-                  <input
-                    type="text" placeholder="Nom complet" required
-                    value={registerName} onChange={(e) => setRegisterName(e.target.value)}
-                    className="h-14 w-full rounded-2xl border border-border bg-surface pl-12 pr-4 text-base text-foreground placeholder:text-foreground/20 focus:outline-none focus:border-brand/40 transition-all"
-                  />
-                </div>
+          {step !== 'choose' && (
+            <form onSubmit={isLogin ? handleLogin : handleRegister} className="mt-8 flex flex-col gap-4">
+              {!isLogin && (
+                <Field label="Nom complet" required>
+                  <Input size="lg" autoComplete="name" value={registerName} onChange={(e) => setRegisterName(e.target.value)} />
+                </Field>
               )}
 
-              <div className="relative group">
-                <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-foreground/20 group-focus-within:text-brand transition-colors" />
-                <input
-                  type="email" placeholder="Adresse email" required
-                  value={step === 'email-login' ? loginEmail : registerEmail}
-                  onChange={(e) => step === 'email-login' ? setLoginEmail(e.target.value) : setRegisterEmail(e.target.value)}
-                  className="h-14 w-full rounded-2xl border border-border bg-surface pl-12 pr-4 text-base text-foreground placeholder:text-foreground/20 focus:outline-none focus:border-brand/40 transition-all"
+              <Field label="Adresse e-mail" required>
+                <Input
+                  size="lg"
+                  type="email"
+                  autoComplete="email"
+                  value={isLogin ? loginEmail : registerEmail}
+                  onChange={(e) => (isLogin ? setLoginEmail(e.target.value) : setRegisterEmail(e.target.value))}
                 />
-              </div>
+              </Field>
 
-              <div className="relative group">
-                <Lock className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-foreground/20 group-focus-within:text-brand transition-colors" />
-                <input
-                  type={step === 'email-login' ? (showLoginPassword ? 'text' : 'password') : (showRegisterPassword ? 'text' : 'password')}
-                  placeholder="Mot de passe" required
-                  value={step === 'email-login' ? loginPassword : registerPassword}
-                  onChange={(e) => step === 'email-login' ? setLoginPassword(e.target.value) : setRegisterPassword(e.target.value)}
-                  className="h-14 w-full rounded-2xl border border-border bg-surface pl-12 pr-12 text-base text-foreground placeholder:text-foreground/20 focus:outline-none focus:border-brand/40 transition-all"
-                />
-                <button
-                  type="button"
-                  onClick={() => step === 'email-login' ? setShowLoginPassword(!showLoginPassword) : setShowRegisterPassword(!showRegisterPassword)}
-                  className="absolute right-4 top-1/2 -translate-y-1/2 text-foreground/20 hover:text-foreground/50 transition-colors"
-                >
-                  {(step === 'email-login' ? showLoginPassword : showRegisterPassword) ? (
-                    <EyeOff className="h-5 w-5" />
-                  ) : (
-                    <Eye className="h-5 w-5" />
-                  )}
-                </button>
-              </div>
+              <Field label="Mot de passe" required>
+                <div className="relative">
+                  <Input
+                    size="lg"
+                    type={showPassword ? 'text' : 'password'}
+                    autoComplete={isLogin ? 'current-password' : 'new-password'}
+                    value={isLogin ? loginPassword : registerPassword}
+                    onChange={(e) => (isLogin ? setLoginPassword(e.target.value) : setRegisterPassword(e.target.value))}
+                    className="pr-12"
+                  />
+                  <IconButton
+                    label={showPassword ? 'Masquer le mot de passe' : 'Afficher le mot de passe'}
+                    icon={showPassword ? EyeOff : Eye}
+                    size="sm"
+                    tooltip={false}
+                    className="absolute right-2 top-1/2 -translate-y-1/2"
+                    onClick={() => (isLogin ? setShowLoginPassword(!showLoginPassword) : setShowRegisterPassword(!showRegisterPassword))}
+                  />
+                </div>
+              </Field>
 
-              {step === 'email-register' && registerPassword.length > 0 && (
-                <div className="space-y-1.5 px-1">
+              {!isLogin && registerPassword.length > 0 && (
+                <ul aria-label="Critères du mot de passe" className="flex flex-col gap-1">
                   {passwordRules.map((rule) => {
                     const valid = rule.test(registerPassword);
                     return (
-                      <div key={rule.label} className="flex items-center gap-2 text-[12px]">
-                        {valid ? (
-                          <Check className="h-3.5 w-3.5 text-brand shrink-0" />
-                        ) : (
-                          <X className="h-3.5 w-3.5 text-foreground/20 shrink-0" />
-                        )}
-                        <span className={cn('transition-colors', valid ? 'text-brand/80' : 'text-foreground/25')}>
+                      <li key={rule.label} className="flex items-center gap-2 text-caption">
+                        {valid ? <Check className="icon-xs text-success" aria-hidden /> : <X className="icon-xs text-foreground-muted" aria-hidden />}
+                        <span className={valid ? 'text-foreground-secondary' : 'text-foreground-muted'}>
                           {rule.label}
+                          <span className="sr-only">{valid ? ' : respecté' : ' : non respecté'}</span>
                         </span>
-                      </div>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
               )}
 
-              {error && (
-                <div className="p-3 rounded-xl bg-red-500/10 border border-red-500/20 text-red-400 text-sm text-center">
-                  {error}
-                </div>
-              )}
+              {error && <Alert tone="error">{error}</Alert>}
 
-              <button
-                type="submit" disabled={loading}
-                className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-brand text-brand-foreground font-bold text-base transition-all hover:brightness-110 disabled:opacity-50 active:scale-[0.98] glow-neon mt-6"
-              >
-                {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : (
-                  <>
-                    {step === 'email-login' ? 'Se connecter' : 'Créer mon compte'}
-                    <ArrowRight className="h-4 w-4" />
-                  </>
-                )}
-              </button>
+              {!isLogin && <LegalConsent action="create" />}
 
-              <div className="pt-6 text-center">
-                <p className="text-sm text-muted">
-                  {step === 'email-login' ? "Pas encore de compte ? " : "Déjà un compte ? "}
-                  <button
-                    type="button"
-                    onClick={() => setStep(step === 'email-login' ? 'email-register' : 'email-login')}
-                    className="font-semibold text-brand hover:text-brand/80 transition-colors ml-1"
-                  >
-                    {step === 'email-login' ? 'Créer un compte' : 'Se connecter'}
-                  </button>
-                </p>
-              </div>
+              <Button type="submit" variant="primary" size="lg" loading={loading} className="mt-2 w-full">
+                {isLogin ? 'Se connecter' : 'Créer mon compte'}
+                {!loading && <ArrowRight className="icon-sm" aria-hidden />}
+              </Button>
+
+              <p className="mt-4 text-center text-body-sm text-foreground-muted">
+                {isLogin ? 'Pas encore de compte ? ' : 'Déjà un compte ? '}
+                <button
+                  type="button"
+                  onClick={() => setStep(isLogin ? 'email-register' : 'email-login')}
+                  className="font-medium text-foreground underline underline-offset-4"
+                >
+                  {isLogin ? 'Créer un compte' : 'Se connecter'}
+                </button>
+              </p>
             </form>
           )}
         </div>
