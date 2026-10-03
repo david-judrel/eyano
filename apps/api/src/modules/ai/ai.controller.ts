@@ -104,8 +104,13 @@ export class AiController {
     this.assertKnownModel(body.model);
 
     res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Cache-Control', 'no-cache, no-transform');
     res.setHeader('Connection', 'keep-alive');
+    // Derriere nginx (VPS), sans cet en-tete le flux est mis en tampon et
+    // tous les evenements arrivent d'un bloc a la fin : ni texte progressif,
+    // ni animation Kepler.
+    res.setHeader('X-Accel-Buffering', 'no');
+    res.flushHeaders();
 
     try {
       const stream = this.aiService.chatStream(
