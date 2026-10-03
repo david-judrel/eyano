@@ -143,9 +143,11 @@ test('l interface n emporte aucune copie de catalogue', () => {
   const profile = read(path.join(ROOT, 'apps', 'web', 'src', 'components', 'ProfileContent.tsx'));
   assert.ok(!profile.includes("'gnoxe-brains-1'"), 'aucun identifiant en dur dans le profil');
 
-  const topBar = read(path.join(ROOT, 'apps', 'web', 'src', 'components', 'TopBar.tsx'));
-  assert.ok(topBar.includes("from '@eyano/types'"), 'le selecteur lit le catalogue commun');
-  assert.ok(!topBar.includes('@/lib/models'), 'plus de reference au fichier supprime');
+  // Le selecteur de modele vit dans le compositeur (Design System).
+  const picker = read(path.join(ROOT, 'apps', 'web', 'src', 'components', 'chat', 'ModelPicker.tsx'));
+  assert.ok(picker.includes("from '@eyano/types'"), 'le selecteur lit le catalogue commun');
+  assert.ok(!picker.includes('@/lib/models'), 'plus de reference au fichier supprime');
+  assert.ok(!picker.includes("'gnoxe-brains-1'"), 'aucun identifiant en dur dans le selecteur');
 });
 
 test('le modele par defaut n est plus redifie dans le code applicatif', () => {

@@ -125,10 +125,28 @@ docker compose down -v              # ARRETE + SUPPRIME LES VOLUMES (ATTENTION!)
 
 ### Mise a jour
 ```bash
-git pull
-docker compose build --no-cache
-docker compose up -d
-docker compose exec api npx prisma migrate deploy --schema=../../packages/database/prisma/schema.prisma
+cd /opt/eyano
+./deploy.sh
+```
+
+`deploy.sh` fait `git pull`, reconstruit les images, redemarre et applique le
+schema (`prisma db push`). Le projet n'a pas de dossier de migrations :
+n'utilisez pas `prisma migrate deploy` (il ne ferait rien).
+
+### Variables de Kepler (images)
+
+A ajouter dans `.env` pour activer la creation d'images :
+
+```bash
+KEPLER_IMAGE_ENABLED=true
+KEPLER_IMAGE_EDIT_ENABLED=false
+KEPLER_IMAGE_BACKEND=cloudflare
+KEPLER_CLOUDFLARE_MODEL=@cf/black-forest-labs/flux-1-schnell
+CLOUDFLARE_ACCOUNT_ID=...
+CLOUDFLARE_API_TOKEN=...
+# Comptes supplementaires (bascule quand un quota du jour est epuise)
+CLOUDFLARE_ACCOUNT_ID_1=...
+CLOUDFLARE_API_TOKEN_1=...
 ```
 
 ## Backup PostgreSQL

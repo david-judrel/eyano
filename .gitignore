@@ -13,3 +13,6 @@ coverage
 .wwebjs_auth
 .wwebjs_cache
 .whatsapp_auth
+
+# Historiques WhatsApp (conversations privees des utilisateurs)
+.whatsapp_history/
