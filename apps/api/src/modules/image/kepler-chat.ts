@@ -40,26 +40,68 @@ function normalize(text: string): string {
 }
 
 const FR_VERBS =
-  'genere|generer|generes|genre|gener|cree|creer|crees|dessine|dessiner|fais|faire|fait|produis|produire|realise|realiser|illustre|illustrer|imagine|imaginer';
+  'genere|generer|generes|genre|gener|cree|creer|crees|dessine|dessines|dessiner|fais|faire|fait|fabrique|fabriquer|fabriques|prends|prendre|prenez|peins|peindre|produis|produire|realise|realiser|illustre|illustrer|imagine|imaginer';
 const FR_NOUNS =
   "image|images|illustration|illustrations|dessin|dessins|photo|photos|affiche|affiches|logo|logos|visuel|visuels|portrait|portraits|fond d'ecran|wallpaper";
+/** Noms d image dont on parle pour une scene : sans logo/portrait (trop souvent poses en question). */
+const FR_NOUNS_SCENE =
+  'image|images|illustration|illustrations|dessin|dessins|photo|photos|affiche|affiches|visuel|visuels';
 const EN_VERBS = 'generate|create|draw|make|paint|render|design';
 const EN_NOUNS = 'image|images|picture|pictures|illustration|illustrations|drawing|drawings|poster|posters|logo|logos|photo|photos|portrait|portraits|wallpaper';
 
 /** Verbe (eventuellement -moi), determinant, au plus un mot, puis l'objet. */
+/**
+ * Qualificatifs entre le determinant et le nom (« une tres belle image »,
+ * « a premium, modern and highly recognizable logo ») : jusqu'a cinq mots,
+ * mais jamais une preposition — « un plan DE projet », « a list OF photo
+ * ideas » parlent d'autre chose qu'une image.
+ */
+const QUALIFIERS =
+  "(?:(?!(?:pour|de|du|des|d'|sur|avec|dans|par|qui|que|for|of|about|with|on|in|by|that|which|to)\\s)\\S+\\s+){0,5}";
 const FR_REQUEST = new RegExp(
-  `\\b(?:${FR_VERBS})(?:-(?:moi|nous|lui))?\\s+(?:(?:moi|nous)\\s+)?(?:(?:une|un|des|deux|trois|quatre|le|la|les|mon|ma|mes)\\s+|l')(?:\\S+\\s+)?(?:${FR_NOUNS})\\b`
+  `\\b(?:${FR_VERBS})(?:-(?:moi|nous|lui))?\\s+(?:(?:moi|nous)\\s+)?(?:(?:une|un|des|deux|trois|quatre|le|la|les|mon|ma|mes)\\s+|l')${QUALIFIERS}(?:${FR_NOUNS})\\b`
 );
 const EN_REQUEST = new RegExp(
-  `\\b(?:${EN_VERBS})\\s+(?:me\\s+|us\\s+)?(?:an?|some|two|three|\\d+)\\s+(?:\\S+\\s+)?(?:${EN_NOUNS})\\b`
+  `\\b(?:${EN_VERBS})\\s+(?:me\\s+|us\\s+)?(?:an?|some|two|three|\\d+)\\s+${QUALIFIERS}(?:${EN_NOUNS})\\b`
 );
 /** « Dessine-moi un mouton » : l'imperatif suffit. */
 const FR_DRAW = /\bdessine-(?:moi|nous)\b/;
 /**
- * Questions sur la methode : pas une demande. « Peux-tu… », « tu peux… »,
- * « can you… » restent des demandes (formulation polie la plus courante).
+ * Questions sur la methode : pas une demande. « comment/pourquoi » valent
+ * partout dans le message (« Explique-moi comment creer une image avec
+ * Python » n'est pas une demande), les interrogatifs (quel, quoi, qui…)
+ * seulement en tete.
  */
-const META_QUESTION = /^\s*(?:comment|pourquoi|how|why)\b/;
+const META_ANY = /\b(?:comment|pourquoi|how|why)\b/;
+const META_START =
+  /^\s*(?:quel|quelle|quels|quelles|quoi|qui|c'est\s+quoi|cest\s+quoi|c'est\s+ce\s+que|what|who|when|where|which|whose)\b/;
+
+/** « apprendre a dessiner » : demande d'apprentissage, pas une image. */
+const LEARN = /\b(?:apprendre|apprends|apprendrai|appris|sais|sait|savent)\b/;
+/** Phrase en train d etre une affirmation (« image de synthese utilisee dans ce site »). */
+const NOUN_FIRST_STOP =
+  /\b(?:utilis\w*|dans ce\w*|cette|celui|celle|ce site|ce document|est une|etait|était|sert|superbe|belle|bien)\b/;
+
+/** « Je veux une image de… », « donne-moi une photo de… » : la volonte suffit. */
+const FR_DESIRE = new RegExp(
+  "\\b(?:(?:je|j')\\s*(?:veux|voudrais|aimerais|souhaite|souhaiterais|peux\\s+avoir)|j\\s+(?:veux|voudrais|aimerais|souhaite)" +
+    "|(?:je|j'\\s*ai|j\\s+ai)\\s+besoin|il\\s+me\\s+(?:faudrait|faut)" +
+    '|peux(?:[-\\s]tu)?\\s+me\\s+(?:donner|envoyer|montrer|faire)|peux(?:[-\\s]tu)?\\s+m\'\\s*(?:donner|envoyer|montrer|faire)' +
+    '|peux[-\\s]tu\\s+me|pui[-\\s]je\\s+avoir|donne[-\\s]moi|fais[-\\s]moi|montre[-\\s]moi|envoie[-\\s]moi|met[-\\s]moi)' +
+    `\\s+(?:l'\\s*|d'\\s*)?(?:(?:une|un|des|deux|trois|le|la|les)\\s+)?(?:${FR_NOUNS_SCENE})\\b`
+);
+/** « Dessine un mouton » : l'imperatif avec un objet, meme sans nom d image. */
+const FR_IMPERATIVE = new RegExp(
+  `\\b(?:dessine|dessines|dessiner|peins|peindre)(?:[-\\s]+(?:moi|nous))?\\s+(?:(?:moi|nous)\\s+)?(?:(?:un|une|le|la|les|du|des)\\s+\\S+|d'\\S+)`
+);
+/** Scene donnee seule, en tete de message : « une image de deux vaches qui rient ». */
+const FR_NOUN_FIRST = new RegExp(
+  `^\\s*(?:une|un|des|quelques|quelque|ces)?\\s*(?:${FR_NOUNS_SCENE})\\s+(?:d'|du|de|des|avec|montrant)\\s*\\S`
+);
+/** « A picture of two laughing cows » : sans verbe. */
+const EN_NOUN_FIRST = new RegExp(
+  '\\ban?\\s+(?:\\S+\\s+){0,2}(?:picture|image|photo|drawing|illustration|poster)\\s+(?:of|with)\\b'
+);
 
 // ----------------------------------------------------- fautes de frappe
 
@@ -70,6 +112,7 @@ const TYPO_TARGETS = [
   'picture', 'pictures', 'drawing', 'drawings',
   'genere', 'generer', 'dessine', 'dessiner', 'realise', 'realiser', 'illustre', 'illustrer',
   'generate', 'create',
+  'creer', 'cree', 'crees', 'dessines', 'fabrique', 'fabriquer', 'fabriques', 'prends', 'prendre', 'prenez',
   'retire', 'retirer', 'enleve', 'enlever', 'ajoute', 'ajouter', 'change', 'changer',
   'modifie', 'modifier', 'refais', 'refaire', 'realiste',
 ];
@@ -108,15 +151,22 @@ function correctTypos(text: string): string {
 }
 
 /**
- * Vrai si le message demande la GENERATION d'une image. Deterministe et
- * volontairement restrictif : un faux negatif laisse le chat repondre
- * normalement, un faux positif enverrait une conversation au moteur image.
+ * Vrai si le message demande la GENERATION d'une image. Deterministe :
+ * verbe + nom (« genere une image de chat »), volonte (« je veux une image
+ * de deux vaches »), imperatif (« dessine un mouton »), scene donnee seule
+ * (« une image de deux vaches qui rient »). Un faux negatif laisse le chat
+ * repondre normalement, un faux positif enverrait une conversation au
+ * moteur image : les questions (comment, quel, pourquoi…) sont coupees.
  */
 export function detectImageRequest(raw: string): boolean {
   if (typeof raw !== 'string') return false;
   const text = correctTypos(normalize(raw));
-  if (META_QUESTION.test(text)) return false;
-  return FR_REQUEST.test(text) || EN_REQUEST.test(text) || FR_DRAW.test(text);
+  if (META_ANY.test(text) || META_START.test(text)) return false;
+  if (FR_REQUEST.test(text) || EN_REQUEST.test(text) || FR_DRAW.test(text)) return true;
+  if (FR_DESIRE.test(text) || EN_NOUN_FIRST.test(text)) return true;
+  if (FR_IMPERATIVE.test(text) && !LEARN.test(text)) return true;
+  if (FR_NOUN_FIRST.test(text) && !NOUN_FIRST_STOP.test(text)) return true;
+  return false;
 }
 
 /** Mode choisi explicitement dans l'interface (« Créer une image »). */
