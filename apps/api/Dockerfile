@@ -115,6 +115,8 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/apps/api/dist ./apps/api/dist
 
 COPY --from=builder /app/apps/api/package.json ./apps/api/package.json
+# Scripts d'exploitation (creation du premier super-administrateur)
+COPY --from=builder /app/apps/api/scripts ./apps/api/scripts
 
 # ============================================================
 # Types
