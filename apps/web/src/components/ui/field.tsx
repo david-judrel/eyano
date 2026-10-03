@@ -56,7 +56,7 @@ export function Field({ label, description, error, required = false, hideLabel =
 
 /** Classes communes des champs de saisie (Input, Textarea, declencheur de Select). */
 export const controlClasses = cn(
-  'w-full rounded-md border border-border bg-surface text-body-md text-foreground placeholder:text-foreground-muted',
+  'w-full rounded-md border border-border bg-surface text-body-md text-foreground placeholder:text-foreground-muted touch:text-body-lg',
   'transition-colors duration-fast ease-standard hover:border-border-strong',
   'focus-visible:border-focus',
   'aria-[invalid=true]:border-error',

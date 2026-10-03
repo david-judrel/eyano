@@ -92,12 +92,50 @@ export default function AdminUsers() {
 
   const isSuperAdmin = currentUser?.role === 'SUPER_ADMIN';
 
+  /** Menu d'actions d'un utilisateur (tableau et liste mobile). */
+  const actions = (user: User) => (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <IconButton label={`Actions pour ${user.email}`} icon={MoreHorizontal} size="sm" tooltip={false} />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        {isSuperAdmin && (
+          <>
+            <DropdownMenuItem icon={MessagesSquare} onSelect={() => router.push(`/admin/conversations?userId=${user.id}`)}>
+              Voir ses conversations
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+          </>
+        )}
+        {user.status === 'ACTIVE' ? (
+          <>
+            <DropdownMenuItem icon={Lock} onSelect={() => handleStatusChange(user.id, 'INACTIVE')}>Désactiver</DropdownMenuItem>
+            <DropdownMenuItem icon={UserX} destructive onSelect={() => handleStatusChange(user.id, 'BANNED')}>Bannir</DropdownMenuItem>
+          </>
+        ) : (
+          <DropdownMenuItem icon={UserCheck} onSelect={() => handleStatusChange(user.id, 'ACTIVE')}>Réactiver</DropdownMenuItem>
+        )}
+        {isSuperAdmin && user.id !== currentUser?.id && user.role !== 'SUPER_ADMIN' && (
+          <>
+            <DropdownMenuSeparator />
+            {user.role === 'USER' && (
+              <DropdownMenuItem icon={Shield} onSelect={() => handleRoleChange(user.id, 'ADMIN')}>Promouvoir admin</DropdownMenuItem>
+            )}
+            {user.role === 'ADMIN' && (
+              <DropdownMenuItem icon={Crown} onSelect={() => handleRoleChange(user.id, 'USER')}>Rétrograder en utilisateur</DropdownMenuItem>
+            )}
+          </>
+        )}
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+
   return (
     <div className="flex flex-col gap-6">
       <PageHeader title="Utilisateurs" description={`${pagination.total} utilisateurs au total`} />
 
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Field label="Rechercher un utilisateur" hideLabel className="flex-1">
+      <div className="grid grid-cols-2 gap-3 sm:flex">
+        <Field label="Rechercher un utilisateur" hideLabel className="col-span-2 sm:flex-1">
           <div className="relative">
             <Search className="icon-sm pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-foreground-muted" aria-hidden />
             <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Rechercher…" className="pl-10" />
@@ -133,6 +171,25 @@ export default function AdminUsers() {
         {loading ? (
           <LoadingBlock />
         ) : (
+          <>
+          <ul className="divide-y divide-border-subtle sm:hidden">
+            {users.map((user) => (
+              <li key={user.id} className="flex items-start gap-3 px-4 py-3">
+                <Avatar src={user.avatarUrl} fallback={(user.name?.[0] || user.email[0] || '?').toUpperCase()} alt={user.name || user.email} size="sm" />
+                <div className="flex min-w-0 flex-1 flex-col gap-1">
+                  <p className="truncate text-label text-foreground">{user.name || 'Sans nom'}</p>
+                  <p className="truncate text-caption text-foreground-muted">{user.email}</p>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <RoleBadge role={user.role} />
+                    <StatusBadge status={user.status} />
+                    <span className="text-caption text-foreground-muted">{user._count.conversations} conv.</span>
+                  </div>
+                </div>
+                {actions(user)}
+              </li>
+            ))}
+          </ul>
+          <div className="hidden sm:block">
           <Table>
             <THead>
               <tr>
@@ -161,45 +218,14 @@ export default function AdminUsers() {
                   <TD className="tabular-nums">{user._count.conversations}</TD>
                   <TD>{new Date(user.createdAt).toLocaleDateString('fr-FR')}</TD>
                   <TD className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <IconButton label={`Actions pour ${user.email}`} icon={MoreHorizontal} size="sm" tooltip={false} />
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        {isSuperAdmin && (
-                          <>
-                            <DropdownMenuItem icon={MessagesSquare} onSelect={() => router.push(`/admin/conversations?userId=${user.id}`)}>
-                              Voir ses conversations
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                          </>
-                        )}
-                        {user.status === 'ACTIVE' ? (
-                          <>
-                            <DropdownMenuItem icon={Lock} onSelect={() => handleStatusChange(user.id, 'INACTIVE')}>Désactiver</DropdownMenuItem>
-                            <DropdownMenuItem icon={UserX} destructive onSelect={() => handleStatusChange(user.id, 'BANNED')}>Bannir</DropdownMenuItem>
-                          </>
-                        ) : (
-                          <DropdownMenuItem icon={UserCheck} onSelect={() => handleStatusChange(user.id, 'ACTIVE')}>Réactiver</DropdownMenuItem>
-                        )}
-                        {isSuperAdmin && user.id !== currentUser?.id && user.role !== 'SUPER_ADMIN' && (
-                          <>
-                            <DropdownMenuSeparator />
-                            {user.role === 'USER' && (
-                              <DropdownMenuItem icon={Shield} onSelect={() => handleRoleChange(user.id, 'ADMIN')}>Promouvoir admin</DropdownMenuItem>
-                            )}
-                            {user.role === 'ADMIN' && (
-                              <DropdownMenuItem icon={Crown} onSelect={() => handleRoleChange(user.id, 'USER')}>Rétrograder en utilisateur</DropdownMenuItem>
-                            )}
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                    {actions(user)}
                   </TD>
                 </TR>
               ))}
             </TBody>
           </Table>
+          </div>
+          </>
         )}
         <Pagination page={pagination.page} pages={pagination.pages} onChange={fetchUsers} />
       </Card>

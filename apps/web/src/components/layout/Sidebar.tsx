@@ -48,7 +48,7 @@ function ConversationItem({ conv, isActive, onSelect, onRename, onDelete }: Conv
             if (e.key === 'Enter') submit();
             if (e.key === 'Escape') setEditing(false);
           }}
-          className="h-7 min-w-0 flex-1 rounded-sm bg-transparent px-1 text-body-sm text-foreground"
+          className="h-7 min-w-0 flex-1 rounded-sm bg-transparent px-1 text-body-sm text-foreground touch:h-10 touch:text-body-lg"
         />
         <IconButton label="Valider" icon={Check} size="sm" tooltip={false} onClick={submit} />
         <IconButton label="Annuler" icon={X} size="sm" tooltip={false} onClick={() => setEditing(false)} />
@@ -69,7 +69,7 @@ function ConversationItem({ conv, isActive, onSelect, onRename, onDelete }: Conv
         onClick={onSelect}
         aria-current={isActive ? 'page' : undefined}
         className={cn(
-          'flex h-9 min-w-0 flex-1 items-center rounded-md px-2 text-left text-body-sm',
+          'flex h-9 min-w-0 flex-1 items-center rounded-md px-2 text-left text-body-sm touch:h-11 touch:text-body-md',
           isActive ? 'font-medium text-foreground' : 'text-foreground-secondary group-hover:text-foreground'
         )}
       >
@@ -178,7 +178,7 @@ function SidebarContent({ onClose }: { onClose?: () => void }) {
   return (
     <>
       <div className="flex h-topbar shrink-0 items-center justify-between px-4">
-        <button type="button" onClick={handleNewConversation} className="flex items-center gap-2 rounded-md" aria-label="Eyano, accueil">
+        <button type="button" onClick={handleNewConversation} className="flex items-center gap-2 rounded-md touch:h-10" aria-label="Eyano, accueil">
           <Logo size="md" />
           <span className="text-heading-sm text-foreground">Eyano</span>
         </button>

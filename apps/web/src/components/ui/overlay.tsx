@@ -68,7 +68,7 @@ export const DropdownMenuItem = forwardRef<HTMLDivElement, MenuItemProps>(
     <RadixMenu.Item
       ref={ref}
       className={cn(
-        'flex h-9 cursor-pointer select-none items-center gap-2 rounded-md px-2 text-body-sm outline-none',
+        'flex h-9 cursor-pointer select-none items-center gap-2 rounded-md px-2 text-body-sm outline-none touch:h-11',
         'data-[highlighted]:bg-hover data-[disabled]:cursor-not-allowed data-[disabled]:text-foreground-disabled',
         destructive ? 'text-error' : 'text-foreground',
         className
@@ -115,7 +115,7 @@ export function DialogContent({ title, description, footer, size = 'md', classNa
       <RadixDialog.Content
         className={cn(
           'fixed z-modal flex max-h-[85dvh] w-full flex-col border border-border bg-surface-overlay shadow-overlay outline-none',
-          'inset-x-0 bottom-0 rounded-t-xl animate-slide-up',
+          'safe-bottom inset-x-0 bottom-0 rounded-t-xl animate-slide-up',
           'sm:inset-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-xl sm:animate-scale-in',
           dialogSizes[size],
           className
@@ -161,7 +161,7 @@ export function SheetContent({ title, side = 'left', className, children, ...pro
       <RadixDialog.Overlay className="fixed inset-0 z-overlay bg-scrim animate-fade-in" />
       <RadixDialog.Content
         className={cn(
-          'fixed inset-y-0 z-overlay flex w-sidebar max-w-[85vw] flex-col border-border bg-background-subtle shadow-overlay outline-none',
+          'safe-top safe-bottom fixed inset-y-0 z-overlay flex w-sidebar max-w-[85vw] flex-col border-border bg-background-subtle shadow-overlay outline-none',
           side === 'left' ? 'left-0 border-r animate-slide-in-left' : 'right-0 border-l animate-slide-in-right',
           className
         )}

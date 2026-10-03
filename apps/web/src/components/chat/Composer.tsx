@@ -718,7 +718,7 @@ export function Composer({ onRequireLogin }: ComposerProps) {
               }
               maxLength={MAX_CHARS}
               rows={1}
-              className="scrollbar-hide block w-full min-w-0 resize-none overflow-y-auto overflow-x-hidden whitespace-pre-wrap break-words bg-transparent px-1 py-2 text-body-md text-foreground placeholder:text-foreground-muted focus-visible:outline-none"
+              className="scrollbar-hide block w-full min-w-0 resize-none overflow-y-auto overflow-x-hidden whitespace-pre-wrap break-words bg-transparent px-1 py-2 text-body-md text-foreground placeholder:text-foreground-muted focus-visible:outline-none touch:text-body-lg"
               style={{ maxHeight: '200px' }}
             />
             {input.length > MAX_CHARS * 0.8 && (
@@ -827,7 +827,8 @@ export function Composer({ onRequireLogin }: ComposerProps) {
       />
 
       <p className="mt-2 select-none text-center text-caption text-foreground-muted">
-        Eyano peut faire des erreurs. Vérifiez les informations importantes.
+        <span className="sm:hidden">Eyano peut se tromper : vérifiez l&apos;essentiel.</span>
+        <span className="hidden sm:inline">Eyano peut faire des erreurs. Vérifiez les informations importantes.</span>
       </p>
     </div>
   );

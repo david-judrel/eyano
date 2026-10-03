@@ -91,6 +91,25 @@ function AdminConversations() {
         ) : rows.length === 0 ? (
           <EmptyState icon={MessagesSquare} title="Aucune conversation" description="Aucune conversation ne correspond à cette recherche." />
         ) : (
+          <>
+          <ul className="divide-y divide-border-subtle sm:hidden">
+            {rows.map((row) => (
+              <li key={row.id}>
+                <button
+                  type="button"
+                  onClick={() => router.push(`/admin/conversations/${row.id}`)}
+                  className="flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors duration-fast hover:bg-hover"
+                >
+                  <span className="truncate text-label text-foreground">{row.title || 'Nouvelle conversation'}</span>
+                  <span className="truncate text-caption text-foreground-muted">
+                    {row.user.name || row.user.email} · {row._count.messages} messages ·{' '}
+                    {new Date(row.updatedAt).toLocaleString('fr-FR', { dateStyle: 'short', timeStyle: 'short' })}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+          <div className="hidden sm:block">
           <Table>
             <THead>
               <tr>
@@ -124,6 +143,8 @@ function AdminConversations() {
               ))}
             </TBody>
           </Table>
+          </div>
+          </>
         )}
         <Pagination page={pagination.page} pages={pagination.pages} onChange={fetchRows} />
       </Card>

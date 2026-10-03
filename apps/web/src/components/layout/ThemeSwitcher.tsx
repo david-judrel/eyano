@@ -28,7 +28,7 @@ export function ThemeSwitcher({ className }: { className?: string }) {
               aria-label={label}
               onClick={() => setTheme(value)}
               className={cn(
-                'flex h-7 w-8 items-center justify-center rounded-sm transition-colors duration-fast',
+                'flex h-7 w-8 items-center justify-center rounded-sm transition-colors duration-fast touch:h-10 touch:w-11',
                 active ? 'bg-surface-overlay text-foreground shadow-subtle' : 'text-foreground-muted hover:text-foreground'
               )}
             >

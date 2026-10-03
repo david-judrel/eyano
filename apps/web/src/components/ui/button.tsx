@@ -28,8 +28,8 @@ export const buttonVariants = cva(
         destructive: 'bg-error-subtle text-error hover:bg-error hover:text-foreground-inverse active:bg-error',
       },
       size: {
-        sm: 'h-8 px-3',
-        md: 'h-10 px-4',
+        sm: 'h-8 px-3 touch:h-10',
+        md: 'h-10 px-4 touch:h-11',
         lg: 'h-12 px-5 text-body-md font-medium',
       },
     },
@@ -68,7 +68,11 @@ export const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 );
 Button.displayName = 'Button';
 
-const iconButtonSizes = { sm: 'h-8 w-8', md: 'h-10 w-10', lg: 'h-12 w-12' } as const;
+const iconButtonSizes = {
+  sm: 'h-8 w-8 touch:h-10 touch:w-10',
+  md: 'h-10 w-10 touch:h-11 touch:w-11',
+  lg: 'h-12 w-12',
+} as const;
 
 export interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'children'> {
   /** Nom accessible, OBLIGATOIRE : lu par les lecteurs d'ecran, affiche en info-bulle. */

@@ -18,7 +18,8 @@ export function TopBar({ onLoginClick }: TopBarProps) {
   const { setSidebarOpen, user } = useAppStore();
 
   return (
-    <header className={cn('sticky top-0 z-sticky flex h-topbar shrink-0 items-center justify-between gap-2 border-b border-border-subtle bg-background px-3 lg:px-4', user && 'lg:hidden')}>
+    <header className={cn('safe-top sticky top-0 z-sticky shrink-0 border-b border-border-subtle bg-background', user && 'lg:hidden')}>
+      <div className="flex h-topbar items-center justify-between gap-2 px-3 lg:px-4">
       <div className="flex items-center gap-1">
         {user && <IconButton label="Ouvrir le menu" icon={Menu} className="lg:hidden" onClick={() => setSidebarOpen(true)} tooltip={false} />}
         <div className={cn('flex items-center gap-2 px-1', user && 'lg:hidden')}>
@@ -33,6 +34,7 @@ export function TopBar({ onLoginClick }: TopBarProps) {
             Connexion
           </Button>
         )}
+      </div>
       </div>
     </header>
   );

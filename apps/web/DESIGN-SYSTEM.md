@@ -186,8 +186,25 @@ Points de rupture Tailwind, une seule charnière structurante : **`lg`**.
 | desktop | ≥ 1024 (`lg`) | Barre latérale fixe (`w-sidebar`), barre supérieure masquée dans le chat |
 | large | ≥ 1280 (`xl`) | Idem desktop ; le contenu reste plafonné à `max-w-content` (800 px) |
 
-Admin : navigation en tiroir sous `lg`, tableaux défilant horizontalement
-dans leur carte, grilles de cartes 1 → 2 → 4 colonnes.
+Admin : navigation en tiroir sous `lg` ; sous `sm`, les tableaux deviennent
+des listes en cartes (aucun défilement horizontal) ; statistiques en 2 puis
+4 colonnes.
+
+### Tactile : la variante `touch:`
+
+`touch:` cible les écrans pilotés au doigt (`@media (pointer: coarse)`),
+indépendamment de la largeur. Elle est intégrée aux primitives :
+
+| Élément | Souris | Doigt |
+|---|---|---|
+| `Button` sm / md | 32 / 40 px | 40 / 44 px |
+| `IconButton` sm / md | 32 / 40 px | 40 / 44 px |
+| Élément de menu, ligne de conversation | 36 px | 44 px |
+| Champs (`Input`, `Textarea`, compositeur) | 15 px | **16 px** (iOS ne zoome pas) |
+
+Le zoom de la page reste autorisé (pas de `user-scalable=no`). Les zones
+sûres (`safe-top`, `safe-bottom`) protègent la barre supérieure, le tiroir
+et les fenêtres en feuille basse de l'encoche et de la barre d'accueil.
 
 ## 10. Icônes
 

@@ -126,7 +126,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       </Sheet>
 
       <main className="flex h-full min-w-0 flex-1 flex-col overflow-hidden">
-        <header className="flex h-topbar shrink-0 items-center gap-2 border-b border-border-subtle px-3 lg:px-6">
+        <header className="safe-top flex h-topbar shrink-0 items-center gap-2 border-b border-border-subtle px-3 lg:px-6">
           <IconButton label="Ouvrir le menu" icon={Menu} className="lg:hidden" tooltip={false} onClick={() => setSidebarOpen(true)} />
           <span className="text-label text-foreground-secondary">Administration</span>
           <div className="ml-auto flex min-w-0 items-center gap-2">

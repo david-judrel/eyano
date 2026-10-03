@@ -162,6 +162,10 @@ const config: Config = {
     },
   },
   plugins: [
+    plugin(({ addVariant }) => {
+      /* Ecrans tactiles (doigt) : cibles agrandies, champs a 16 px (pas de zoom iOS). */
+      addVariant('touch', '@media (pointer: coarse)');
+    }),
     plugin(({ addComponents }) => {
       /* Tailles d'icone : 4 niveaux. */
       addComponents({
