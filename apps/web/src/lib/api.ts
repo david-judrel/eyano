@@ -9,6 +9,7 @@ export interface StreamEvent {
   outputTokens?: number;
   code?: string;
   errorMessage?: string;
+  message?: string;
   attachment?: { id: string; fileName: string; mimeType: string; size: number };
 }
 
@@ -148,7 +149,8 @@ class ApiClient {
               case 'error':
                 callbacks?.onError?.({
                   code: event.code,
-                  message: event.errorMessage || 'Erreur inconnue',
+                  // L'API envoie `message` (ou `content` pour une erreur de flux).
+                  message: event.message || event.errorMessage || event.content || 'Une erreur est survenue.',
                 });
                 break;
             }

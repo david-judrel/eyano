@@ -209,12 +209,15 @@ export class AiService {
           inputTokens: 0,
           outputTokens: 0,
         };
-      } catch {
+      } catch (error: any) {
+        // Jamais silencieux : sans journal, un schema de base en retard
+        // (colonne Attachment.data absente) etait invisible.
+        console.error('[Kepler] echec de la generation web :', error?.message || error);
         await this.messagesService.failStreaming(assistantMessage.id);
         yield {
           type: 'error' as const,
           code: 'IMAGE_GENERATION_ERROR',
-          message: "La génération de l'image a échoué.",
+          message: 'Impossible de générer cette image.',
         };
       }
       return;
