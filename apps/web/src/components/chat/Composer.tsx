@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/lib/toast';
 import { IconButton } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/overlay';
+import { ModelPicker } from './ModelPicker';
 
 interface AttachedFile {
   file: File;
@@ -699,37 +700,8 @@ export function Composer({ onRequireLogin }: ComposerProps) {
           </div>
         )}
 
-        <div className="flex items-end gap-1 p-2">
-          <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
-            <DropdownMenuTrigger asChild>
-              <IconButton label="Joindre un fichier ou créer une image" icon={Paperclip} />
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="start" className="w-60">
-              {canCreateImages && (
-                <DropdownMenuItem
-                  icon={Sparkles}
-                  hint="Kepler"
-                  onSelect={() => {
-                    setImageMode(true);
-                    setTimeout(() => textareaRef.current?.focus(), 0);
-                  }}
-                >
-                  Créer une image
-                </DropdownMenuItem>
-              )}
-              <DropdownMenuItem icon={Image} hint="Galerie" onSelect={() => imageInputRef.current?.click()}>
-                Image
-              </DropdownMenuItem>
-              <DropdownMenuItem icon={Camera} hint="Photo" onSelect={() => cameraInputRef.current?.click()}>
-                Caméra
-              </DropdownMenuItem>
-              <DropdownMenuItem icon={FileText} hint="PDF, DOC" onSelect={() => fileInputRef.current?.click()}>
-                Document
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <div className="relative min-w-0 flex-1">
+        <div className="px-3 pt-2">
+          <div className="relative min-w-0">
             <textarea
               ref={textareaRef}
               aria-label="Message à Eyano"
@@ -760,7 +732,40 @@ export function Composer({ onRequireLogin }: ComposerProps) {
               </div>
             )}
           </div>
+        </div>
 
+        <div className="flex items-center gap-1 px-2 pb-2 pt-1">
+          <DropdownMenu open={dropdownOpen} onOpenChange={setDropdownOpen}>
+            <DropdownMenuTrigger asChild>
+              <IconButton label="Joindre un fichier ou créer une image" icon={Paperclip} />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="start" className="w-60">
+              {canCreateImages && (
+                <DropdownMenuItem
+                  icon={Sparkles}
+                  hint="Kepler"
+                  onSelect={() => {
+                    setImageMode(true);
+                    setTimeout(() => textareaRef.current?.focus(), 0);
+                  }}
+                >
+                  Créer une image
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuItem icon={Image} hint="Galerie" onSelect={() => imageInputRef.current?.click()}>
+                Image
+              </DropdownMenuItem>
+              <DropdownMenuItem icon={Camera} hint="Photo" onSelect={() => cameraInputRef.current?.click()}>
+                Caméra
+              </DropdownMenuItem>
+              <DropdownMenuItem icon={FileText} hint="PDF, DOC" onSelect={() => fileInputRef.current?.click()}>
+                Document
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <ModelPicker />
+          <div className="flex-1" />
           {isStreaming ? (
             <IconButton label="Arrêter la génération" icon={Square} variant="secondary" onClick={handleStop} />
           ) : (

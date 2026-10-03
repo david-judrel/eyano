@@ -1,68 +1,13 @@
 'use client';
 
-import { useEffect, useRef, useState, useCallback } from 'react';
-import { Check, Pencil, Sparkles, X } from 'lucide-react';
+import { useEffect, useRef, useCallback } from 'react';
+import { Sparkles } from 'lucide-react';
 import { EmptyChat } from './EmptyChat';
 import { Composer } from './Composer';
 import { ChatMessage } from './Message';
 import { ActivityStep } from '@/components/ai/ActivityStep';
-import { IconButton } from '@/components/ui/button';
 import { useAppStore } from '@/lib/store';
 import { api } from '@/lib/api';
-
-/** Titre de la conversation, renommable sur place. */
-function ConversationHeader() {
-  const { activeConversationId, conversations, updateConversation } = useAppStore();
-  const [isEditing, setIsEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState('');
-
-  const conversation = conversations.find((c) => c.id === activeConversationId);
-  if (!conversation) return null;
-
-  const handleSave = async () => {
-    if (editTitle.trim() && editTitle !== conversation.title) {
-      await api.updateConversation(activeConversationId!, { title: editTitle.trim() });
-      updateConversation(activeConversationId!, { title: editTitle.trim() });
-    }
-    setIsEditing(false);
-  };
-
-  return (
-    <div className="flex h-12 items-center gap-1">
-      {isEditing ? (
-        <>
-          <input
-            aria-label="Titre de la conversation"
-            value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') handleSave();
-              if (e.key === 'Escape') setIsEditing(false);
-            }}
-            className="h-8 min-w-0 flex-1 rounded-md border border-border bg-surface px-2 text-label text-foreground"
-            autoFocus
-          />
-          <IconButton label="Valider" icon={Check} size="sm" tooltip={false} onClick={handleSave} />
-          <IconButton label="Annuler" icon={X} size="sm" tooltip={false} onClick={() => setIsEditing(false)} />
-        </>
-      ) : (
-        <div className="group flex min-w-0 items-center gap-1">
-          <h2 className="truncate text-label text-foreground-secondary">{conversation.title || 'Nouvelle conversation'}</h2>
-          <IconButton
-            label="Renommer la conversation"
-            icon={Pencil}
-            size="sm"
-            className="lg:opacity-0 lg:focus-visible:opacity-100 lg:group-hover:opacity-100"
-            onClick={() => {
-              setEditTitle(conversation.title || '');
-              setIsEditing(true);
-            }}
-          />
-        </div>
-      )}
-    </div>
-  );
-}
 
 interface ChatViewProps {
   onRequireLogin?: (message: string) => void;
@@ -208,14 +153,6 @@ export function ChatView({ onRequireLogin }: ChatViewProps) {
 
   return (
     <div className="flex h-full w-full flex-col overflow-hidden">
-      {activeConversationId && (
-        <div className="shrink-0 border-b border-border-subtle bg-background">
-          <div className="mx-auto max-w-content px-4 sm:px-6">
-            <ConversationHeader />
-          </div>
-        </div>
-      )}
-
       <div className="min-h-0 flex-1 overflow-y-auto overflow-x-hidden">
         {activeConversationId ? (
           <div className="mx-auto flex max-w-content flex-col gap-8 px-4 py-8 sm:px-6">
